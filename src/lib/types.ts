@@ -75,5 +75,51 @@ export const transactionTypeSchema = z.object({
   createdAt: z.date().optional(),
 });
 
-export const insertTransactionTypeSchema = transactionTypeSchema.omit({ id: true });
+export const insertTransactionTypeSchema = transactionTypeSchema.omit({
+  id: true,
+});
 export type InsertTransactionType = z.infer<typeof insertTransactionTypeSchema>;
+
+// Location schemas
+export const countrySchema = z.object({
+  id: z.number().optional(),
+  name: z.string().min(1, "Country name is required"),
+  code: z.string().min(1, "Country code is required"),
+  active: z.boolean().default(true),
+});
+
+export const areaSchema = z.object({
+  id: z.number().optional(),
+  name: z.string().min(1, "Area name is required"),
+  countryId: z.number().int().positive("Country is required"),
+  active: z.boolean().default(true),
+});
+
+export const citySchema = z.object({
+  id: z.number().optional(),
+  name: z.string().min(1, "City name is required"),
+  areaId: z.number().int().positive("Area is required"),
+  active: z.boolean().default(true),
+});
+
+export const villageSchema = z.object({
+  id: z.number().optional(),
+  name: z.string().min(1, "Village name is required"),
+  cityId: z.number().int().positive("City is required"),
+  active: z.boolean().default(true),
+});
+
+export const insertCountrySchema = countrySchema.omit({ id: true });
+export const insertAreaSchema = areaSchema.omit({ id: true });
+export const insertCitySchema = citySchema.omit({ id: true });
+export const insertVillageSchema = villageSchema.omit({ id: true });
+
+export type Country = z.infer<typeof countrySchema>;
+export type Area = z.infer<typeof areaSchema>;
+export type City = z.infer<typeof citySchema>;
+export type Village = z.infer<typeof villageSchema>;
+
+export type InsertCountry = z.infer<typeof insertCountrySchema>;
+export type InsertArea = z.infer<typeof insertAreaSchema>;
+export type InsertCity = z.infer<typeof insertCitySchema>;
+export type InsertVillage = z.infer<typeof insertVillageSchema>;

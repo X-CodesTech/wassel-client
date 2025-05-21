@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { TransactionType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +10,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+
+// Define transaction type interface
+interface TransactionType {
+  id: number;
+  name: string;
+  createdAt?: string;
+}
 
 // Form schema
 const formSchema = z.object({
@@ -28,77 +32,12 @@ export default function TransactionTypes() {
   const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionType | null>(null);
   const { toast } = useToast();
 
-  // Fetch all transaction types
-  const { data: transactionTypes = [], isLoading } = useQuery({
-    queryKey: ['/api/transaction-types'],
-    refetchOnWindowFocus: true
-  });
-
-  // Create transaction type mutation
-  const createTransactionTypeMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      return apiRequest("POST", "/api/transaction-types", values);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transaction-types'] });
-      toast({
-        title: "Success",
-        description: "Transaction type created successfully",
-      });
-      setAddModalOpen(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to create transaction type: ${error}`,
-        variant: "destructive"
-      });
-    }
-  });
-
-  // Update transaction type mutation
-  const updateTransactionTypeMutation = useMutation({
-    mutationFn: async ({ id, values }: { id: number, values: FormValues }) => {
-      return apiRequest("PUT", `/api/transaction-types/${id}`, values);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transaction-types'] });
-      toast({
-        title: "Success",
-        description: "Transaction type updated successfully",
-      });
-      setEditModalOpen(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to update transaction type: ${error}`,
-        variant: "destructive"
-      });
-    }
-  });
-
-  // Delete transaction type mutation
-  const deleteTransactionTypeMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/transaction-types/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transaction-types'] });
-      toast({
-        title: "Success",
-        description: "Transaction type deleted successfully",
-      });
-      setDeleteDialogOpen(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to delete transaction type: ${error}`,
-        variant: "destructive"
-      });
-    }
-  });
+  // Sample transaction types data (client-side)
+  const [transactionTypes, setTransactionTypes] = useState<TransactionType[]>([
+    { id: 1, name: "Sale", createdAt: new Date().toISOString() },
+    { id: 2, name: "Purchase", createdAt: new Date().toISOString() },
+    { id: 3, name: "Transfer", createdAt: new Date().toISOString() }
+  ]);
 
   // Form for adding transaction type
   const addForm = useForm<FormValues>({
@@ -127,23 +66,68 @@ export default function TransactionTypes() {
 
   // Handle add transaction type
   const handleAddTransactionType = (values: FormValues) => {
-    createTransactionTypeMutation.mutate(values);
+    // Generate a new ID
+    const newId = Math.max(...transactionTypes.map(t => t.id), 0) + 1;
+
+    // Create new transaction type
+    const newTransactionType: TransactionType = {
+      id: newId,
+      name: values.name,
+      createdAt: new Date().toISOString()
+    };
+
+    // Add to transaction types state
+    setTransactionTypes([...transactionTypes, newTransactionType]);
+
+    // Show success toast
+    toast({
+      title: "Success",
+      description: "Transaction type added successfully",
+    });
+
+    // Close modal and reset form
+    setAddModalOpen(false);
+    addForm.reset();
   };
 
   // Handle edit transaction type
   const handleEditTransactionType = (values: FormValues) => {
     if (selectedTransactionType) {
-      updateTransactionTypeMutation.mutate({
-        id: selectedTransactionType.id,
-        values
+      // Update the transaction type in the state
+      setTransactionTypes(transactionTypes.map(transactionType =>
+        transactionType.id === selectedTransactionType.id
+          ? { ...transactionType, name: values.name }
+          : transactionType
+      ));
+
+      // Show success toast
+      toast({
+        title: "Success",
+        description: "Transaction type updated successfully",
       });
+
+      // Close modal and reset form
+      setEditModalOpen(false);
+      editForm.reset();
     }
   };
 
   // Handle delete transaction type
   const handleDeleteTransactionType = () => {
     if (selectedTransactionType) {
-      deleteTransactionTypeMutation.mutate(selectedTransactionType.id);
+      // Remove the transaction type from state
+      setTransactionTypes(transactionTypes.filter(
+        transactionType => transactionType.id !== selectedTransactionType.id
+      ));
+
+      // Show success toast
+      toast({
+        title: "Success",
+        description: "Transaction type deleted successfully",
+      });
+
+      // Close the delete dialog
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -156,24 +140,20 @@ export default function TransactionTypes() {
             Configure and manage transaction types in the system
           </p>
         </div>
-        <Button 
-          onClick={() => setAddModalOpen(true)} 
+        <Button
+          onClick={() => setAddModalOpen(true)}
           className="flex items-center"
-          style={{ 
-            backgroundColor: '#1e88e5', 
+          style={{
+            backgroundColor: '#1e88e5',
             color: 'white',
-            border: 'none' 
+            border: 'none'
           }}
         >
           <Plus className="mr-2 h-4 w-4" /> Add Transaction Type
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
-        </div>
-      ) : transactionTypes.length === 0 ? (
+      {transactionTypes.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
             <div className="rounded-full bg-blue-100 p-4 mb-4">
@@ -187,7 +167,7 @@ export default function TransactionTypes() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {transactionTypes.map((transactionType: TransactionType) => (
+            {transactionTypes.map((transactionType) => (
             <Card key={transactionType.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="flex justify-between items-center p-6">
@@ -253,9 +233,7 @@ export default function TransactionTypes() {
                 <Button variant="outline" type="button" onClick={() => setAddModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createTransactionTypeMutation.isPending}>
-                  {createTransactionTypeMutation.isPending ? "Saving..." : "Save"}
-                </Button>
+                <Button type="submit">Save</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -290,9 +268,7 @@ export default function TransactionTypes() {
                 <Button variant="outline" type="button" onClick={() => setEditModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={updateTransactionTypeMutation.isPending}>
-                  {updateTransactionTypeMutation.isPending ? "Saving..." : "Save"}
-                </Button>
+                <Button type="submit">Save</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -305,7 +281,7 @@ export default function TransactionTypes() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the transaction type "{selectedTransactionType?.name}". 
+              This will permanently delete the transaction type "{selectedTransactionType?.name}".
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -314,9 +290,8 @@ export default function TransactionTypes() {
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={handleDeleteTransactionType}
-              disabled={deleteTransactionTypeMutation.isPending}
             >
-              {deleteTransactionTypeMutation.isPending ? "Deleting..." : "Delete"}
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

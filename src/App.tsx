@@ -10,16 +10,19 @@ import PriceListDetails from "@/pages/PriceListDetails";
 import CustomerDetails from "@/pages/CustomerDetails";
 import TransactionTypes from "@/pages/TransactionTypes";
 import MainLayout from "@/components/MainLayout";
+import LocationManagement from "@/pages/LocationManagement";
+
 
 function Router() {
   return (
     <MainLayout>
       <Switch>
-        <Route path="/" component={ActivityManagement}/>
-        <Route path="/price-lists" component={PriceLists}/>
-        <Route path="/price-lists/:id" component={PriceListDetails}/>
-        <Route path="/customers/:id" component={CustomerDetails}/>
-        <Route path="/transaction-types" component={TransactionTypes}/>
+        <Route path="/" component={ActivityManagement} />
+        <Route path="/price-lists" component={PriceLists} />
+        <Route path="/price-lists/:id" component={PriceListDetails} />
+        <Route path="/customers/:id" component={CustomerDetails} />
+        <Route path="/transaction-types" component={TransactionTypes} />
+        <Route path="/admin/locations" component={LocationManagement} />
         <Route component={NotFound} />
       </Switch>
     </MainLayout>

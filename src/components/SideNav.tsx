@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { LayoutGroup, motion } from "framer-motion";
-import { List, DollarSign, FileText } from "lucide-react";
+import { List, DollarSign, FileText, MapPin } from "lucide-react";
 
 export default function SideNav() {
   const [location, navigate] = useLocation();
@@ -24,13 +24,28 @@ export default function SideNav() {
       href: "/transaction-types",
       icon: <FileText className="h-5 w-5" />,
       active: location === "/transaction-types"
+    },
+    {
+      name: "Locations",
+      href: "/admin/locations",
+      icon: <MapPin className="h-5 w-5" />,
+      active: location.startsWith("/admin/locations")
+    }
+  ];
+
+  const adminItems = [
+    {
+      name: "Locations",
+      href: "/admin/locations",
+      icon: <MapPin className="h-5 w-5" />,
+      active: location.startsWith("/admin/locations")
     }
   ];
 
   return (
     <div className="w-64 shadow-sm" style={{ backgroundColor: 'var(--sidebar-bg)' }}>
       <div className="h-16 flex items-center px-6 border-b">
-        <h1 className="text-xl font-bold" style={{ 
+        <h1 className="text-xl font-bold" style={{
           background: 'linear-gradient(to right, #1e88e5, #3949ab)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -72,6 +87,7 @@ export default function SideNav() {
               </li>
             ))}
           </ul>
+
         </LayoutGroup>
       </nav>
     </div>

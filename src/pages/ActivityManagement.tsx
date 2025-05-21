@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import ActivityTable from "@/components/ActivityTable";
 import AddActivityForm from "@/components/AddActivityForm";
@@ -7,7 +6,6 @@ import EditActivityForm from "@/components/EditActivityForm";
 import AddSubActivityForm from "@/components/AddSubActivityForm";
 import EditSubActivityForm from "@/components/EditSubActivityForm";
 import SearchFilter from "@/components/SearchFilter";
-import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Activity, SubActivity } from "@/lib/types";
 import {
   Dialog,
@@ -30,7 +28,7 @@ export default function ActivityManagement() {
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [selectedSubActivity, setSelectedSubActivity] = useState<SubActivity | null>(null);
-  
+
   // Modal states
   const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [editActivityOpen, setEditActivityOpen] = useState(false);
@@ -38,72 +36,231 @@ export default function ActivityManagement() {
   const [editSubActivityOpen, setEditSubActivityOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteSubConfirmOpen, setDeleteSubConfirmOpen] = useState(false);
-  
+
   const { toast } = useToast();
 
-  // Fetch all activities
-  const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['/api/activities'],
-    refetchOnWindowFocus: true
-  });
-
-  // Delete activity mutation
-  const deleteActivityMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/activities/${id}`);
+  // Sample client-side activities data
+  const [activities, setActivities] = useState<Activity[]>([
+    {
+      id: 1,
+      actSrl: "X01",
+      activityCode: "PKGN",
+      activityType: "X-work",
+      activityName: "Packaging",
+      isWithItems: true,
+      financeEffect: "Positive Effect",
+      active: true
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-      toast({
-        title: "Success",
-        description: "Activity deleted successfully",
-      });
-      setDeleteConfirmOpen(false);
+    {
+      id: 2,
+      actSrl: "I01",
+      activityCode: "INSR",
+      activityType: "Service",
+      activityName: "Insurance",
+      isWithItems: true,
+      financeEffect: "No Effect",
+      active: true
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to delete activity: ${error}`,
-        variant: "destructive"
-      });
+    {
+      id: 3,
+      actSrl: "M01",
+      activityCode: "MATL",
+      activityType: "Material",
+      activityName: "Material Handling",
+      isWithItems: true,
+      financeEffect: "Positive Effect",
+      active: true
+    },
+    {
+      id: 4,
+      actSrl: "T01",
+      activityCode: "TRNS",
+      activityType: "Transport",
+      activityName: "Transportation",
+      isWithItems: true,
+      financeEffect: "Positive Effect",
+      active: true
+    },
+    {
+      id: 5,
+      actSrl: "F01",
+      activityCode: "FINC",
+      activityType: "Finance",
+      activityName: "Financial Services",
+      isWithItems: false,
+      financeEffect: "Positive Effect",
+      active: true
     }
-  });
+  ]);
 
-  // Delete sub-activity mutation
-  const deleteSubActivityMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/sub-activities/${id}`);
+  // Sample client-side sub-activities data
+  const [subActivities, setSubActivities] = useState<SubActivity[]>([
+    {
+      id: 1,
+      parentId: 1,
+      itmSrl: 1001,
+      itemCode: "BOX",
+      itemName: "Box Packaging (Standard)",
+      activityName: "Packaging",
+      activityType: "X-work",
+      pricingMethod: "Fixed",
+      active: true
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-      if (selectedActivity) {
-        queryClient.invalidateQueries({ queryKey: ['/api/activities', selectedActivity.id, 'sub-activities'] });
-      }
-      toast({
-        title: "Success",
-        description: "Sub-activity deleted successfully",
-      });
-      setDeleteSubConfirmOpen(false);
+    {
+      id: 2,
+      parentId: 1,
+      itmSrl: 1002,
+      itemCode: "WRAP",
+      itemName: "Wrap Packaging (Premium)",
+      activityName: "Packaging",
+      activityType: "X-work",
+      pricingMethod: "Variable",
+      active: true
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to delete sub-activity: ${error}`,
-        variant: "destructive"
-      });
+    {
+      id: 3,
+      parentId: 1,
+      itmSrl: 1003,
+      itemCode: "LABL",
+      itemName: "Label Printing",
+      activityName: "Packaging",
+      activityType: "X-work",
+      pricingMethod: "Fixed",
+      active: true
+    },
+    {
+      id: 4,
+      parentId: 2,
+      itmSrl: 2001,
+      itemCode: "BINS",
+      itemName: "Basic Insurance",
+      activityName: "Insurance",
+      activityType: "Service",
+      pricingMethod: "Percentage",
+      active: true
+    },
+    {
+      id: 5,
+      parentId: 2,
+      itmSrl: 2002,
+      itemCode: "PINS",
+      itemName: "Premium Insurance",
+      activityName: "Insurance",
+      activityType: "Service",
+      pricingMethod: "Percentage",
+      active: true
+    },
+    {
+      id: 6,
+      parentId: 3,
+      itmSrl: 3001,
+      itemCode: "WOOD",
+      itemName: "Wood Material",
+      activityName: "Material Handling",
+      activityType: "Material",
+      pricingMethod: "Fixed",
+      active: true
+    },
+    {
+      id: 7,
+      parentId: 3,
+      itmSrl: 3002,
+      itemCode: "PLST",
+      itemName: "Plastic Material",
+      activityName: "Material Handling",
+      activityType: "Material",
+      pricingMethod: "Fixed",
+      active: true
+    },
+    {
+      id: 8,
+      parentId: 4,
+      itmSrl: 4001,
+      itemCode: "LCDL",
+      itemName: "Local Delivery",
+      activityName: "Transportation",
+      activityType: "Transport",
+      pricingMethod: "Variable",
+      active: true
+    },
+    {
+      id: 9,
+      parentId: 4,
+      itmSrl: 4002,
+      itemCode: "INTL",
+      itemName: "International Delivery",
+      activityName: "Transportation",
+      activityType: "Transport",
+      pricingMethod: "Variable",
+      active: true
+    },
+    {
+      id: 10,
+      parentId: 5,
+      itmSrl: 5001,
+      itemCode: "INIT",
+      itemName: "Initial Payment",
+      activityName: "Financial Services",
+      activityType: "Finance",
+      pricingMethod: "Percentage",
+      active: true
+    },
+    {
+      id: 11,
+      parentId: 5,
+      itmSrl: 5002,
+      itemCode: "FINL",
+      itemName: "Final Payment",
+      activityName: "Financial Services",
+      activityType: "Finance",
+      pricingMethod: "Percentage",
+      active: true
     }
-  });
+  ]);
+
+  // Delete activity function
+  const deleteActivity = (id: number) => {
+    // Delete all sub-activities of the activity first
+    setSubActivities(subActivities.filter(subActivity => subActivity.parentId !== id));
+
+    // Then delete the activity itself
+    setActivities(activities.filter(activity => activity.id !== id));
+
+    // Show success toast
+    toast({
+      title: "Success",
+      description: "Activity deleted successfully",
+    });
+
+    // Close delete confirmation dialog
+    setDeleteConfirmOpen(false);
+  };
+
+  // Delete sub-activity function
+  const deleteSubActivity = (id: number) => {
+    // Delete the sub-activity
+    setSubActivities(subActivities.filter(subActivity => subActivity.id !== id));
+
+    // Show success toast
+    toast({
+      title: "Success",
+      description: "Sub-activity deleted successfully",
+    });
+
+    // Close delete confirmation dialog
+    setDeleteSubConfirmOpen(false);
+  };
 
   // Filter activities based on search term and filter type
   const filteredActivities = activities.filter((activity: Activity) => {
-    const matchesSearch = 
+    const matchesSearch =
       activity.actSrl.toLowerCase().includes(searchTerm.toLowerCase()) ||
       activity.activityCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
       activity.activityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       activity.activityType.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     if (!filterType) return matchesSearch;
-    
+
     switch (filterType) {
       case "activityType":
         return matchesSearch && activity.activityType === "X-work";
@@ -136,7 +293,7 @@ export default function ActivityManagement() {
   // Confirm delete activity
   const confirmDeleteActivity = () => {
     if (selectedActivity) {
-      deleteActivityMutation.mutate(selectedActivity.id);
+      deleteActivity(selectedActivity.id);
     }
   };
 
@@ -155,7 +312,7 @@ export default function ActivityManagement() {
   // Confirm delete sub-activity
   const confirmDeleteSubActivity = () => {
     if (selectedSubActivity) {
-      deleteSubActivityMutation.mutate(selectedSubActivity.id);
+      deleteSubActivity(selectedSubActivity.id);
     }
   };
 
@@ -163,6 +320,54 @@ export default function ActivityManagement() {
   const handleAddSubActivity = (activity: Activity) => {
     setSelectedActivity(activity);
     setAddSubActivityOpen(true);
+  };
+
+  // Add activity handler
+  const handleAddActivity = (newActivity: Activity) => {
+    setActivities([...activities, newActivity]);
+    setAddActivityOpen(false);
+
+    toast({
+      title: "Success",
+      description: "Activity added successfully",
+    });
+  };
+
+  // Update activity handler
+  const handleUpdateActivity = (updatedActivity: Activity) => {
+    setActivities(activities.map(activity =>
+      activity.id === updatedActivity.id ? updatedActivity : activity
+    ));
+    setEditActivityOpen(false);
+
+    toast({
+      title: "Success",
+      description: "Activity updated successfully",
+    });
+  };
+
+  // Add sub-activity handler
+  const handleAddSubActivity2 = (newSubActivity: SubActivity) => {
+    setSubActivities([...subActivities, newSubActivity]);
+    setAddSubActivityOpen(false);
+
+    toast({
+      title: "Success",
+      description: "Sub-activity added successfully",
+    });
+  };
+
+  // Update sub-activity handler
+  const handleUpdateSubActivity = (updatedSubActivity: SubActivity) => {
+    setSubActivities(subActivities.map(subActivity =>
+      subActivity.id === updatedSubActivity.id ? updatedSubActivity : subActivity
+    ));
+    setEditSubActivityOpen(false);
+
+    toast({
+      title: "Success",
+      description: "Sub-activity updated successfully",
+    });
   };
 
   return (
@@ -174,11 +379,11 @@ export default function ActivityManagement() {
             Manage and organize activities and sub-activities in the system
           </p>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
             <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
-              <SearchFilter 
+              <SearchFilter
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
                 filterType={filterType}
@@ -187,8 +392,8 @@ export default function ActivityManagement() {
               />
             </div>
           </div>
-          
-          <ActivityTable 
+
+          <ActivityTable
             activities={filteredActivities}
             expandedActivity={expandedActivity}
             onToggleExpand={handleToggleExpand}
@@ -197,6 +402,7 @@ export default function ActivityManagement() {
             onAddSubActivity={handleAddSubActivity}
             onEditSubActivity={handleEditSubActivity}
             onDeleteSubActivity={handleDeleteSubActivity}
+            subActivities={subActivities}
           />
         </div>
       </div>
@@ -204,7 +410,10 @@ export default function ActivityManagement() {
       {/* Add Activity Dialog */}
       <Dialog open={addActivityOpen} onOpenChange={setAddActivityOpen}>
         <DialogContent className="sm:max-w-[425px]">
-          <AddActivityForm onClose={() => setAddActivityOpen(false)} />
+          <AddActivityForm
+            onClose={() => setAddActivityOpen(false)}
+            onAdd={handleAddActivity}
+          />
         </DialogContent>
       </Dialog>
 
@@ -212,9 +421,10 @@ export default function ActivityManagement() {
       <Dialog open={editActivityOpen} onOpenChange={setEditActivityOpen}>
         <DialogContent className="sm:max-w-[425px]">
           {selectedActivity && (
-            <EditActivityForm 
-              activity={selectedActivity} 
-              onClose={() => setEditActivityOpen(false)} 
+            <EditActivityForm
+              activity={selectedActivity}
+              onClose={() => setEditActivityOpen(false)}
+              onUpdate={handleUpdateActivity}
             />
           )}
         </DialogContent>
@@ -224,9 +434,10 @@ export default function ActivityManagement() {
       <Dialog open={addSubActivityOpen} onOpenChange={setAddSubActivityOpen}>
         <DialogContent className="sm:max-w-[425px]">
           {selectedActivity && (
-            <AddSubActivityForm 
-              parentActivity={selectedActivity} 
-              onClose={() => setAddSubActivityOpen(false)} 
+            <AddSubActivityForm
+              parentActivity={selectedActivity}
+              onClose={() => setAddSubActivityOpen(false)}
+              onAdd={handleAddSubActivity2}
             />
           )}
         </DialogContent>
@@ -236,9 +447,10 @@ export default function ActivityManagement() {
       <Dialog open={editSubActivityOpen} onOpenChange={setEditSubActivityOpen}>
         <DialogContent className="sm:max-w-[425px]">
           {selectedSubActivity && (
-            <EditSubActivityForm 
-              subActivity={selectedSubActivity} 
-              onClose={() => setEditSubActivityOpen(false)} 
+            <EditSubActivityForm
+              subActivity={selectedSubActivity}
+              onClose={() => setEditSubActivityOpen(false)}
+              onUpdate={handleUpdateSubActivity}
             />
           )}
         </DialogContent>

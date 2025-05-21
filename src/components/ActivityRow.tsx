@@ -1,13 +1,12 @@
 import { Activity, SubActivity } from "@/lib/types";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import SubActivityTable from "@/components/SubActivityTable";
-import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface ActivityRowProps {
   activity: Activity;
@@ -18,6 +17,7 @@ interface ActivityRowProps {
   onAddSubActivity: (activity: Activity) => void;
   onEditSubActivity: (subActivity: SubActivity) => void;
   onDeleteSubActivity: (subActivity: SubActivity) => void;
+  subActivities?: SubActivity[];
 }
 
 export default function ActivityRow({
@@ -28,59 +28,34 @@ export default function ActivityRow({
   onDeleteActivity,
   onAddSubActivity,
   onEditSubActivity,
-  onDeleteSubActivity
+  onDeleteSubActivity,
+  subActivities = []
 }: ActivityRowProps) {
   const { toast } = useToast();
+  const [active, setActive] = useState(activity.active);
 
-  // Fetch sub-activities when the row is expanded
-  const { data: activityWithSubs, isLoading: isLoadingSubActivities } = useQuery({
-    queryKey: ['/api/activities', activity.id, 'subactivities'],
-    enabled: isExpanded,
-    staleTime: 0, // Force refetch when expanded
-    refetchOnWindowFocus: true,
-  });
+  // Handle toggle active status client-side
+  const handleToggleActive = (isActive: boolean) => {
+    setActive(isActive);
 
-  // Toggle active status mutation
-  const toggleActiveMutation = useMutation({
-    mutationFn: async (active: boolean) => {
-      await apiRequest("PUT", `/api/activities/${activity.id}`, { active });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-      toast({
-        title: `Activity ${activity.active ? 'deactivated' : 'activated'}`,
-        description: `${activity.activityName} has been ${activity.active ? 'deactivated' : 'activated'}.`,
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to update activity status: ${error}`,
-        variant: "destructive"
-      });
-    }
-  });
+    // Update the activity's active status - in a real app, this would be part of a store
+    activity.active = isActive;
 
-  // Handle toggle active status
-  const handleToggleActive = (active: boolean) => {
-    toggleActiveMutation.mutate(active);
+    toast({
+      title: `Activity ${isActive ? 'activated' : 'deactivated'}`,
+      description: `${activity.activityName} has been ${isActive ? 'activated' : 'deactivated'}.`,
+    });
   };
-
-  // Safely access sub-activities from the query response
-  const subActivities: SubActivity[] = 
-    activityWithSubs && typeof activityWithSubs === 'object' && activityWithSubs !== null && 'subActivities' in activityWithSubs
-      ? (activityWithSubs.subActivities as SubActivity[])
-      : [];
 
   return (
     <>
       <TableRow className="hover:bg-gray-50 cursor-pointer">
         <TableCell>
-          <button 
+          <button
             className="flex items-center space-x-2 focus:outline-none"
             onClick={() => onToggleExpand(activity.actSrl)}
           >
-            <ChevronRight 
+            <ChevronRight
               className={cn(
                 "h-5 w-5 text-primary transition-transform duration-200",
                 isExpanded && "transform rotate-90"
@@ -103,16 +78,16 @@ export default function ActivityRow({
           </span>
         </TableCell>
         <TableCell>
-          <Switch 
-            checked={activity.active} 
-            onCheckedChange={handleToggleActive} 
+          <Switch
+            checked={active}
+            onCheckedChange={handleToggleActive}
             aria-label="Toggle activity status"
           />
         </TableCell>
         <TableCell className="text-right">
           <div className="flex justify-end space-x-2">
-            <Button 
-              variant="link" 
+            <Button
+              variant="link"
               className="text-indigo-600 hover:text-indigo-900"
               onClick={(e) => {
                 e.stopPropagation();
@@ -121,8 +96,8 @@ export default function ActivityRow({
             >
               Edit
             </Button>
-            <Button 
-              variant="link" 
+            <Button
+              variant="link"
               className="text-red-600 hover:text-red-900"
               onClick={(e) => {
                 e.stopPropagation();
@@ -139,16 +114,15 @@ export default function ActivityRow({
         <TableRow className="bg-gray-50">
           <TableCell colSpan={8} className="px-0 py-0">
             <div className="px-4 py-2">
-              <SubActivityTable 
+              <SubActivityTable
                 subActivities={subActivities}
-                isLoading={isLoadingSubActivities}
                 onEditSubActivity={onEditSubActivity}
                 onDeleteSubActivity={onDeleteSubActivity}
               />
               <div className="mt-3 ml-6">
                 {activity.isWithItems ? (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     className="text-indigo-700 bg-indigo-100 hover:bg-indigo-200 border-transparent"
                     onClick={() => onAddSubActivity(activity)}

@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { Activity, SubActivity } from "@/lib/types";
-import { useQuery } from "@tanstack/react-query";
 import ActivityRow from "@/components/ActivityRow";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { ArrowUpDown } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 
 type SortField = 'actSrl' | 'activityCode' | 'activityType' | 'activityName' | 'isWithItems' | 'financeEffect' | 'active';
 type SortDirection = 'asc' | 'desc';
@@ -13,25 +10,25 @@ type SortDirection = 'asc' | 'desc';
 interface ActivityTableProps {
   activities: Activity[];
   expandedActivity: string | null;
-  isLoading: boolean;
   onToggleExpand: (actSrl: string) => void;
   onEditActivity: (activity: Activity) => void;
   onDeleteActivity: (activity: Activity) => void;
   onAddSubActivity: (activity: Activity) => void;
   onEditSubActivity: (subActivity: SubActivity) => void;
   onDeleteSubActivity: (subActivity: SubActivity) => void;
+  subActivities?: SubActivity[];
 }
 
 export default function ActivityTable({
   activities,
   expandedActivity,
-  isLoading,
   onToggleExpand,
   onEditActivity,
   onDeleteActivity,
   onAddSubActivity,
   onEditSubActivity,
-  onDeleteSubActivity
+  onDeleteSubActivity,
+  subActivities = []
 }: ActivityTableProps) {
   const [sortField, setSortField] = useState<SortField>('actSrl');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -50,54 +47,19 @@ export default function ActivityTable({
     const fieldB = b[sortField];
 
     if (typeof fieldA === 'boolean' && typeof fieldB === 'boolean') {
-      return sortDirection === 'asc' 
-        ? Number(fieldA) - Number(fieldB) 
+      return sortDirection === 'asc'
+        ? Number(fieldA) - Number(fieldB)
         : Number(fieldB) - Number(fieldA);
     }
 
     if (typeof fieldA === 'string' && typeof fieldB === 'string') {
-      return sortDirection === 'asc' 
-        ? fieldA.localeCompare(fieldB) 
+      return sortDirection === 'asc'
+        ? fieldA.localeCompare(fieldB)
         : fieldB.localeCompare(fieldA);
     }
 
     return 0;
   });
-
-  if (isLoading) {
-    return (
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ACTsrl</TableHead>
-              <TableHead>Activity Code</TableHead>
-              <TableHead>Activity Type</TableHead>
-              <TableHead>Activity Name</TableHead>
-              <TableHead>Is with Items</TableHead>
-              <TableHead>Finance Effect</TableHead>
-              <TableHead>Active</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {[...Array(5)].map((_, i) => (
-              <TableRow key={i}>
-                <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-28" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-32" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-12" /></TableCell>
-                <TableCell><Skeleton className="h-6 w-24 ml-auto" /></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    );
-  }
 
   return (
     <div className="overflow-x-auto">
@@ -168,6 +130,7 @@ export default function ActivityTable({
                 onAddSubActivity={onAddSubActivity}
                 onEditSubActivity={onEditSubActivity}
                 onDeleteSubActivity={onDeleteSubActivity}
+                subActivities={subActivities.filter(subActivity => subActivity.parentId === activity.id)}
               />
             ))
           )}
