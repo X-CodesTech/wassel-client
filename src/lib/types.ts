@@ -151,3 +151,39 @@ export const orderSchema = z.object({
 
 export const insertOrderSchema = orderSchema.omit({ id: true, createdAt: true });
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
+
+// Vendor interface and schemas
+export interface Vendor {
+  id: number;
+  name: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string;
+  category: string;
+  status: 'active' | 'inactive';
+  contractStartDate: string;
+  contractEndDate: string;
+  rating: number;
+  totalOrders: number;
+  createdAt: string;
+}
+
+export const vendorSchema = z.object({
+  id: z.number().optional(),
+  name: z.string().min(1, "Vendor name is required"),
+  contactPerson: z.string().min(1, "Contact person is required"),
+  email: z.string().email("Valid email address is required"),
+  phone: z.string().min(1, "Phone number is required"),
+  address: z.string().min(1, "Address is required"),
+  category: z.string().min(1, "Category is required"),
+  status: z.enum(['active', 'inactive']).default('active'),
+  contractStartDate: z.string().min(1, "Contract start date is required"),
+  contractEndDate: z.string().min(1, "Contract end date is required"),
+  rating: z.number().min(0).max(5).default(0),
+  totalOrders: z.number().default(0),
+  createdAt: z.string().optional(),
+});
+
+export const insertVendorSchema = vendorSchema.omit({ id: true, createdAt: true });
+export type InsertVendor = z.infer<typeof insertVendorSchema>;

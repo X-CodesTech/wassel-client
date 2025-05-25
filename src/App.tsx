@@ -11,8 +11,10 @@ import CustomerDetails from "@/pages/CustomerDetails";
 import TransactionTypes from "@/pages/TransactionTypes";
 import LocationManagement from "@/pages/LocationManagement";
 import OrdersList from "@/pages/OrdersList";
+import CreateOrder from "@/pages/CreateOrder";
+import VendorsList from "@/pages/VendorsList";
+import VendorDetails from "@/pages/VendorDetails";
 import MainLayout from "@/components/MainLayout";
-import CreateOrder from "./pages/CreateOrder";
 
 function Router() {
   return (
@@ -25,6 +27,8 @@ function Router() {
         <Route path="/price-lists/:id" component={PriceListDetails}/>
         <Route path="/customers/:id" component={CustomerDetails}/>
         <Route path="/transaction-types" component={TransactionTypes}/>
+        <Route path="/vendors" component={VendorsList}/>
+        <Route path="/vendors/:id" component={VendorDetails}/>
         <Route path="/admin/locations" component={LocationManagement}/>
         <Route component={NotFound} />
       </Switch>
