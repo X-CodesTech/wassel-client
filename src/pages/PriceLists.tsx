@@ -56,7 +56,7 @@ export default function PriceLists() {
   // Get location to check for URL parameters
   const [location] = useLocation();
   const { toast } = useToast();
-
+  
   // Check if we have a tab parameter in the URL
   const getInitialTab = () => {
     if (location.includes('?')) {
@@ -68,7 +68,7 @@ export default function PriceLists() {
   };
 
   const [activeTab, setActiveTab] = useState(getInitialTab());
-
+  
   // Update the active tab when URL changes
   useEffect(() => {
     setActiveTab(getInitialTab());
@@ -76,11 +76,11 @@ export default function PriceLists() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [, setLocation] = useLocation();
-  const [selectedSubActivities, setSelectedSubActivities] = useState<{
-    id: number,
-    name: string,
+  const [selectedSubActivities, setSelectedSubActivities] = useState<{ 
+    id: number, 
+    name: string, 
     price: string,
-    selected: boolean
+    selected: boolean 
   }[]>([]);
 
   // Sample sub-activities data
@@ -261,11 +261,11 @@ export default function PriceLists() {
 
     // Add it to the list
     setPriceLists([...priceLists, newPriceList]);
-
+    
     // Reset form and close modal
     form.reset();
     setModalOpen(false);
-
+    
     // Show success toast
     toast({
       title: "Success",
@@ -274,16 +274,16 @@ export default function PriceLists() {
   };
 
   const handleCheckboxChange = (id: number, checked: boolean) => {
-    setSelectedSubActivities(prev =>
-      prev.map(item =>
+    setSelectedSubActivities(prev => 
+      prev.map(item => 
         item.id === id ? { ...item, selected: checked } : item
       )
     );
   };
 
   const handlePriceChange = (id: number, price: string) => {
-    setSelectedSubActivities(prev =>
-      prev.map(item =>
+    setSelectedSubActivities(prev => 
+      prev.map(item => 
         item.id === id ? { ...item, price } : item
       )
     );
@@ -300,7 +300,7 @@ export default function PriceLists() {
 
     // Update the form items - even if empty
     form.setValue("items", selectedItems);
-
+    
     // Submit the form
     onSubmit(form.getValues());
   });
@@ -314,9 +314,9 @@ export default function PriceLists() {
         </p>
       </div>
 
-      <Tabs
-        defaultValue="price-lists"
-        className="w-full"
+      <Tabs 
+        defaultValue="price-lists" 
+        className="w-full" 
         value={activeTab}
         onValueChange={(value) => {
           setActiveTab(value);
@@ -325,15 +325,15 @@ export default function PriceLists() {
         }}
       >
         <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger
-            value="price-lists"
+          <TabsTrigger 
+            value="price-lists" 
             className="flex items-center gap-2"
           >
             <DollarSign className="h-4 w-4" />
             <span>Price Lists</span>
           </TabsTrigger>
-          <TabsTrigger
-            value="customers"
+          <TabsTrigger 
+            value="customers" 
             className="flex items-center gap-2"
           >
             <Users className="h-4 w-4" />
@@ -345,13 +345,13 @@ export default function PriceLists() {
         <TabsContent value="price-lists" className="space-y-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium">Your Price Lists</h3>
-            <Button
+            <Button 
               onClick={() => setModalOpen(true)}
               className="flex items-center gap-2"
-              style={{
-                backgroundColor: '#1e88e5',
+              style={{ 
+                backgroundColor: '#1e88e5', 
                 color: 'white',
-                border: 'none'
+                border: 'none' 
               }}
             >
               <Plus className="h-4 w-4" />
@@ -359,10 +359,10 @@ export default function PriceLists() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6">
             {/* Price list cards */}
             {priceLists.length === 0 ? (
-              <Card className="col-span-3">
+              <Card className="col-span-full">
                 <CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
                   <div className="rounded-full bg-blue-100 p-4 mb-4">
                     <FileText className="h-8 w-8 text-blue-600" />
@@ -375,58 +375,64 @@ export default function PriceLists() {
               </Card>
             ) : (
               priceLists.map((priceList) => (
-                <Card
-                  key={priceList.id}
-                  className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow flex flex-col h-[280px]"
+                <Card 
+                  key={priceList.id} 
+                  className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1 flex flex-col h-[320px] sm:h-[300px] lg:h-[280px]"
                   onClick={() => setLocation(`/price-lists/${priceList.id}`)}
                 >
-                  <CardHeader className="pb-2">
-                    <CardTitle>{priceList.name}</CardTitle>
-                    <CardDescription className="line-clamp-2 h-10">
+                  <CardHeader className="pb-3 px-4 sm:px-6">
+                    <CardTitle className="text-base sm:text-lg line-clamp-1">{priceList.name}</CardTitle>
+                    <CardDescription className="line-clamp-2 h-10 text-xs sm:text-sm">
                       {priceList.description}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-grow overflow-hidden">
+                  <CardContent className="flex-grow overflow-hidden px-4 sm:px-6">
                     <div className="space-y-2">
-                      <div className="text-sm font-medium text-gray-500">
+                      <div className="text-xs sm:text-sm font-medium text-gray-500">
                         {priceList.items.length} items
                       </div>
                       <div className="border-t pt-2">
-                        <div className="flex justify-between text-sm mb-1">
+                        <div className="flex justify-between text-xs sm:text-sm mb-1">
                           <span className="font-medium">Sample Items:</span>
                         </div>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                          {priceList.items.slice(0, 3).map((item) => (
-                            <li key={item.id} className="flex justify-between">
-                              <span className="truncate max-w-[120px]">{item.subActivityName}</span>
-                              <span className="font-medium">${item.price.toFixed(2)}</span>
+                        <ul className="text-xs sm:text-sm text-gray-600 space-y-1">
+                          {priceList.items.slice(0, 2).map((item) => (
+                            <li key={item.id} className="flex justify-between items-center gap-2">
+                              <span className="truncate flex-1 min-w-0">{item.subActivityName}</span>
+                              <span className="font-medium text-green-600 whitespace-nowrap">${item.price.toFixed(2)}</span>
                             </li>
                           ))}
-                          {priceList.items.length > 3 && (
+                          {priceList.items.length > 2 && (
                             <li className="text-blue-600 text-xs">
-                              + {priceList.items.length - 3} more items
+                              + {priceList.items.length - 2} more items
+                            </li>
+                          )}
+                          {priceList.items.length === 0 && (
+                            <li className="text-gray-400 italic text-xs">
+                              No items added yet
                             </li>
                           )}
                         </ul>
                       </div>
                     </div>
                   </CardContent>
-                  <CardFooter className="flex justify-between pt-2 pb-4 mt-auto border-t">
-                    <Button
-                      variant="outline"
+                  <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between pt-2 pb-4 mt-auto border-t px-4 sm:px-6">
+                    <Button 
+                      variant="outline" 
                       size="sm"
+                      className="w-full sm:w-auto text-xs sm:text-sm"
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent card click
                         setLocation(`/price-lists/edit/${priceList.id}`);
                       }}
                     >
-                      <Edit className="h-4 w-4 mr-2" />
+                      <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Edit
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-500 hover:text-red-600"
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full sm:w-auto text-xs sm:text-sm text-red-500 hover:text-red-600 hover:border-red-300"
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent card click
                         const confirmed = window.confirm(`Are you sure you want to delete "${priceList.name}"?`);
@@ -439,7 +445,7 @@ export default function PriceLists() {
                         }
                       }}
                     >
-                      <Trash className="h-4 w-4 mr-2" />
+                      <Trash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Delete
                     </Button>
                   </CardFooter>
@@ -449,7 +455,7 @@ export default function PriceLists() {
 
             {/* Add price list card */}
             {priceLists.length > 0 && (
-              <Card
+              <Card 
                 className="flex flex-col items-center justify-center h-[280px] border-dashed cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => setModalOpen(true)}
               >
@@ -487,7 +493,7 @@ export default function PriceLists() {
                     lastUpdated: now
                   }));
                   setCustomers(updatedCustomers);
-
+                  
                   // Show success message
                   toast({
                     title: "Success",
@@ -496,10 +502,10 @@ export default function PriceLists() {
                 }}
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 12C4 7.58172 7.58172 4 12 4C15.0736 4 17.7548 5.77409 19.1446 8.33116" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M20 12C20 16.4183 16.4183 20 12 20C8.92638 20 6.24516 18.2259 4.85541 15.6688" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M16.9999 8L19.9999 8L19.9999 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M7 16L4 16L4 19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M4 12C4 7.58172 7.58172 4 12 4C15.0736 4 17.7548 5.77409 19.1446 8.33116" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M20 12C20 16.4183 16.4183 20 12 20C8.92638 20 6.24516 18.2259 4.85541 15.6688" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M16.9999 8L19.9999 8L19.9999 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M7 16L4 16L4 19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 <span>Refresh</span>
               </Button>
@@ -508,8 +514,8 @@ export default function PriceLists() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {customers.map((customer) => (
-              <Card
-                key={customer.id}
+              <Card 
+                key={customer.id} 
                 className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow flex flex-col h-[280px]"
                 onClick={() => setLocation(`/customers/${customer.id}`)}
               >
@@ -555,8 +561,8 @@ export default function PriceLists() {
                   <div className="text-xs text-gray-500">
                     Updated: {new Date(customer.lastUpdated).toLocaleDateString()}
                   </div>
-                  <Button
-                    variant="outline"
+                  <Button 
+                    variant="outline" 
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation(); // Prevent card click
@@ -581,7 +587,7 @@ export default function PriceLists() {
               Create a new price list for your activities and services.
             </DialogDescription>
           </DialogHeader>
-
+          
           <Form {...form}>
             <form onSubmit={handleFormSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-4">
@@ -598,7 +604,7 @@ export default function PriceLists() {
                     </FormItem>
                   )}
                 />
-
+                
                 <FormField
                   control={form.control}
                   name="description"
@@ -616,7 +622,7 @@ export default function PriceLists() {
                   )}
                 />
               </div>
-
+              
               <div>
                 <h4 className="text-sm font-medium mb-2">Select Sub-Activities and Set Prices</h4>
                 <div className="border rounded-md p-3 max-h-[300px] overflow-y-auto">
@@ -634,7 +640,7 @@ export default function PriceLists() {
                           <td className="py-2 px-2">
                             <Checkbox
                               checked={item.selected}
-                              onCheckedChange={(checked) =>
+                              onCheckedChange={(checked) => 
                                 handleCheckboxChange(item.id, checked === true)
                               }
                             />
@@ -657,7 +663,7 @@ export default function PriceLists() {
                   </table>
                 </div>
               </div>
-
+              
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setModalOpen(false)}>
                   Cancel
