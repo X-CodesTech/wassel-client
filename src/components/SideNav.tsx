@@ -1,78 +1,137 @@
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { LayoutGroup, motion } from "framer-motion";
-import { List, DollarSign, FileText, MapPin } from "lucide-react";
+import { 
+  Plus, 
+  List, 
+  Package, 
+  Settings, 
+  Users, 
+  DollarSign, 
+  Building2, 
+  MapPin, 
+  Activity, 
+  FileText, 
+  CreditCard, 
+  Receipt 
+} from "lucide-react";
 
 export default function SideNav() {
   const [location, navigate] = useLocation();
 
-  const navItems = [
+  const mainItems = [
     {
-      name: "Activities",
-      href: "/",
+      name: "Order list",
+      href: "/orders",
       icon: <List className="h-5 w-5" />,
-      active: location === "/"
+      active: location === "/orders"
     },
     {
-      name: "Price Lists",
+      name: "Shipments",
+      href: "/shipments",
+      icon: <Package className="h-5 w-5" />,
+      active: location === "/shipments"
+    },
+    {
+      name: "Shipment list",
+      href: "/shipment-list",
+      icon: <List className="h-5 w-5" />,
+      active: location === "/shipment-list"
+    }
+  ];
+
+  const settingsItems = [
+    {
+      name: "Users",
+      href: "/users",
+      icon: <Users className="h-5 w-5" />,
+      active: location === "/users"
+    },
+    {
+      name: "Pricelists",
       href: "/price-lists",
       icon: <DollarSign className="h-5 w-5" />,
       active: location === "/price-lists"
     },
     {
-      name: "Transaction Types",
-      href: "/transaction-types",
-      icon: <FileText className="h-5 w-5" />,
-      active: location === "/transaction-types"
+      name: "Vendor list",
+      href: "/vendors",
+      icon: <Building2 className="h-5 w-5" />,
+      active: location === "/vendors"
+    },
+    {
+      name: "Customer list",
+      href: "/customers",
+      icon: <Users className="h-5 w-5" />,
+      active: location.startsWith("/customers")
     },
     {
       name: "Locations",
       href: "/admin/locations",
       icon: <MapPin className="h-5 w-5" />,
       active: location.startsWith("/admin/locations")
+    },
+    {
+      name: "Activities",
+      href: "/",
+      icon: <Activity className="h-5 w-5" />,
+      active: location === "/"
+    },
+    {
+      name: "Type of transaction",
+      href: "/transaction-types",
+      icon: <FileText className="h-5 w-5" />,
+      active: location === "/transaction-types"
     }
   ];
 
-  const adminItems = [
+  const paymentItems = [
     {
-      name: "Locations",
-      href: "/admin/locations",
-      icon: <MapPin className="h-5 w-5" />,
-      active: location.startsWith("/admin/locations")
+      name: "Payment Requests",
+      href: "/payment-requests",
+      icon: <CreditCard className="h-5 w-5" />,
+      active: location === "/payment-requests"
+    },
+    {
+      name: "Invoices",
+      href: "/invoices",
+      icon: <Receipt className="h-5 w-5" />,
+      active: location === "/invoices"
     }
   ];
 
   return (
-    <div className="w-64 shadow-sm" style={{ backgroundColor: 'var(--sidebar-bg)' }}>
-      <div className="h-16 flex items-center px-6 border-b">
-        <h1 className="text-xl font-bold" style={{
-          background: 'linear-gradient(to right, #1e88e5, #3949ab)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text'
-        }}>
-          FMS System
-        </h1>
+    <div className="w-64 bg-blue-600 shadow-lg">
+      {/* Create New Order Button */}
+      <div className="p-4">
+        <button 
+          onClick={() => navigate('/create-order')}
+          className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-medium py-3 px-4 rounded-md flex items-center justify-center transition-colors"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Create new order
+        </button>
       </div>
-      <nav className="mt-6 px-4">
+      
+      <nav className="px-0">
         <LayoutGroup>
-          <ul className="space-y-1">
-            {navItems.map((item) => (
+          {/* Main Navigation Items */}
+          <ul className="space-y-0">
+            {mainItems.map((item) => (
               <li key={item.name}>
                 <div
                   onClick={() => navigate(item.href)}
                   className={cn(
-                    "flex items-center px-4 py-3 text-sm font-medium rounded-md relative cursor-pointer",
+                    "flex items-center px-6 py-4 text-white font-medium cursor-pointer relative transition-colors",
                     item.active
-                      ? "text-[#1e88e5]"
-                      : "text-gray-600 hover:text-[#1e88e5] hover:bg-[#f0f7ff]"
+                      ? "bg-blue-700"
+                      : "hover:bg-blue-700"
                   )}
                 >
                   {item.active && (
                     <motion.div
                       layoutId="sidebar-highlight"
-                      className="absolute inset-0 rounded-md z-0"
-                      style={{ backgroundColor: '#e3f2fd' }}
+                      className="absolute inset-0 bg-blue-700 z-0"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -87,7 +146,80 @@ export default function SideNav() {
               </li>
             ))}
           </ul>
+          
+          {/* Settings Section */}
+          <div className="mt-6">
+            <div className="px-6 py-3">
+              <div className="flex items-center text-white font-medium">
+                <Settings className="h-5 w-5 mr-3" />
+                <span>Settings</span>
+              </div>
+            </div>
+            <ul className="space-y-0 ml-6">
+              {settingsItems.map((item) => (
+                <li key={item.name}>
+                  <div
+                    onClick={() => navigate(item.href)}
+                    className={cn(
+                      "flex items-center px-6 py-3 text-white cursor-pointer relative transition-colors",
+                      item.active
+                        ? "bg-blue-700"
+                        : "hover:bg-blue-700"
+                    )}
+                  >
+                    {item.active && (
+                      <motion.div
+                        layoutId="settings-sidebar-highlight"
+                        className="absolute inset-0 bg-blue-700 z-0"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      />
+                    )}
+                    <span className="z-10 flex items-center">
+                      {item.icon}
+                      <span className="ml-3">{item.name}</span>
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
 
+          {/* Payment Section */}
+          <div className="mt-6">
+            <ul className="space-y-0">
+              {paymentItems.map((item) => (
+                <li key={item.name}>
+                  <div
+                    onClick={() => navigate(item.href)}
+                    className={cn(
+                      "flex items-center px-6 py-4 text-white font-medium cursor-pointer relative transition-colors",
+                      item.active
+                        ? "bg-blue-700"
+                        : "hover:bg-blue-700"
+                    )}
+                  >
+                    {item.active && (
+                      <motion.div
+                        layoutId="payment-sidebar-highlight"
+                        className="absolute inset-0 bg-blue-700 z-0"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      />
+                    )}
+                    <span className="z-10 flex items-center">
+                      {item.icon}
+                      <span className="ml-3">{item.name}</span>
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </LayoutGroup>
       </nav>
     </div>

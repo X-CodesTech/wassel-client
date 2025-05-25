@@ -75,9 +75,7 @@ export const transactionTypeSchema = z.object({
   createdAt: z.date().optional(),
 });
 
-export const insertTransactionTypeSchema = transactionTypeSchema.omit({
-  id: true,
-});
+export const insertTransactionTypeSchema = transactionTypeSchema.omit({ id: true });
 export type InsertTransactionType = z.infer<typeof insertTransactionTypeSchema>;
 
 // Location schemas
@@ -85,28 +83,28 @@ export const countrySchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "Country name is required"),
   code: z.string().min(1, "Country code is required"),
-  active: z.boolean().default(true),
+  active: z.boolean().default(true)
 });
 
 export const areaSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "Area name is required"),
   countryId: z.number().int().positive("Country is required"),
-  active: z.boolean().default(true),
+  active: z.boolean().default(true)
 });
 
 export const citySchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "City name is required"),
   areaId: z.number().int().positive("Area is required"),
-  active: z.boolean().default(true),
+  active: z.boolean().default(true)
 });
 
 export const villageSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "Village name is required"),
   cityId: z.number().int().positive("City is required"),
-  active: z.boolean().default(true),
+  active: z.boolean().default(true)
 });
 
 export const insertCountrySchema = countrySchema.omit({ id: true });
@@ -123,3 +121,33 @@ export type InsertCountry = z.infer<typeof insertCountrySchema>;
 export type InsertArea = z.infer<typeof insertAreaSchema>;
 export type InsertCity = z.infer<typeof insertCitySchema>;
 export type InsertVillage = z.infer<typeof insertVillageSchema>;
+
+// Order interface and schemas
+export interface Order {
+  id: number;
+  orderNumber: string;
+  customerName: string;
+  serviceType: string;
+  status: 'pending' | 'in-progress' | 'completed' | 'cancelled';
+  pickupLocation: string;
+  deliveryLocation: string;
+  requestedDate: string;
+  createdAt: string;
+  totalAmount?: number;
+}
+
+export const orderSchema = z.object({
+  id: z.number().optional(),
+  orderNumber: z.string().min(1, "Order number is required"),
+  customerName: z.string().min(1, "Customer name is required"),
+  serviceType: z.string().min(1, "Service type is required"),
+  status: z.enum(['pending', 'in-progress', 'completed', 'cancelled']).default('pending'),
+  pickupLocation: z.string().min(1, "Pickup location is required"),
+  deliveryLocation: z.string().min(1, "Delivery location is required"),
+  requestedDate: z.string().min(1, "Requested date is required"),
+  createdAt: z.string().optional(),
+  totalAmount: z.number().optional(),
+});
+
+export const insertOrderSchema = orderSchema.omit({ id: true, createdAt: true });
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
