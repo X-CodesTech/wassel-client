@@ -1,477 +1,387 @@
 import { useState } from "react";
-import { Order, InsertOrder, orderSchema } from "@/lib/types";
+import { Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { 
+  MoreHorizontal, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Package, 
+  Clock, 
+  User,
+  FileText,
+  Download,
+  Eye,
+  Edit,
+  Trash2
+} from "lucide-react";
+import { useLocation } from "wouter";
 
-const sampleOrders: Order[] = [
-  {
-    id: 1,
-    orderNumber: "ORD-2024-001",
-    customerName: "John Smith",
-    serviceType: "Express Delivery",
-    status: "pending",
-    pickupLocation: "Downtown Office",
-    deliveryLocation: "Business District",
-    requestedDate: "2024-01-15",
-    createdAt: "2024-01-10T10:00:00Z",
-    totalAmount: 150.00
-  },
-  {
-    id: 2,
-    orderNumber: "ORD-2024-002",
-    customerName: "Sarah Johnson",
-    serviceType: "Standard Shipping",
-    status: "in-progress",
-    pickupLocation: "Warehouse A",
-    deliveryLocation: "Residential Area",
-    requestedDate: "2024-01-16",
-    createdAt: "2024-01-11T14:30:00Z",
-    totalAmount: 85.50
-  },
-  {
-    id: 3,
-    orderNumber: "ORD-2024-003",
-    customerName: "Mike Davis",
-    serviceType: "International Freight",
-    status: "completed",
-    pickupLocation: "Port Terminal",
-    deliveryLocation: "Industrial Zone",
-    requestedDate: "2024-01-12",
-    createdAt: "2024-01-08T09:15:00Z",
-    totalAmount: 420.75
-  }
-];
+const sampleOrder = {
+  id: 1,
+  orderNumber: "RQU-03",
+  status: "pending",
+  createdDate: "13/3/2025",
+  material: "National",
+  assignedTo: "Negotiator",
+  createdThrough: "One portal",
+  service: "Freight",
+  serviceNumber: "F18464",
+  requesterName: "Mohammed Khaleal",
+  requesterContact1: "059869001",
+  requesterContact2: "059869112", 
+  requesterEmail: "majsoom@wassel.com",
+  pickupLocation: "Palestine, Ramallah, Almasyoun",
+  pickupAddress: "Wassel HQ",
+  pickupTimeWindow: "10/3/2024 - 16/3/2024",
+  pickupCoordinatorName: "Mohammed Khaleal",
+  pickupCoordinatorContact1: "059869001",
+  pickupCoordinatorContact2: "059869112",
+  pickupCoordinatorEmail: "majsoom@wassel.com",
+  deliveryLocation: "Palestine, Ramallah, Almasyoun", 
+  deliveryAddress: "Wassel HQ",
+  deliveryTimeWindow: "10/3/2024 - 16/3/2024",
+  deliveryCoordinatorName: "Mohammed Khaleal",
+  deliveryCoordinatorContact1: "059869001",
+  deliveryCoordinatorContact2: "059869112",
+  deliveryCoordinatorEmail: "majsoom@wassel.com",
+  serviceDetails: [
+    "1 x Truck Lite_Dim_BG_Lit_Seeking Welding",
+    "2 x Labor for Load",
+    "3 x Labor for Unload"
+  ],
+  specialRequirements: [
+    "1 x Forklift - Should be fully charged",
+    "4 x Labor - Fuel day"
+  ],
+  sellingPrice: "25,000",
+  cost: "1,000",
+  profitMargin: "-96%",
+  currency: "J.S",
+  attachments: [
+    { name: "13/3/2025 16:08:00", type: "Order", assigned: "mjsoom", date: "13/3/2025 16:08:00" },
+    { name: "13/3/2025 16:08:00", type: "Order", assigned: "mjsoom", date: "13/3/2025 16:08:00" },
+    { name: "13/3/2025 16:08:00", type: "Order", assigned: "mjsoom", date: "13/3/2025 16:08:00" }
+  ]
+};
 
 export default function OrdersList() {
-  const [orders, setOrders] = useState<Order[]>(sampleOrders);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
 
-  const form = useForm<InsertOrder>({
-    resolver: zodResolver(orderSchema.omit({ id: true, createdAt: true })),
-    defaultValues: {
-      orderNumber: "",
-      customerName: "",
-      serviceType: "",
-      status: "pending",
-      pickupLocation: "",
-      deliveryLocation: "",
-      requestedDate: "",
-      totalAmount: 0
-    }
-  });
-
-  const editForm = useForm<Order>({
-    resolver: zodResolver(orderSchema),
-    defaultValues: editingOrder || {}
-  });
-
-  // Filter orders based on search and status
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.serviceType.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
-
-  const handleAddOrder = (data: InsertOrder) => {
-    const newOrder: Order = {
-      ...data,
-      id: Math.max(...orders.map(o => o.id), 0) + 1,
-      createdAt: new Date().toISOString()
-    };
-    
-    setOrders([...orders, newOrder]);
-    setIsAddDialogOpen(false);
-    form.reset();
-    
-    toast({
-      title: "Order Created",
-      description: `Order ${newOrder.orderNumber} has been created successfully.`
-    });
-  };
-
-  const handleEditOrder = (data: Order) => {
-    setOrders(orders.map(order => 
-      order.id === editingOrder?.id ? { ...data, id: editingOrder.id } : order
-    ));
-    setIsEditDialogOpen(false);
-    setEditingOrder(null);
-    editForm.reset();
-    
-    toast({
-      title: "Order Updated",
-      description: `Order ${data.orderNumber} has been updated successfully.`
-    });
-  };
-
-  const handleDeleteOrder = (orderId: number) => {
-    const orderToDelete = orders.find(order => order.id === orderId);
-    setOrders(orders.filter(order => order.id !== orderId));
-    
-    toast({
-      title: "Order Deleted",
-      description: `Order ${orderToDelete?.orderNumber} has been deleted successfully.`,
-      variant: "destructive"
-    });
-  };
-
-  const openEditDialog = (order: Order) => {
-    setEditingOrder(order);
-    editForm.reset(order);
-    setIsEditDialogOpen(true);
-  };
-
-  const getStatusBadge = (status: Order['status']) => {
-    const variants = {
-      pending: "default",
-      "in-progress": "secondary",
-      completed: "outline",
-      cancelled: "destructive"
-    } as const;
-    
-    return <Badge variant={variants[status]}>{status}</Badge>;
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Orders List</h1>
-          <p className="text-muted-foreground">Manage all customer orders and requests</p>
+    <div className="w-full p-6 space-y-6">
+      {/* Header with Order Info and Actions */}
+      <div className="flex justify-between items-start">
+        <div className="flex items-center space-x-4">
+          <div>
+            <h1 className="text-2xl font-bold">Order info</h1>
+            <h2 className="text-3xl font-bold text-blue-600">{sampleOrder.orderNumber}</h2>
+            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+              <span>Created date: {sampleOrder.createdDate}</span>
+              <span>Material: {sampleOrder.material}</span>
+              <span>Assigned to: {sampleOrder.assignedTo}</span>
+              <span>Service: {sampleOrder.service}</span>
+            </div>
+            <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
+              <span>Created through: {sampleOrder.createdThrough}</span>
+              <span>Service number: {sampleOrder.serviceNumber}</span>
+            </div>
+          </div>
         </div>
         
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Order
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Order</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleAddOrder)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="orderNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Order Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ORD-2024-001" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="customerName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Customer Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Smith" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="serviceType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Service Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select service type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Express Delivery">Express Delivery</SelectItem>
-                          <SelectItem value="Standard Shipping">Standard Shipping</SelectItem>
-                          <SelectItem value="International Freight">International Freight</SelectItem>
-                          <SelectItem value="Local Pickup">Local Pickup</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="pickupLocation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pickup Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Downtown Office" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="deliveryLocation"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Delivery Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Business District" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="requestedDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Requested Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="totalAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Total Amount</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          placeholder="0.00" 
-                          {...field} 
-                          onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Create Order</Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search orders..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="in-progress">In Progress</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Orders Table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order Number</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Service Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Pickup Location</TableHead>
-              <TableHead>Delivery Location</TableHead>
-              <TableHead>Requested Date</TableHead>
-              <TableHead>Total Amount</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredOrders.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center py-6 text-gray-500">
-                  No orders found. {searchTerm && "Try adjusting your search criteria."}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                  <TableCell>{order.customerName}</TableCell>
-                  <TableCell>{order.serviceType}</TableCell>
-                  <TableCell>{getStatusBadge(order.status)}</TableCell>
-                  <TableCell>{order.pickupLocation}</TableCell>
-                  <TableCell>{order.deliveryLocation}</TableCell>
-                  <TableCell>{new Date(order.requestedDate).toLocaleDateString()}</TableCell>
-                  <TableCell>${order.totalAmount?.toFixed(2) || '0.00'}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(order)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteOrder(order.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+      {/* Status and Action Buttons */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+            Pending
+          </Badge>
+          <div className="flex items-center space-x-2">
+            <input type="radio" id="order" name="type" className="text-blue-600" defaultChecked />
+            <label htmlFor="order" className="text-sm">Order</label>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Badge className="bg-purple-600 text-white">Waiting approval</Badge>
+          <div className="flex space-x-2">
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+              Post order
+            </Button>
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+              Quick post
+            </Button>
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+              Send by email
+            </Button>
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+              Print order
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Order</DialogTitle>
-          </DialogHeader>
-          <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleEditOrder)} className="space-y-4">
-              <FormField
-                control={editForm.control}
-                name="orderNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Order Number</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={editForm.control}
-                name="customerName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={editForm.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={editForm.control}
-                name="totalAmount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Total Amount</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        {...field} 
-                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Update Order</Button>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="xl:col-span-2 space-y-6">
+          {/* Required Service Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Required service details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-1">
+                {sampleOrder.serviceDetails.map((detail, index) => (
+                  <li key={index} className="text-sm">{detail}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* Service Details Table */}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Service</TableHead>
+                    <TableHead>Freight</TableHead>
+                    <TableHead>Requester Name</TableHead>
+                    <TableHead>Mohammed Khaleal</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Type of goods</TableCell>
+                    <TableCell>Business and HI-VIs</TableCell>
+                    <TableCell>Requester mobile number 1</TableCell>
+                    <TableCell>{sampleOrder.requesterContact1}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Goods description</TableCell>
+                    <TableCell>ELECTRONICS AND ELECTRICAL</TableCell>
+                    <TableCell>Requester mobile number 2</TableCell>
+                    <TableCell>{sampleOrder.requesterContact2}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Billing Amount</TableCell>
+                    <TableCell>Jawaad company</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>{sampleOrder.requesterEmail}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Pickup Point */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <MapPin className="mr-2 h-5 w-5" />
+                Pickup point 1
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p><strong>Pickup location:</strong> {sampleOrder.pickupLocation}</p>
+                  <p><strong>Pickup address:</strong> {sampleOrder.pickupAddress}</p>
+                  <p><strong>Pickup time window:</strong> {sampleOrder.pickupTimeWindow}</p>
+                  <p><strong>Pickup notes:</strong></p>
+                  <p><strong>Special requirements:</strong></p>
+                  <ul className="ml-4">
+                    {sampleOrder.specialRequirements.map((req, index) => (
+                      <li key={index}>{req}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p><strong>Pickup coordinator name:</strong> {sampleOrder.pickupCoordinatorName}</p>
+                  <p><strong>Pickup coordinator mobile 1:</strong> {sampleOrder.pickupCoordinatorContact1}</p>
+                  <p><strong>Pickup coordinator mobile 2:</strong> {sampleOrder.pickupCoordinatorContact2}</p>
+                  <p><strong>Email:</strong> {sampleOrder.pickupCoordinatorEmail}</p>
+                  <p><strong>Other requirements:</strong></p>
+                </div>
               </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+            </CardContent>
+          </Card>
+
+          {/* Delivery Point */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Package className="mr-2 h-5 w-5" />
+                Delivery point 1
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p><strong>Pickup location:</strong> {sampleOrder.deliveryLocation}</p>
+                  <p><strong>Pickup address:</strong> {sampleOrder.deliveryAddress}</p>
+                  <p><strong>Pickup time window:</strong> {sampleOrder.deliveryTimeWindow}</p>
+                  <p><strong>Pickup notes:</strong></p>
+                  <p><strong>Special requirements:</strong></p>
+                  <ul className="ml-4">
+                    {sampleOrder.specialRequirements.map((req, index) => (
+                      <li key={index}>{req}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p><strong>Pickup coordinator name:</strong> {sampleOrder.deliveryCoordinatorName}</p>
+                  <p><strong>Pickup coordinator mobile 1:</strong> {sampleOrder.deliveryCoordinatorContact1}</p>
+                  <p><strong>Pickup coordinator mobile 2:</strong> {sampleOrder.deliveryCoordinatorContact2}</p>
+                  <p><strong>Email:</strong> {sampleOrder.deliveryCoordinatorEmail}</p>
+                  <p><strong>Other requirements:</strong></p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Initial Price Offer */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Initial price offer</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-blue-600 text-white p-4 rounded-lg mb-4">
+                <h3 className="font-bold text-lg">ROU00000031POV3</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex space-x-2">
+                  <Button size="sm" className="bg-blue-600">Transportation</Button>
+                  <Button size="sm" className="bg-blue-600">Packaging</Button>
+                  <Button size="sm" className="bg-blue-600">Warehouse</Button>
+                  <Button size="sm" className="bg-green-600">Send by email</Button>
+                  <Button size="sm" className="bg-blue-600">Print offer</Button>
+                </div>
+                
+                {/* Price table representation */}
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 p-3 border-b">
+                    <div className="grid grid-cols-7 gap-4 text-sm font-medium">
+                      <span>SL Start</span>
+                      <span>Transportation</span>
+                      <span>T</span>
+                      <span>Transportation to KIA HAMTOUR</span>
+                      <span>2,000</span>
+                      <span>J.S</span>
+                      <span>Action</span>
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <div className="grid grid-cols-7 gap-4 text-sm">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span>T: 45 KM RETURN</span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Initial Price Offer Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Initial price offer summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p><strong>Selling price:</strong> {sampleOrder.sellingPrice} {sampleOrder.currency}</p>
+                  <p><strong>Cost:</strong> {sampleOrder.cost} {sampleOrder.currency}</p>
+                  <p><strong>Profit margin:</strong> {sampleOrder.profitMargin}</p>
+                </div>
+                <div>
+                  <p><strong>Update price manual:</strong></p>
+                  <p><strong>Update cost:</strong></p>
+                  <p><strong>Timeline:</strong></p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Attachments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="mr-2 h-5 w-5" />
+                Attachments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Document name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Assigned</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sampleOrder.attachments.map((attachment, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{attachment.name}</TableCell>
+                      <TableCell>{attachment.type}</TableCell>
+                      <TableCell>{attachment.assigned}</TableCell>
+                      <TableCell>{attachment.date}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              <div className="mt-4">
+                <Button className="bg-gray-500 hover:bg-gray-600">
+                  Browse...
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Sidebar - would contain additional info */}
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center text-sm text-gray-600">
+                Additional order information and actions would go here
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
