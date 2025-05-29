@@ -30,7 +30,6 @@ export default function MainHeader({ onLogout }: MainHeaderProps) {
   const languages = [
     { code: "en", name: "English", flag: "🇺🇸" },
     { code: "ar", name: "العربية", flag: "🇵🇸" },
-    { code: "he", name: "עברית", flag: "🇮🇱" },
   ];
 
   const handleSearch = (e: React.FormEvent) => {
@@ -100,8 +99,12 @@ export default function MainHeader({ onLogout }: MainHeaderProps) {
               </AvatarFallback>
             </Avatar>
             <div className="hidden md:block text-left">
-              <div className="font-medium text-xl">{user.name}</div>
-              <div className="text-xl text-blue-100">{user.company}</div>
+              <div className="font-medium text-xl whitespace-nowrap">
+                {user.name}
+              </div>
+              <div className="text-xl text-blue-100 whitespace-nowrap">
+                {user.company}
+              </div>
             </div>
           </div>
 
