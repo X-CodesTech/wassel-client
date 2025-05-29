@@ -13,18 +13,30 @@ export default function MainLayout({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <MainHeader onLogout={handleLogout} />
+    <div
+      className="grid grid-rows-[auto_1fr] grid-cols-[16rem_1fr] h-screen overflow-hidden"
+      style={{ overscrollBehavior: "none" }}
+    >
+      {/* Header spanning both columns */}
+      <header className="col-span-2">
+        <MainHeader onLogout={handleLogout} />
+      </header>
 
-      {/* Main layout with sidebar */}
-      <div className="flex">
-        {/* Sidebar */}
+      {/* Sidebar with hover scroll */}
+      <aside
+        className="bg-blue-600 overflow-y-auto min-h-0"
+        style={{ overscrollBehavior: "contain" }}
+      >
         <SideNav />
+      </aside>
 
-        {/* Main content */}
-        <div className="flex-1 p-8">{children}</div>
-      </div>
+      {/* Main content area with hover scroll */}
+      <main
+        className="bg-gray-50 overflow-hidden hover:overflow-y-auto p-8"
+        style={{ overscrollBehavior: "contain" }}
+      >
+        {children}
+      </main>
     </div>
   );
 }

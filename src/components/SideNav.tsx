@@ -1,19 +1,19 @@
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { LayoutGroup, motion } from "framer-motion";
-import { 
-  Plus, 
-  List, 
-  Package, 
-  Settings, 
-  Users, 
-  DollarSign, 
-  Building2, 
-  MapPin, 
-  Activity, 
-  FileText, 
-  CreditCard, 
-  Receipt 
+import {
+  Plus,
+  List,
+  Package,
+  Settings,
+  Users,
+  DollarSign,
+  Building2,
+  MapPin,
+  Activity,
+  FileText,
+  CreditCard,
+  Receipt,
 } from "lucide-react";
 
 export default function SideNav() {
@@ -24,20 +24,20 @@ export default function SideNav() {
       name: "Order list",
       href: "/orders",
       icon: <List className="h-5 w-5" />,
-      active: location === "/orders"
+      active: location === "/orders",
     },
     {
       name: "Shipments",
       href: "/shipments",
       icon: <Package className="h-5 w-5" />,
-      active: location === "/shipments"
+      active: location === "/shipments",
     },
     {
       name: "Shipment list",
       href: "/shipment-list",
       icon: <List className="h-5 w-5" />,
-      active: location === "/shipment-list"
-    }
+      active: location === "/shipment-list",
+    },
   ];
 
   const settingsItems = [
@@ -45,44 +45,44 @@ export default function SideNav() {
       name: "Users",
       href: "/users",
       icon: <Users className="h-5 w-5" />,
-      active: location === "/users"
+      active: location === "/users",
     },
     {
       name: "Pricelists",
       href: "/price-lists",
       icon: <DollarSign className="h-5 w-5" />,
-      active: location === "/price-lists"
+      active: location === "/price-lists",
     },
     {
       name: "Vendor list",
       href: "/vendors",
       icon: <Building2 className="h-5 w-5" />,
-      active: location === "/vendors"
+      active: location === "/vendors",
     },
     {
       name: "Customer list",
       href: "/customers",
       icon: <Users className="h-5 w-5" />,
-      active: location.startsWith("/customers")
+      active: location.startsWith("/customers"),
     },
     {
       name: "Locations",
       href: "/admin/locations",
       icon: <MapPin className="h-5 w-5" />,
-      active: location.startsWith("/admin/locations")
+      active: location.startsWith("/admin/locations"),
     },
     {
       name: "Activities",
       href: "/",
       icon: <Activity className="h-5 w-5" />,
-      active: location === "/"
+      active: location === "/",
     },
     {
       name: "Type of transaction",
       href: "/transaction-types",
       icon: <FileText className="h-5 w-5" />,
-      active: location === "/transaction-types"
-    }
+      active: location === "/transaction-types",
+    },
   ];
 
   const paymentItems = [
@@ -90,30 +90,31 @@ export default function SideNav() {
       name: "Payment Requests",
       href: "/payment-requests",
       icon: <CreditCard className="h-5 w-5" />,
-      active: location === "/payment-requests"
+      active: location === "/payment-requests",
     },
     {
       name: "Invoices",
       href: "/invoices",
       icon: <Receipt className="h-5 w-5" />,
-      active: location === "/invoices"
-    }
+      active: location === "/invoices",
+    },
   ];
 
   return (
-    <div className="w-64 bg-blue-600 shadow-lg">
-      {/* Create New Order Button */}
-      <div className="p-4">
-        <button 
-          onClick={() => navigate('/create-order')}
+    <div className="w-full bg-blue-600 shadow-lg h-full flex flex-col">
+      {/* Create New Order Button - Fixed at top */}
+      <div className="p-4 flex-shrink-0">
+        <button
+          onClick={() => navigate("/create-order")}
           className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-medium py-3 px-4 rounded-md flex items-center justify-center transition-colors"
         >
           <Plus className="h-5 w-5 mr-2" />
           Create new order
         </button>
       </div>
-      
-      <nav className="px-0">
+
+      {/* Scrollable Navigation */}
+      <nav className="flex-1 min-h-full">
         <LayoutGroup>
           {/* Main Navigation Items */}
           <ul className="space-y-0">
@@ -123,9 +124,7 @@ export default function SideNav() {
                   onClick={() => navigate(item.href)}
                   className={cn(
                     "flex items-center px-6 py-4 text-white font-medium cursor-pointer relative transition-colors",
-                    item.active
-                      ? "bg-blue-700"
-                      : "hover:bg-blue-700"
+                    item.active ? "bg-blue-700" : "hover:bg-blue-700"
                   )}
                 >
                   {item.active && (
@@ -146,7 +145,7 @@ export default function SideNav() {
               </li>
             ))}
           </ul>
-          
+
           {/* Settings Section */}
           <div className="mt-6">
             <div className="px-6 py-3">
@@ -162,9 +161,7 @@ export default function SideNav() {
                     onClick={() => navigate(item.href)}
                     className={cn(
                       "flex items-center px-6 py-3 text-white cursor-pointer relative transition-colors",
-                      item.active
-                        ? "bg-blue-700"
-                        : "hover:bg-blue-700"
+                      item.active ? "bg-blue-700" : "hover:bg-blue-700"
                     )}
                   >
                     {item.active && (
@@ -196,9 +193,7 @@ export default function SideNav() {
                     onClick={() => navigate(item.href)}
                     className={cn(
                       "flex items-center px-6 py-4 text-white font-medium cursor-pointer relative transition-colors",
-                      item.active
-                        ? "bg-blue-700"
-                        : "hover:bg-blue-700"
+                      item.active ? "bg-blue-700" : "hover:bg-blue-700"
                     )}
                   >
                     {item.active && (
