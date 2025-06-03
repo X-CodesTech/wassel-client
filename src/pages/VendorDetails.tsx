@@ -1,26 +1,33 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Vendor } from "@/lib/types";
+import { Vendor } from "@/types/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  ArrowLeft, 
-  Building2, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  Star, 
-  Package, 
-  DollarSign, 
+import {
+  ArrowLeft,
+  Building2,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Star,
+  Package,
+  DollarSign,
   TrendingUp,
   Edit,
   FileText,
-  Clock
+  Clock,
 } from "lucide-react";
 
 // Sample vendor data - in a real app this would come from props or API
@@ -37,7 +44,7 @@ const sampleVendor: Vendor = {
   contractEndDate: "2025-01-15",
   rating: 4.5,
   totalOrders: 145,
-  createdAt: "2024-01-10T10:00:00Z"
+  createdAt: "2024-01-10T10:00:00Z",
 };
 
 // Extended vendor details matching the image
@@ -52,7 +59,7 @@ const vendorDetails = {
   mobileNo: "059964001",
   phoneNo: "0000000000",
   financeEmail: "Mohammed@AB.PS",
-  lastUpdate: "13/5/2025 11:56:56 AM"
+  lastUpdate: "13/5/2025 11:56:56 AM",
 };
 
 // Sample order history
@@ -61,34 +68,34 @@ const orderHistory = [
     id: 1,
     orderNumber: "ORD-2024-156",
     date: "2024-05-20",
-    amount: 2850.00,
+    amount: 2850.0,
     status: "completed",
-    service: "Express Delivery"
+    service: "Express Delivery",
   },
   {
     id: 2,
     orderNumber: "ORD-2024-143",
     date: "2024-05-15",
-    amount: 1920.00,
+    amount: 1920.0,
     status: "completed",
-    service: "Standard Shipping"
+    service: "Standard Shipping",
   },
   {
     id: 3,
     orderNumber: "ORD-2024-128",
     date: "2024-05-10",
-    amount: 3200.00,
+    amount: 3200.0,
     status: "in-progress",
-    service: "Freight Transport"
+    service: "Freight Transport",
   },
   {
     id: 4,
     orderNumber: "ORD-2024-102",
     date: "2024-05-05",
-    amount: 1650.00,
+    amount: 1650.0,
     status: "completed",
-    service: "Local Delivery"
-  }
+    service: "Local Delivery",
+  },
 ];
 
 // Sample performance metrics
@@ -96,14 +103,14 @@ const performanceMetrics = {
   onTimeDelivery: 94.5,
   customerSatisfaction: 4.2,
   averageResponseTime: 2.3,
-  totalRevenue: 45670.00,
+  totalRevenue: 45670.0,
   monthlyOrders: [
     { month: "Jan", orders: 12, revenue: 8450 },
     { month: "Feb", orders: 15, revenue: 9200 },
     { month: "Mar", orders: 18, revenue: 11300 },
     { month: "Apr", orders: 22, revenue: 13800 },
-    { month: "May", orders: 25, revenue: 15650 }
-  ]
+    { month: "May", orders: 25, revenue: 15650 },
+  ],
 };
 
 interface VendorDetailsProps {
@@ -122,10 +129,12 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     // For now, we're using sample data
   }, [params?.id]);
 
-  const getStatusBadge = (status: Vendor['status']) => {
-    return status === 'active' 
-      ? <Badge className="bg-green-100 text-green-800">Active</Badge>
-      : <Badge variant="secondary">Inactive</Badge>;
+  const getStatusBadge = (status: Vendor["status"]) => {
+    return status === "active" ? (
+      <Badge className="bg-green-100 text-green-800">Active</Badge>
+    ) : (
+      <Badge variant="secondary">Inactive</Badge>
+    );
   };
 
   const getOrderStatusBadge = (status: string) => {
@@ -133,23 +142,32 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       completed: "outline",
       "in-progress": "secondary",
       pending: "default",
-      cancelled: "destructive"
+      cancelled: "destructive",
     } as const;
-    
-    return <Badge variant={variants[status as keyof typeof variants] || "default"}>{status}</Badge>;
+
+    return (
+      <Badge variant={variants[status as keyof typeof variants] || "default"}>
+        {status}
+      </Badge>
+    );
   };
 
   const getRatingStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
-      <Star 
-        key={i} 
-        className={`h-4 w-4 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+      <Star
+        key={i}
+        className={`h-4 w-4 ${
+          i < Math.floor(rating)
+            ? "text-yellow-400 fill-current"
+            : "text-gray-300"
+        }`}
       />
     ));
   };
 
   const contractDaysRemaining = Math.ceil(
-    (new Date(vendor.contractEndDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)
+    (new Date(vendor.contractEndDate).getTime() - new Date().getTime()) /
+      (1000 * 3600 * 24)
   );
 
   return (
@@ -157,8 +175,8 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => navigate("/vendors")}
           >
@@ -167,10 +185,12 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{vendor.name}</h1>
-            <p className="text-muted-foreground">Vendor Details & Performance</p>
+            <p className="text-muted-foreground">
+              Vendor Details & Performance
+            </p>
           </div>
         </div>
-        
+
         <div className="flex space-x-2">
           <Button variant="outline">
             <Edit className="h-4 w-4 mr-2" />
@@ -192,7 +212,9 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{vendor.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">+12% from last month</p>
+            <p className="text-xs text-muted-foreground">
+              +12% from last month
+            </p>
           </CardContent>
         </Card>
 
@@ -202,19 +224,27 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${performanceMetrics.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ${performanceMetrics.totalRevenue.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">+8% from last month</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">On-Time Delivery</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              On-Time Delivery
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{performanceMetrics.onTimeDelivery}%</div>
-            <p className="text-xs text-muted-foreground">+2.1% from last month</p>
+            <div className="text-2xl font-bold">
+              {performanceMetrics.onTimeDelivery}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              +2.1% from last month
+            </p>
           </CardContent>
         </Card>
 
@@ -245,23 +275,35 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             {/* Left Column */}
             <div className="space-y-4">
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">Vendor Status:</span>
-                <span className="text-sm font-semibold">{vendorDetails.vendorStatus}</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Vendor Status:
+                </span>
+                <span className="text-sm font-semibold">
+                  {vendorDetails.vendorStatus}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">Vendor API:</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Vendor API:
+                </span>
                 <span className="text-sm">{vendorDetails.vendorAPI}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">Location:</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Location:
+                </span>
                 <span className="text-sm">{vendorDetails.location}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">Creation date:</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Creation date:
+                </span>
                 <span className="text-sm">{vendorDetails.creationDate}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">Vendor ID:</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Vendor ID:
+                </span>
                 <span className="text-sm">{vendorDetails.vendorID}</span>
               </div>
             </div>
@@ -269,23 +311,33 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             {/* Middle Column */}
             <div className="space-y-4">
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">Contact person:</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Contact person:
+                </span>
                 <span className="text-sm">{vendorDetails.contactPerson}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">VAT Number:</span>
+                <span className="text-sm font-medium text-gray-600">
+                  VAT Number:
+                </span>
                 <span className="text-sm">{vendorDetails.vatNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">Mobile No:</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Mobile No:
+                </span>
                 <span className="text-sm">{vendorDetails.mobileNo}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">Phone No:</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Phone No:
+                </span>
                 <span className="text-sm">{vendorDetails.phoneNo}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">Finance Email:</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Finance Email:
+                </span>
                 <span className="text-sm">{vendorDetails.financeEmail}</span>
               </div>
             </div>
@@ -293,7 +345,9 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             {/* Right Column */}
             <div className="space-y-4">
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">Last update:</span>
+                <span className="text-sm font-medium text-gray-600">
+                  Last update:
+                </span>
                 <span className="text-sm">{vendorDetails.lastUpdate}</span>
               </div>
             </div>
@@ -325,7 +379,9 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
                 <TableCell>Mayson</TableCell>
                 <TableCell>Mayson</TableCell>
                 <TableCell>
-                  <Button size="sm" variant="outline">Edit</Button>
+                  <Button size="sm" variant="outline">
+                    Edit
+                  </Button>
                 </TableCell>
               </TableRow>
               <TableRow>
@@ -344,7 +400,9 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-pink-600">Vendor attachments</CardTitle>
-          <p className="text-sm text-gray-600">Upload, download, insert data and select type of attachment</p>
+          <p className="text-sm text-gray-600">
+            Upload, download, insert data and select type of attachment
+          </p>
         </CardHeader>
         <CardContent className="min-h-[100px] border-2 border-dashed border-pink-300 rounded-lg flex items-center justify-center">
           <p className="text-gray-500">No attachments uploaded</p>
@@ -354,8 +412,14 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       {/* Payment Requests */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-pink-600">Payment requests per vendor</CardTitle>
-          <p className="text-sm text-gray-600">View and send shipment number and confirmation date and amount and currency with ability to confirm, update, and print list of PR, and generate a payment request to be sent to the vendor</p>
+          <CardTitle className="text-pink-600">
+            Payment requests per vendor
+          </CardTitle>
+          <p className="text-sm text-gray-600">
+            View and send shipment number and confirmation date and amount and
+            currency with ability to confirm, update, and print list of PR, and
+            generate a payment request to be sent to the vendor
+          </p>
         </CardHeader>
         <CardContent>
           <div className="bg-blue-50 p-4 rounded-lg">
@@ -392,7 +456,9 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-pink-600">Sub vendor</CardTitle>
-          <p className="text-sm text-gray-600">Define drivers, trucks, and the default one</p>
+          <p className="text-sm text-gray-600">
+            Define drivers, trucks, and the default one
+          </p>
         </CardHeader>
         <CardContent className="min-h-[100px] border-2 border-dashed border-pink-300 rounded-lg flex items-center justify-center">
           <p className="text-gray-500">No sub vendors defined</p>
@@ -401,7 +467,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 gap-6">
-
         {/* Tabs Section */}
         <div className="lg:col-span-2">
           <Tabs defaultValue="orders" className="space-y-4">
@@ -430,11 +495,17 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
                     <TableBody>
                       {orderHistory.map((order) => (
                         <TableRow key={order.id}>
-                          <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                          <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-medium">
+                            {order.orderNumber}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(order.date).toLocaleDateString()}
+                          </TableCell>
                           <TableCell>{order.service}</TableCell>
                           <TableCell>${order.amount.toFixed(2)}</TableCell>
-                          <TableCell>{getOrderStatusBadge(order.status)}</TableCell>
+                          <TableCell>
+                            {getOrderStatusBadge(order.status)}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -452,20 +523,34 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <div className="text-sm font-medium">On-Time Delivery Rate</div>
-                        <div className="text-2xl font-bold text-green-600">{performanceMetrics.onTimeDelivery}%</div>
+                        <div className="text-sm font-medium">
+                          On-Time Delivery Rate
+                        </div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {performanceMetrics.onTimeDelivery}%
+                        </div>
                       </div>
                       <div>
-                        <div className="text-sm font-medium">Customer Satisfaction</div>
-                        <div className="text-2xl font-bold text-blue-600">{performanceMetrics.customerSatisfaction}/5</div>
+                        <div className="text-sm font-medium">
+                          Customer Satisfaction
+                        </div>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {performanceMetrics.customerSatisfaction}/5
+                        </div>
                       </div>
                       <div>
-                        <div className="text-sm font-medium">Avg Response Time</div>
-                        <div className="text-2xl font-bold">{performanceMetrics.averageResponseTime}h</div>
+                        <div className="text-sm font-medium">
+                          Avg Response Time
+                        </div>
+                        <div className="text-2xl font-bold">
+                          {performanceMetrics.averageResponseTime}h
+                        </div>
                       </div>
                       <div>
                         <div className="text-sm font-medium">Total Revenue</div>
-                        <div className="text-2xl font-bold text-green-600">${performanceMetrics.totalRevenue.toLocaleString()}</div>
+                        <div className="text-2xl font-bold text-green-600">
+                          ${performanceMetrics.totalRevenue.toLocaleString()}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -485,13 +570,17 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {performanceMetrics.monthlyOrders.map((month, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{month.month}</TableCell>
-                            <TableCell>{month.orders}</TableCell>
-                            <TableCell>${month.revenue.toLocaleString()}</TableCell>
-                          </TableRow>
-                        ))}
+                        {performanceMetrics.monthlyOrders.map(
+                          (month, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{month.month}</TableCell>
+                              <TableCell>{month.orders}</TableCell>
+                              <TableCell>
+                                ${month.revenue.toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          )
+                        )}
                       </TableBody>
                     </Table>
                   </CardContent>
@@ -510,33 +599,50 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
                       <div className="flex items-center space-x-3">
                         <FileText className="h-5 w-5 text-blue-600" />
                         <div>
-                          <p className="font-medium">Service Agreement 2024-2025</p>
-                          <p className="text-sm text-muted-foreground">Signed on {new Date(vendor.contractStartDate).toLocaleDateString()}</p>
+                          <p className="font-medium">
+                            Service Agreement 2024-2025
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Signed on{" "}
+                            {new Date(
+                              vendor.contractStartDate
+                            ).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Download</Button>
+                      <Button variant="outline" size="sm">
+                        Download
+                      </Button>
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center space-x-3">
                         <FileText className="h-5 w-5 text-green-600" />
                         <div>
                           <p className="font-medium">Insurance Certificate</p>
-                          <p className="text-sm text-muted-foreground">Valid until Dec 2024</p>
+                          <p className="text-sm text-muted-foreground">
+                            Valid until Dec 2024
+                          </p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Download</Button>
+                      <Button variant="outline" size="sm">
+                        Download
+                      </Button>
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center space-x-3">
                         <FileText className="h-5 w-5 text-purple-600" />
                         <div>
                           <p className="font-medium">Compliance Certificate</p>
-                          <p className="text-sm text-muted-foreground">Updated monthly</p>
+                          <p className="text-sm text-muted-foreground">
+                            Updated monthly
+                          </p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Download</Button>
+                      <Button variant="outline" size="sm">
+                        Download
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

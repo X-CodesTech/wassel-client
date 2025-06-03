@@ -1,17 +1,54 @@
 import { useState } from "react";
-import { Vendor, InsertVendor, vendorSchema } from "@/lib/types";
+import { Vendor, InsertVendor, vendorSchema } from "@/types/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Search, Star, Building2, Phone, Mail, MapPin, Calendar } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  Star,
+  Building2,
+  Phone,
+  Mail,
+  MapPin,
+  Calendar,
+} from "lucide-react";
 import { useLocation } from "wouter";
 
 const sampleVendors: Vendor[] = [
@@ -28,7 +65,7 @@ const sampleVendors: Vendor[] = [
     contractEndDate: "2025-01-15",
     rating: 4.5,
     totalOrders: 145,
-    createdAt: "2024-01-10T10:00:00Z"
+    createdAt: "2024-01-10T10:00:00Z",
   },
   {
     id: 2,
@@ -43,7 +80,7 @@ const sampleVendors: Vendor[] = [
     contractEndDate: "2025-02-01",
     rating: 4.8,
     totalOrders: 89,
-    createdAt: "2024-01-25T14:30:00Z"
+    createdAt: "2024-01-25T14:30:00Z",
   },
   {
     id: 3,
@@ -58,7 +95,7 @@ const sampleVendors: Vendor[] = [
     contractEndDate: "2024-06-01",
     rating: 3.9,
     totalOrders: 67,
-    createdAt: "2023-05-20T09:15:00Z"
+    createdAt: "2023-05-20T09:15:00Z",
   },
   {
     id: 4,
@@ -73,8 +110,8 @@ const sampleVendors: Vendor[] = [
     contractEndDate: "2025-03-01",
     rating: 4.2,
     totalOrders: 112,
-    createdAt: "2024-02-15T11:45:00Z"
-  }
+    createdAt: "2024-02-15T11:45:00Z",
+  },
 ];
 
 export default function VendorsList() {
@@ -101,68 +138,74 @@ export default function VendorsList() {
       contractStartDate: "",
       contractEndDate: "",
       rating: 0,
-      totalOrders: 0
-    }
+      totalOrders: 0,
+    },
   });
 
   const editForm = useForm<Vendor>({
     resolver: zodResolver(vendorSchema),
-    defaultValues: editingVendor || {}
+    defaultValues: editingVendor || {},
   });
 
   // Filter vendors based on search, status, and category
-  const filteredVendors = vendors.filter(vendor => {
-    const matchesSearch = 
+  const filteredVendors = vendors.filter((vendor) => {
+    const matchesSearch =
       vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.category.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || vendor.status === statusFilter;
-    const matchesCategory = categoryFilter === "all" || vendor.category === categoryFilter;
-    
+
+    const matchesStatus =
+      statusFilter === "all" || vendor.status === statusFilter;
+    const matchesCategory =
+      categoryFilter === "all" || vendor.category === categoryFilter;
+
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
   const handleAddVendor = (data: InsertVendor) => {
     const newVendor: Vendor = {
       ...data,
-      id: Math.max(...vendors.map(v => v.id), 0) + 1,
-      createdAt: new Date().toISOString()
+      id: Math.max(...vendors.map((v) => v.id), 0) + 1,
+      createdAt: new Date().toISOString(),
     };
-    
+
     setVendors([...vendors, newVendor]);
     setIsAddDialogOpen(false);
     form.reset();
-    
+
     toast({
       title: "Vendor Created",
-      description: `Vendor ${newVendor.name} has been created successfully.`
+      description: `Vendor ${newVendor.name} has been created successfully.`,
     });
   };
 
   const handleEditVendor = (data: Vendor) => {
-    setVendors(vendors.map(vendor => 
-      vendor.id === editingVendor?.id ? { ...data, id: editingVendor.id } : vendor
-    ));
+    setVendors(
+      vendors.map((vendor) =>
+        vendor.id === editingVendor?.id
+          ? { ...data, id: editingVendor.id }
+          : vendor
+      )
+    );
     setIsEditDialogOpen(false);
     setEditingVendor(null);
     editForm.reset();
-    
+
     toast({
       title: "Vendor Updated",
-      description: `Vendor ${data.name} has been updated successfully.`
+      description: `Vendor ${data.name} has been updated successfully.`,
     });
   };
 
   const handleDeleteVendor = (vendorId: number) => {
-    const vendorToDelete = vendors.find(vendor => vendor.id === vendorId);
-    setVendors(vendors.filter(vendor => vendor.id !== vendorId));
-    
+    const vendorToDelete = vendors.find((vendor) => vendor.id === vendorId);
+    setVendors(vendors.filter((vendor) => vendor.id !== vendorId));
+
     toast({
       title: "Vendor Deleted",
       description: `Vendor ${vendorToDelete?.name} has been deleted successfully.`,
-      variant: "destructive"
+      variant: "destructive",
     });
   };
 
@@ -172,31 +215,39 @@ export default function VendorsList() {
     setIsEditDialogOpen(true);
   };
 
-  const getStatusBadge = (status: Vendor['status']) => {
-    return status === 'active' 
-      ? <Badge className="bg-green-100 text-green-800">Active</Badge>
-      : <Badge variant="secondary">Inactive</Badge>;
+  const getStatusBadge = (status: Vendor["status"]) => {
+    return status === "active" ? (
+      <Badge className="bg-green-100 text-green-800">Active</Badge>
+    ) : (
+      <Badge variant="secondary">Inactive</Badge>
+    );
   };
 
   const getRatingStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
-      <Star 
-        key={i} 
-        className={`h-4 w-4 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+      <Star
+        key={i}
+        className={`h-4 w-4 ${
+          i < Math.floor(rating)
+            ? "text-yellow-400 fill-current"
+            : "text-gray-300"
+        }`}
       />
     ));
   };
 
-  const categories = Array.from(new Set(vendors.map(v => v.category)));
+  const categories = Array.from(new Set(vendors.map((v) => v.category)));
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Vendors</h1>
-          <p className="text-muted-foreground">Manage your vendor partnerships and contracts</p>
+          <p className="text-muted-foreground">
+            Manage your vendor partnerships and contracts
+          </p>
         </div>
-        
+
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -209,7 +260,10 @@ export default function VendorsList() {
               <DialogTitle>Add New Vendor</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleAddVendor)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(handleAddVendor)}
+                className="space-y-4"
+              >
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -218,13 +272,16 @@ export default function VendorsList() {
                       <FormItem>
                         <FormLabel>Vendor Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Global Logistics Corp" {...field} />
+                          <Input
+                            placeholder="Global Logistics Corp"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="contactPerson"
@@ -239,7 +296,7 @@ export default function VendorsList() {
                     )}
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -248,13 +305,17 @@ export default function VendorsList() {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="contact@vendor.com" {...field} />
+                          <Input
+                            type="email"
+                            placeholder="contact@vendor.com"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="phone"
@@ -269,7 +330,7 @@ export default function VendorsList() {
                     )}
                   />
                 </div>
-                
+
                 <FormField
                   control={form.control}
                   name="address"
@@ -277,13 +338,16 @@ export default function VendorsList() {
                     <FormItem>
                       <FormLabel>Address</FormLabel>
                       <FormControl>
-                        <Input placeholder="123 Business Street, City, State, ZIP" {...field} />
+                        <Input
+                          placeholder="123 Business Street, City, State, ZIP"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -291,16 +355,25 @@ export default function VendorsList() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Transportation">Transportation</SelectItem>
-                            <SelectItem value="Express Delivery">Express Delivery</SelectItem>
-                            <SelectItem value="Warehousing">Warehousing</SelectItem>
+                            <SelectItem value="Transportation">
+                              Transportation
+                            </SelectItem>
+                            <SelectItem value="Express Delivery">
+                              Express Delivery
+                            </SelectItem>
+                            <SelectItem value="Warehousing">
+                              Warehousing
+                            </SelectItem>
                             <SelectItem value="Freight">Freight</SelectItem>
                             <SelectItem value="Packaging">Packaging</SelectItem>
                             <SelectItem value="Logistics">Logistics</SelectItem>
@@ -310,14 +383,17 @@ export default function VendorsList() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="status"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select status" />
@@ -333,7 +409,7 @@ export default function VendorsList() {
                     )}
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -348,7 +424,7 @@ export default function VendorsList() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="contractEndDate"
@@ -363,9 +439,13 @@ export default function VendorsList() {
                     )}
                   />
                 </div>
-                
+
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsAddDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
                   <Button type="submit">Create Vendor</Button>
@@ -403,8 +483,10 @@ export default function VendorsList() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            {categories.map(category => (
-              <SelectItem key={category} value={category}>{category}</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -423,11 +505,15 @@ export default function VendorsList() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Vendors</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Vendors
+            </CardTitle>
             <Badge className="bg-green-100 text-green-800">Active</Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vendors.filter(v => v.status === 'active').length}</div>
+            <div className="text-2xl font-bold">
+              {vendors.filter((v) => v.status === "active").length}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -446,7 +532,12 @@ export default function VendorsList() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {vendors.length > 0 ? (vendors.reduce((sum, v) => sum + v.rating, 0) / vendors.length).toFixed(1) : '0.0'}
+              {vendors.length > 0
+                ? (
+                    vendors.reduce((sum, v) => sum + v.rating, 0) /
+                    vendors.length
+                  ).toFixed(1)
+                : "0.0"}
             </div>
           </CardContent>
         </Card>
@@ -470,21 +561,27 @@ export default function VendorsList() {
           <TableBody>
             {filteredVendors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-6 text-gray-500">
-                  No vendors found. {searchTerm && "Try adjusting your search criteria."}
+                <TableCell
+                  colSpan={8}
+                  className="text-center py-6 text-gray-500"
+                >
+                  No vendors found.{" "}
+                  {searchTerm && "Try adjusting your search criteria."}
                 </TableCell>
               </TableRow>
             ) : (
               filteredVendors.map((vendor) => (
-                <TableRow 
-                  key={vendor.id} 
+                <TableRow
+                  key={vendor.id}
                   className="cursor-pointer hover:bg-gray-50"
                   onClick={() => navigate(`/vendors/${vendor.id}`)}
                 >
                   <TableCell>
                     <div>
                       <div className="font-medium">{vendor.name}</div>
-                      <div className="text-sm text-gray-500">{vendor.contactPerson}</div>
+                      <div className="text-sm text-gray-500">
+                        {vendor.contactPerson}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -555,7 +652,10 @@ export default function VendorsList() {
             <DialogTitle>Edit Vendor</DialogTitle>
           </DialogHeader>
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleEditVendor)} className="space-y-4">
+            <form
+              onSubmit={editForm.handleSubmit(handleEditVendor)}
+              className="space-y-4"
+            >
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={editForm.control}
@@ -570,14 +670,17 @@ export default function VendorsList() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={editForm.control}
                   name="status"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue />
@@ -593,9 +696,13 @@ export default function VendorsList() {
                   )}
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit">Update Vendor</Button>

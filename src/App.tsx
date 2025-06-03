@@ -13,21 +13,24 @@ import CreateOrder from "@/pages/CreateOrder";
 import VendorsList from "@/pages/VendorsList";
 import VendorDetails from "@/pages/VendorDetails";
 import MainLayout from "@/components/MainLayout";
+import { Provider } from "react-redux";
+import { persistor, store } from "./store";
+import { PersistGate } from "redux-persist/integration/react";
 
 function Router() {
   return (
     <MainLayout>
       <Switch>
-        <Route path="/" component={ActivityManagement}/>
-        <Route path="/orders" component={OrdersList}/>
-        <Route path="/create-order" component={CreateOrder}/>
-        <Route path="/price-lists" component={PriceLists}/>
-        <Route path="/price-lists/:id" component={PriceListDetails}/>
-        <Route path="/customers/:id" component={CustomerDetails}/>
-        <Route path="/transaction-types" component={TransactionTypes}/>
-        <Route path="/vendors" component={VendorsList}/>
-        <Route path="/vendors/:id" component={VendorDetails}/>
-        <Route path="/admin/locations" component={LocationManagement}/>
+        <Route path="/" component={ActivityManagement} />
+        <Route path="/orders" component={OrdersList} />
+        <Route path="/create-order" component={CreateOrder} />
+        <Route path="/price-lists" component={PriceLists} />
+        <Route path="/price-lists/:id" component={PriceListDetails} />
+        <Route path="/customers/:id" component={CustomerDetails} />
+        <Route path="/transaction-types" component={TransactionTypes} />
+        <Route path="/vendors" component={VendorsList} />
+        <Route path="/vendors/:id" component={VendorDetails} />
+        <Route path="/admin/locations" component={LocationManagement} />
         <Route component={NotFound} />
       </Switch>
     </MainLayout>
@@ -36,10 +39,14 @@ function Router() {
 
 function App() {
   return (
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </PersistGate>
+    </Provider>
   );
 }
 

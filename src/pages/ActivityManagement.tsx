@@ -6,11 +6,8 @@ import EditActivityForm from "@/components/EditActivityForm";
 import AddSubActivityForm from "@/components/AddSubActivityForm";
 import EditSubActivityForm from "@/components/EditSubActivityForm";
 import SearchFilter from "@/components/SearchFilter";
-import { Activity, SubActivity } from "@/lib/types";
-import {
-  Dialog,
-  DialogContent
-} from "@/components/ui/dialog";
+import { Activity, SubActivity } from "@/types/types";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,8 +23,11 @@ export default function ActivityManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string | null>(null);
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const [selectedSubActivity, setSelectedSubActivity] = useState<SubActivity | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
+    null
+  );
+  const [selectedSubActivity, setSelectedSubActivity] =
+    useState<SubActivity | null>(null);
 
   // Modal states
   const [addActivityOpen, setAddActivityOpen] = useState(false);
@@ -49,7 +49,7 @@ export default function ActivityManagement() {
       activityName: "Packaging",
       isWithItems: true,
       financeEffect: "Positive Effect",
-      active: true
+      active: true,
     },
     {
       id: 2,
@@ -59,7 +59,7 @@ export default function ActivityManagement() {
       activityName: "Insurance",
       isWithItems: true,
       financeEffect: "No Effect",
-      active: true
+      active: true,
     },
     {
       id: 3,
@@ -69,7 +69,7 @@ export default function ActivityManagement() {
       activityName: "Material Handling",
       isWithItems: true,
       financeEffect: "Positive Effect",
-      active: true
+      active: true,
     },
     {
       id: 4,
@@ -79,7 +79,7 @@ export default function ActivityManagement() {
       activityName: "Transportation",
       isWithItems: true,
       financeEffect: "Positive Effect",
-      active: true
+      active: true,
     },
     {
       id: 5,
@@ -89,8 +89,8 @@ export default function ActivityManagement() {
       activityName: "Financial Services",
       isWithItems: false,
       financeEffect: "Positive Effect",
-      active: true
-    }
+      active: true,
+    },
   ]);
 
   // Sample client-side sub-activities data
@@ -104,7 +104,7 @@ export default function ActivityManagement() {
       activityName: "Packaging",
       activityType: "X-work",
       pricingMethod: "Fixed",
-      active: true
+      active: true,
     },
     {
       id: 2,
@@ -115,7 +115,7 @@ export default function ActivityManagement() {
       activityName: "Packaging",
       activityType: "X-work",
       pricingMethod: "Variable",
-      active: true
+      active: true,
     },
     {
       id: 3,
@@ -126,7 +126,7 @@ export default function ActivityManagement() {
       activityName: "Packaging",
       activityType: "X-work",
       pricingMethod: "Fixed",
-      active: true
+      active: true,
     },
     {
       id: 4,
@@ -137,7 +137,7 @@ export default function ActivityManagement() {
       activityName: "Insurance",
       activityType: "Service",
       pricingMethod: "Percentage",
-      active: true
+      active: true,
     },
     {
       id: 5,
@@ -148,7 +148,7 @@ export default function ActivityManagement() {
       activityName: "Insurance",
       activityType: "Service",
       pricingMethod: "Percentage",
-      active: true
+      active: true,
     },
     {
       id: 6,
@@ -159,7 +159,7 @@ export default function ActivityManagement() {
       activityName: "Material Handling",
       activityType: "Material",
       pricingMethod: "Fixed",
-      active: true
+      active: true,
     },
     {
       id: 7,
@@ -170,7 +170,7 @@ export default function ActivityManagement() {
       activityName: "Material Handling",
       activityType: "Material",
       pricingMethod: "Fixed",
-      active: true
+      active: true,
     },
     {
       id: 8,
@@ -181,7 +181,7 @@ export default function ActivityManagement() {
       activityName: "Transportation",
       activityType: "Transport",
       pricingMethod: "Variable",
-      active: true
+      active: true,
     },
     {
       id: 9,
@@ -192,7 +192,7 @@ export default function ActivityManagement() {
       activityName: "Transportation",
       activityType: "Transport",
       pricingMethod: "Variable",
-      active: true
+      active: true,
     },
     {
       id: 10,
@@ -203,7 +203,7 @@ export default function ActivityManagement() {
       activityName: "Financial Services",
       activityType: "Finance",
       pricingMethod: "Percentage",
-      active: true
+      active: true,
     },
     {
       id: 11,
@@ -214,17 +214,19 @@ export default function ActivityManagement() {
       activityName: "Financial Services",
       activityType: "Finance",
       pricingMethod: "Percentage",
-      active: true
-    }
+      active: true,
+    },
   ]);
 
   // Delete activity function
   const deleteActivity = (id: number) => {
     // Delete all sub-activities of the activity first
-    setSubActivities(subActivities.filter(subActivity => subActivity.parentId !== id));
+    setSubActivities(
+      subActivities.filter((subActivity) => subActivity.parentId !== id)
+    );
 
     // Then delete the activity itself
-    setActivities(activities.filter(activity => activity.id !== id));
+    setActivities(activities.filter((activity) => activity.id !== id));
 
     // Show success toast
     toast({
@@ -239,7 +241,9 @@ export default function ActivityManagement() {
   // Delete sub-activity function
   const deleteSubActivity = (id: number) => {
     // Delete the sub-activity
-    setSubActivities(subActivities.filter(subActivity => subActivity.id !== id));
+    setSubActivities(
+      subActivities.filter((subActivity) => subActivity.id !== id)
+    );
 
     // Show success toast
     toast({
@@ -335,9 +339,11 @@ export default function ActivityManagement() {
 
   // Update activity handler
   const handleUpdateActivity = (updatedActivity: Activity) => {
-    setActivities(activities.map(activity =>
-      activity.id === updatedActivity.id ? updatedActivity : activity
-    ));
+    setActivities(
+      activities.map((activity) =>
+        activity.id === updatedActivity.id ? updatedActivity : activity
+      )
+    );
     setEditActivityOpen(false);
 
     toast({
@@ -359,9 +365,13 @@ export default function ActivityManagement() {
 
   // Update sub-activity handler
   const handleUpdateSubActivity = (updatedSubActivity: SubActivity) => {
-    setSubActivities(subActivities.map(subActivity =>
-      subActivity.id === updatedSubActivity.id ? updatedSubActivity : subActivity
-    ));
+    setSubActivities(
+      subActivities.map((subActivity) =>
+        subActivity.id === updatedSubActivity.id
+          ? updatedSubActivity
+          : subActivity
+      )
+    );
     setEditSubActivityOpen(false);
 
     toast({
@@ -374,7 +384,9 @@ export default function ActivityManagement() {
     <main>
       <div className="space-y-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Activities Management</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Activities Management
+          </h2>
           <p className="text-gray-500 mt-2">
             Manage and organize activities and sub-activities in the system
           </p>
@@ -462,12 +474,16 @@ export default function ActivityManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the activity and all its sub-activities. This action cannot be undone.
+              This will permanently delete the activity and all its
+              sub-activities. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmDeleteActivity}>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={confirmDeleteActivity}
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -475,17 +491,24 @@ export default function ActivityManagement() {
       </AlertDialog>
 
       {/* Delete Sub-Activity Confirmation */}
-      <AlertDialog open={deleteSubConfirmOpen} onOpenChange={setDeleteSubConfirmOpen}>
+      <AlertDialog
+        open={deleteSubConfirmOpen}
+        onOpenChange={setDeleteSubConfirmOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the sub-activity. This action cannot be undone.
+              This will permanently delete the sub-activity. This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmDeleteSubActivity}>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={confirmDeleteSubActivity}
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

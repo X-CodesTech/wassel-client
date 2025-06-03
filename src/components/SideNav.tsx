@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils";
 import { LayoutGroup, motion } from "framer-motion";
 import {
   Plus,

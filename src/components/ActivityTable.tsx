@@ -1,11 +1,25 @@
 import { useState } from "react";
-import { Activity, SubActivity } from "@/lib/types";
+import { Activity, SubActivity } from "@/types/types";
 import ActivityRow from "@/components/ActivityRow";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ArrowUpDown } from "lucide-react";
 
-type SortField = 'actSrl' | 'activityCode' | 'activityType' | 'activityName' | 'isWithItems' | 'financeEffect' | 'active';
-type SortDirection = 'asc' | 'desc';
+type SortField =
+  | "actSrl"
+  | "activityCode"
+  | "activityType"
+  | "activityName"
+  | "isWithItems"
+  | "financeEffect"
+  | "active";
+type SortDirection = "asc" | "desc";
 
 interface ActivityTableProps {
   activities: Activity[];
@@ -28,17 +42,17 @@ export default function ActivityTable({
   onAddSubActivity,
   onEditSubActivity,
   onDeleteSubActivity,
-  subActivities = []
+  subActivities = [],
 }: ActivityTableProps) {
-  const [sortField, setSortField] = useState<SortField>('actSrl');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortField, setSortField] = useState<SortField>("actSrl");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
@@ -46,14 +60,14 @@ export default function ActivityTable({
     const fieldA = a[sortField];
     const fieldB = b[sortField];
 
-    if (typeof fieldA === 'boolean' && typeof fieldB === 'boolean') {
-      return sortDirection === 'asc'
+    if (typeof fieldA === "boolean" && typeof fieldB === "boolean") {
+      return sortDirection === "asc"
         ? Number(fieldA) - Number(fieldB)
         : Number(fieldB) - Number(fieldA);
     }
 
-    if (typeof fieldA === 'string' && typeof fieldB === 'string') {
-      return sortDirection === 'asc'
+    if (typeof fieldA === "string" && typeof fieldB === "string") {
+      return sortDirection === "asc"
         ? fieldA.localeCompare(fieldB)
         : fieldB.localeCompare(fieldA);
     }
@@ -66,43 +80,64 @@ export default function ActivityTable({
       <Table>
         <TableHeader className="bg-gray-50">
           <TableRow>
-            <TableHead onClick={() => handleSort('actSrl')} className="cursor-pointer">
+            <TableHead
+              onClick={() => handleSort("actSrl")}
+              className="cursor-pointer"
+            >
               <div className="flex items-center">
                 ACTsrl
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
               </div>
             </TableHead>
-            <TableHead onClick={() => handleSort('activityCode')} className="cursor-pointer">
+            <TableHead
+              onClick={() => handleSort("activityCode")}
+              className="cursor-pointer"
+            >
               <div className="flex items-center">
                 Activity Code
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
               </div>
             </TableHead>
-            <TableHead onClick={() => handleSort('activityType')} className="cursor-pointer">
+            <TableHead
+              onClick={() => handleSort("activityType")}
+              className="cursor-pointer"
+            >
               <div className="flex items-center">
                 Activity Type
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
               </div>
             </TableHead>
-            <TableHead onClick={() => handleSort('activityName')} className="cursor-pointer">
+            <TableHead
+              onClick={() => handleSort("activityName")}
+              className="cursor-pointer"
+            >
               <div className="flex items-center">
                 Activity Name
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
               </div>
             </TableHead>
-            <TableHead onClick={() => handleSort('isWithItems')} className="cursor-pointer">
+            <TableHead
+              onClick={() => handleSort("isWithItems")}
+              className="cursor-pointer"
+            >
               <div className="flex items-center">
                 Is with Items
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
               </div>
             </TableHead>
-            <TableHead onClick={() => handleSort('financeEffect')} className="cursor-pointer">
+            <TableHead
+              onClick={() => handleSort("financeEffect")}
+              className="cursor-pointer"
+            >
               <div className="flex items-center">
                 Finance Effect
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
               </div>
             </TableHead>
-            <TableHead onClick={() => handleSort('active')} className="cursor-pointer">
+            <TableHead
+              onClick={() => handleSort("active")}
+              className="cursor-pointer"
+            >
               <div className="flex items-center">
                 Active
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
@@ -130,7 +165,9 @@ export default function ActivityTable({
                 onAddSubActivity={onAddSubActivity}
                 onEditSubActivity={onEditSubActivity}
                 onDeleteSubActivity={onDeleteSubActivity}
-                subActivities={subActivities.filter(subActivity => subActivity.parentId === activity.id)}
+                subActivities={subActivities.filter(
+                  (subActivity) => subActivity.parentId === activity.id
+                )}
               />
             ))
           )}

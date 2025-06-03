@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils";
 import { LayoutGroup, motion } from "framer-motion";
 import { List, DollarSign, FileText } from "lucide-react";
 
@@ -11,20 +11,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       name: "Activities",
       href: "/",
       icon: <List className="h-5 w-5" />,
-      active: location === "/"
+      active: location === "/",
     },
     {
       name: "Price Lists",
       href: "/price-lists",
       icon: <DollarSign className="h-5 w-5" />,
-      active: location === "/price-lists"
+      active: location === "/price-lists",
     },
     {
       name: "Transaction Types",
       href: "/transaction-types",
       icon: <FileText className="h-5 w-5" />,
-      active: location === "/transaction-types"
-    }
+      active: location === "/transaction-types",
+    },
   ];
 
   return (
@@ -73,9 +73,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 p-8">
-        {children}
-      </div>
+      <div className="flex-1 p-8">{children}</div>
     </div>
   );
 }
