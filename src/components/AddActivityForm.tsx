@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Form,
@@ -60,38 +58,16 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
   });
 
   // Add activity mutation
-  const addActivityMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      return apiRequest("POST", "/api/activities", values);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-      toast({
-        title: "Success",
-        description: "Activity added successfully",
-      });
-      onClose();
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to add activity: ${error}`,
-        variant: "destructive"
-      });
-      setIsSubmitting(false);
-    }
-  });
 
   // Submit handler
   const onSubmit = (values: FormValues) => {
     setIsSubmitting(true);
-    addActivityMutation.mutate(values);
   };
 
   return (
     <div>
       <h3 className="text-lg font-semibold mb-4">Add New Activity</h3>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -122,7 +98,7 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
               )}
             />
           </div>
-          
+
           <FormField
             control={form.control}
             name="activityName"
@@ -136,15 +112,15 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="activityType"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Activity Type</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
+                <Select
+                  onValueChange={field.onChange}
                   defaultValue={field.value}
                 >
                   <FormControl>
@@ -155,7 +131,9 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
                   <SelectContent>
                     <SelectItem value="X-work">X-work</SelectItem>
                     <SelectItem value="Material">Material</SelectItem>
-                    <SelectItem value="Transportation">Transportation</SelectItem>
+                    <SelectItem value="Transportation">
+                      Transportation
+                    </SelectItem>
                     <SelectItem value="Finance">Finance</SelectItem>
                   </SelectContent>
                 </Select>
@@ -163,7 +141,7 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
               </FormItem>
             )}
           />
-          
+
           <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -171,8 +149,8 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Is with Items</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(value === "yes")} 
+                  <Select
+                    onValueChange={(value) => field.onChange(value === "yes")}
                     defaultValue={field.value ? "yes" : "no"}
                   >
                     <FormControl>
@@ -189,15 +167,15 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="financeEffect"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Finance Effect</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
+                  <Select
+                    onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
@@ -206,8 +184,12 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Yes (Positive)">Yes (Positive)</SelectItem>
-                      <SelectItem value="Yes (Negative)">Yes (Negative)</SelectItem>
+                      <SelectItem value="Yes (Positive)">
+                        Yes (Positive)
+                      </SelectItem>
+                      <SelectItem value="Yes (Negative)">
+                        Yes (Negative)
+                      </SelectItem>
                       <SelectItem value="Yes">Yes</SelectItem>
                       <SelectItem value="No">No</SelectItem>
                     </SelectContent>
@@ -217,7 +199,7 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
               )}
             />
           </div>
-          
+
           <FormField
             control={form.control}
             name="active"
@@ -235,7 +217,7 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
               </FormItem>
             )}
           />
-          
+
           <div className="flex justify-end space-x-2 pt-2">
             <Button variant="outline" onClick={onClose} type="button">
               Cancel

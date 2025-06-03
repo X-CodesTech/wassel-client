@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Activity, SubActivity } from "@/lib/types";
 import {
@@ -44,28 +42,32 @@ interface AddSubActivityFormProps {
   onClose: () => void;
 }
 
-export default function AddSubActivityForm({ 
+export default function AddSubActivityForm({
   parentActivity,
-  onClose 
+  onClose,
 }: AddSubActivityFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get current sub-activities to determine next itmSrl
   const { data: activityWithSubs } = useQuery({
-    queryKey: ['/api/activities', parentActivity.id, 'sub-activities'],
+    queryKey: ["/api/activities", parentActivity.id, "sub-activities"],
   });
 
   // Safely access sub-activities from the query response
-  const subActivities: SubActivity[] = 
-    activityWithSubs && typeof activityWithSubs === 'object' && activityWithSubs !== null && 'subActivities' in activityWithSubs
+  const subActivities: SubActivity[] =
+    activityWithSubs &&
+    typeof activityWithSubs === "object" &&
+    activityWithSubs !== null &&
+    "subActivities" in activityWithSubs
       ? (activityWithSubs.subActivities as SubActivity[])
       : [];
-    
+
   // Calculate next itmSrl
-  const nextItmSrl = subActivities.length > 0 
-    ? Math.max(...subActivities.map((sub: SubActivity) => sub.itmSrl)) + 1 
-    : 1;
+  const nextItmSrl =
+    subActivities.length > 0
+      ? Math.max(...subActivities.map((sub: SubActivity) => sub.itmSrl)) + 1
+      : 1;
 
   // Initialize form
   const form = useForm<FormValues>({
@@ -83,61 +85,28 @@ export default function AddSubActivityForm({
   });
 
   // Add sub-activity mutation
-  const addSubActivityMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      return apiRequest("POST", "/api/sub-activities", values);
-    },
-    onSuccess: () => {
-      // Force invalidate all queries to ensure the UI updates properly
-      queryClient.invalidateQueries();
-      // Specifically target the activity and sub-activities
-      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/activities', parentActivity.id, 'sub-activities']
-      });
-      
-      toast({
-        title: "Success",
-        description: "Sub-activity added successfully",
-      });
-      
-      // Use a slight delay to ensure queries are refreshed before closing the modal
-      setTimeout(() => {
-        onClose();
-      }, 100);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to add sub-activity: ${error}`,
-        variant: "destructive"
-      });
-      setIsSubmitting(false);
-    }
-  });
 
   // Submit handler
   const onSubmit = (values: FormValues) => {
     setIsSubmitting(true);
-    
+
     // Prefix the itmSrl with the parent activity's ACTsrl in the itemCode field to display
     // but keep the numeric itmSrl for the database
     const submissionValues = {
       ...values,
       itmSrl: Number(values.itmSrl),
-      itemCode: `${parentActivity.actSrl}-${values.itmSrl}-${values.itemCode}`
+      itemCode: `${parentActivity.actSrl}-${values.itmSrl}-${values.itemCode}`,
     };
-    
-    addSubActivityMutation.mutate(submissionValues);
   };
 
   return (
     <div>
       <h3 className="text-lg font-semibold mb-4">Add New Sub-Activity</h3>
       <p className="text-sm text-gray-500 mb-4">
-        Adding sub-activity to: <strong>{parentActivity.activityName}</strong> ({parentActivity.actSrl})
+        Adding sub-activity to: <strong>{parentActivity.activityName}</strong> (
+        {parentActivity.actSrl})
       </p>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -152,11 +121,13 @@ export default function AddSubActivityForm({
                       {parentActivity.actSrl}-
                     </div>
                     <FormControl>
-                      <Input 
+                      <Input
                         type="number"
                         className="rounded-l-none"
-                        {...field} 
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || '')}
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value) || "")
+                        }
                       />
                     </FormControl>
                   </div>
@@ -178,7 +149,7 @@ export default function AddSubActivityForm({
               )}
             />
           </div>
-          
+
           <FormField
             control={form.control}
             name="itemName"
@@ -192,7 +163,7 @@ export default function AddSubActivityForm({
               </FormItem>
             )}
           />
-          
+
           <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -207,15 +178,15 @@ export default function AddSubActivityForm({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="activityType"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Activity Type</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
+                  <Select
+                    onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
@@ -226,7 +197,9 @@ export default function AddSubActivityForm({
                     <SelectContent>
                       <SelectItem value="X-work">X-work</SelectItem>
                       <SelectItem value="Material">Material</SelectItem>
-                      <SelectItem value="Transportation">Transportation</SelectItem>
+                      <SelectItem value="Transportation">
+                        Transportation
+                      </SelectItem>
                       <SelectItem value="Finance">Finance</SelectItem>
                     </SelectContent>
                   </Select>
@@ -235,15 +208,15 @@ export default function AddSubActivityForm({
               )}
             />
           </div>
-          
+
           <FormField
             control={form.control}
             name="pricingMethod"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Pricing Method</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
+                <Select
+                  onValueChange={field.onChange}
                   defaultValue={field.value}
                 >
                   <FormControl>
@@ -262,7 +235,7 @@ export default function AddSubActivityForm({
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="active"
@@ -280,7 +253,7 @@ export default function AddSubActivityForm({
               </FormItem>
             )}
           />
-          
+
           <div className="flex justify-end space-x-2 pt-2">
             <Button variant="outline" onClick={onClose} type="button">
               Cancel
