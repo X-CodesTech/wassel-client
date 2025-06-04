@@ -5,19 +5,29 @@
 import { z } from "zod";
 
 export interface Activity {
-  id: number;
+  _id: string;
   actSrl: string;
+  activityTransactionType: string;
+  activityNameEn: string;
+  activityNameAr: string;
   activityCode: string;
-  activityType: string;
-  activityName: string;
+  portalActivityNameEn: string;
+  portalActivityNameAr: string;
   isWithItems: boolean;
-  financeEffect: string;
-  active: boolean;
+  isOpsActive: boolean;
+  isPortalActive: boolean;
+  isInOrderScreen: boolean;
+  isInShippingUnit: boolean;
+  isActive: boolean;
+  isInSpecialRequirement: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  subActivities: SubActivity[];
 }
 
 export interface SubActivity {
-  id: number;
-  parentId: number;
+  _id: string;
+  parentId: string;
   itmSrl: number;
   itemCode: string;
   itemName: string;
@@ -36,6 +46,7 @@ export interface TransactionType {
   id: number;
   name: string;
   createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // Schemas for form validation - copied from shared schema
@@ -75,7 +86,9 @@ export const transactionTypeSchema = z.object({
   createdAt: z.date().optional(),
 });
 
-export const insertTransactionTypeSchema = transactionTypeSchema.omit({ id: true });
+export const insertTransactionTypeSchema = transactionTypeSchema.omit({
+  id: true,
+});
 export type InsertTransactionType = z.infer<typeof insertTransactionTypeSchema>;
 
 // Location schemas
@@ -83,28 +96,28 @@ export const countrySchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "Country name is required"),
   code: z.string().min(1, "Country code is required"),
-  active: z.boolean().default(true)
+  active: z.boolean().default(true),
 });
 
 export const areaSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "Area name is required"),
   countryId: z.number().int().positive("Country is required"),
-  active: z.boolean().default(true)
+  active: z.boolean().default(true),
 });
 
 export const citySchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "City name is required"),
   areaId: z.number().int().positive("Area is required"),
-  active: z.boolean().default(true)
+  active: z.boolean().default(true),
 });
 
 export const villageSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "Village name is required"),
   cityId: z.number().int().positive("City is required"),
-  active: z.boolean().default(true)
+  active: z.boolean().default(true),
 });
 
 export const insertCountrySchema = countrySchema.omit({ id: true });
@@ -128,7 +141,7 @@ export interface Order {
   orderNumber: string;
   customerName: string;
   serviceType: string;
-  status: 'pending' | 'in-progress' | 'completed' | 'cancelled';
+  status: "pending" | "in-progress" | "completed" | "cancelled";
   pickupLocation: string;
   deliveryLocation: string;
   requestedDate: string;
@@ -141,7 +154,9 @@ export const orderSchema = z.object({
   orderNumber: z.string().min(1, "Order number is required"),
   customerName: z.string().min(1, "Customer name is required"),
   serviceType: z.string().min(1, "Service type is required"),
-  status: z.enum(['pending', 'in-progress', 'completed', 'cancelled']).default('pending'),
+  status: z
+    .enum(["pending", "in-progress", "completed", "cancelled"])
+    .default("pending"),
   pickupLocation: z.string().min(1, "Pickup location is required"),
   deliveryLocation: z.string().min(1, "Delivery location is required"),
   requestedDate: z.string().min(1, "Requested date is required"),
@@ -149,7 +164,10 @@ export const orderSchema = z.object({
   totalAmount: z.number().optional(),
 });
 
-export const insertOrderSchema = orderSchema.omit({ id: true, createdAt: true });
+export const insertOrderSchema = orderSchema.omit({
+  id: true,
+  createdAt: true,
+});
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
 // Vendor interface and schemas
@@ -161,7 +179,7 @@ export interface Vendor {
   phone: string;
   address: string;
   category: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   contractStartDate: string;
   contractEndDate: string;
   rating: number;
@@ -177,7 +195,7 @@ export const vendorSchema = z.object({
   phone: z.string().min(1, "Phone number is required"),
   address: z.string().min(1, "Address is required"),
   category: z.string().min(1, "Category is required"),
-  status: z.enum(['active', 'inactive']).default('active'),
+  status: z.enum(["active", "inactive"]).default("active"),
   contractStartDate: z.string().min(1, "Contract start date is required"),
   contractEndDate: z.string().min(1, "Contract end date is required"),
   rating: z.number().min(0).max(5).default(0),
@@ -185,5 +203,8 @@ export const vendorSchema = z.object({
   createdAt: z.string().optional(),
 });
 
-export const insertVendorSchema = vendorSchema.omit({ id: true, createdAt: true });
+export const insertVendorSchema = vendorSchema.omit({
+  id: true,
+  createdAt: true,
+});
 export type InsertVendor = z.infer<typeof insertVendorSchema>;

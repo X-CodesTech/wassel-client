@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,6 +21,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { FormSkeleton } from "./LoadingComponents";
+import { Skeleton } from "./ui/skeleton";
+import { actGetTransactionTypes } from "@/store/transactionTypes/transactionTypesSlice";
 
 // Form validation schema
 const formSchema = z.object({
@@ -42,19 +46,15 @@ interface AddActivityFormProps {
 export default function AddActivityForm({ onClose }: AddActivityFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatch = useAppDispatch();
+  const { records, loading, error } = useAppSelector(
+    (state) => state.transactionTypes
+  );
 
   // Initialize form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      actSrl: "",
-      activityCode: "",
-      activityName: "",
-      activityType: "X-work",
-      isWithItems: true,
-      financeEffect: "Yes (Positive)",
-      active: true,
-    },
+    defaultValues: {},
   });
 
   // Add activity mutation
@@ -63,6 +63,19 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
   const onSubmit = (values: FormValues) => {
     setIsSubmitting(true);
   };
+
+  useEffect(() => {
+    dispatch(actGetTransactionTypes());
+  }, [dispatch]);
+
+  if (loading === "pending") {
+    return (
+      <div>
+        <Skeleton className="h-10 w-32" />
+        <FormSkeleton fields={5} />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -129,12 +142,17 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="X-work">X-work</SelectItem>
+                    {records.map((record) => (
+                      <SelectItem key={record.id} value={record.id}>
+                        {record.name}
+                      </SelectItem>
+                    ))}
+                    {/* <SelectItem value="X-work">X-work</SelectItem>
                     <SelectItem value="Material">Material</SelectItem>
                     <SelectItem value="Transportation">
                       Transportation
                     </SelectItem>
-                    <SelectItem value="Finance">Finance</SelectItem>
+                    <SelectItem value="Finance">Finance</SelectItem> */}
                   </SelectContent>
                 </Select>
                 <FormMessage />

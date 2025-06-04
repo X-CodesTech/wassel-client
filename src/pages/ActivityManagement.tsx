@@ -19,7 +19,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import { actGetActivities } from "@/store/activities/activitiesSlice";
+import {
+  actAddActivity,
+  actGetActivities,
+} from "@/store/activities/activitiesSlice";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ActivitiesPageSkeleton,
@@ -232,14 +235,14 @@ export default function ActivityManagement() {
   ]);
 
   // Delete activity function
-  const deleteActivity = (id: number) => {
+  const deleteActivity = (id: string) => {
     // Delete all sub-activities of the activity first
     setSubActivities(
       subActivities.filter((subActivity) => subActivity.parentId !== id)
     );
 
     // Then delete the activity itself
-    setActivities(activities.filter((activity) => activity.id !== id));
+    setActivities(activities.filter((activity) => activity._id !== id));
 
     // Show success toast
     toast({
@@ -252,10 +255,10 @@ export default function ActivityManagement() {
   };
 
   // Delete sub-activity function
-  const deleteSubActivity = (id: number) => {
+  const deleteSubActivity = (id: string) => {
     // Delete the sub-activity
     setSubActivities(
-      subActivities.filter((subActivity) => subActivity.id !== id)
+      subActivities.filter((subActivity) => subActivity._id !== id)
     );
 
     // Show success toast
@@ -269,22 +272,29 @@ export default function ActivityManagement() {
   };
 
   // Filter activities based on search term and filter type
-  const filteredActivities = activities?.filter((activity: Activity) => {
+  const filteredActivities = records?.filter((activity: Activity) => {
     const matchesSearch =
       activity.actSrl.toLowerCase().includes(searchTerm.toLowerCase()) ||
       activity.activityCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.activityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.activityType.toLowerCase().includes(searchTerm.toLowerCase());
+      activity.activityNameEn
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      activity.activityNameAr
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      activity.activityTransactionType
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
     if (!filterType) return matchesSearch;
 
     switch (filterType) {
       case "activityType":
-        return matchesSearch && activity.activityType === "X-work";
+        return matchesSearch && activity.activityTransactionType === "X-work";
       case "financeEffect":
         return matchesSearch && activity.financeEffect.includes("Positive");
       case "activeStatus":
-        return matchesSearch && activity.active;
+        return matchesSearch && activity.isActive;
       default:
         return matchesSearch;
     }
@@ -310,7 +320,7 @@ export default function ActivityManagement() {
   // Confirm delete activity
   const confirmDeleteActivity = () => {
     if (selectedActivity) {
-      deleteActivity(selectedActivity.id);
+      deleteActivity(selectedActivity._id);
     }
   };
 
@@ -329,7 +339,7 @@ export default function ActivityManagement() {
   // Confirm delete sub-activity
   const confirmDeleteSubActivity = () => {
     if (selectedSubActivity) {
-      deleteSubActivity(selectedSubActivity.id);
+      deleteSubActivity(selectedSubActivity._id);
     }
   };
 
@@ -341,7 +351,8 @@ export default function ActivityManagement() {
 
   // Add activity handler
   const handleAddActivity = (newActivity: Activity) => {
-    setActivities([...activities, newActivity]);
+    // setActivities([...activities, newActivity]);
+    dispatch(actAddActivity(newActivity));
     setAddActivityOpen(false);
 
     toast({
@@ -354,7 +365,7 @@ export default function ActivityManagement() {
   const handleUpdateActivity = (updatedActivity: Activity) => {
     setActivities(
       activities.map((activity) =>
-        activity.id === updatedActivity.id ? updatedActivity : activity
+        activity._id === updatedActivity._id ? updatedActivity : activity
       )
     );
     setEditActivityOpen(false);
@@ -380,7 +391,7 @@ export default function ActivityManagement() {
   const handleUpdateSubActivity = (updatedSubActivity: SubActivity) => {
     setSubActivities(
       subActivities.map((subActivity) =>
-        subActivity.id === updatedSubActivity.id
+        subActivity._id === updatedSubActivity._id
           ? updatedSubActivity
           : subActivity
       )
