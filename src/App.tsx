@@ -17,6 +17,7 @@ import { Provider } from "react-redux";
 import { persistor, store } from "./store";
 import { PersistGate } from "redux-persist/integration/react";
 import DesignSystem from "./pages/DesignSystem";
+import ErrorPage from "./pages/ErrorPage";
 
 function Router() {
   return (
@@ -33,6 +34,7 @@ function Router() {
         <Route path="/vendors/:id" component={VendorDetails} />
         <Route path="/admin/locations" component={LocationManagement} />
         <Route path="/design-system" component={DesignSystem} />
+        <Route path="/error/:code" component={ErrorPage} />
         <Route component={NotFound} />
       </Switch>
     </MainLayout>

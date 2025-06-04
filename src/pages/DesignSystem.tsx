@@ -38,20 +38,29 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Plus,
-  Edit,
-  Trash2,
-  Search,
-  Star,
-  Building2,
-  Phone,
-  Mail,
-  MapPin,
-  Calendar,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+  TableSkeleton,
+  CardGridSkeleton,
+  StatsSkeleton,
+  FormSkeleton,
+  ListSkeleton,
+  VendorDetailsSkeleton,
+  OrderFormSkeleton,
+  PriceListSkeleton,
+  PageSkeleton,
+  ActivitiesPageSkeleton,
+} from "@/components/LoadingComponents";
+import {
+  ErrorComponent,
+  NetworkError,
+  ServerError,
+  NotFoundError,
+  PermissionError,
+  ValidationError,
+  UnknownError,
+} from "@/components/ErrorComponents";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -133,7 +142,6 @@ export default function DesignSystem() {
 
   return (
     <div className="space-y-6">
-      <title>Design System | Wassel</title>
       <div className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight mb-4">
           Design System
@@ -145,11 +153,13 @@ export default function DesignSystem() {
       </div>
 
       <Tabs defaultValue="foundations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="foundations">Foundations</TabsTrigger>
           <TabsTrigger value="components">Components</TabsTrigger>
           <TabsTrigger value="forms">Forms</TabsTrigger>
           <TabsTrigger value="layout">Layout</TabsTrigger>
+          <TabsTrigger value="loading">Loading</TabsTrigger>
+          <TabsTrigger value="errors">Errors</TabsTrigger>
         </TabsList>
 
         <TabsContent value="foundations">
@@ -802,6 +812,574 @@ export default function DesignSystem() {
     Tab 2 content
   </TabsContent>
 </Tabs>`}
+                  />
+                </div>
+              </div>
+            </ComponentSection>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="loading">
+          <div className="space-y-8">
+            <ComponentSection title="Basic Skeleton">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-3">Basic Skeletons</h4>
+                  <div className="space-y-3">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-10 w-32 rounded-md" />
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Usage</h4>
+                  <CodeBlock
+                    code={`<Skeleton className="h-4 w-full" />
+<Skeleton className="h-10 w-32 rounded-md" />
+<Skeleton className="h-12 w-12 rounded-full" />`}
+                  />
+                </div>
+
+                <PropTable
+                  props={[
+                    {
+                      name: "className",
+                      type: "string",
+                      description: "Additional CSS classes for customization",
+                    },
+                  ]}
+                />
+              </div>
+            </ComponentSection>
+
+            <ComponentSection title="Table Loading">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-3">Table Skeleton</h4>
+                  <TableSkeleton rows={3} columns={4} />
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Usage</h4>
+                  <CodeBlock code={`<TableSkeleton rows={5} columns={4} />`} />
+                </div>
+
+                <PropTable
+                  props={[
+                    {
+                      name: "rows",
+                      type: "number",
+                      default: "5",
+                      description: "Number of skeleton rows to display",
+                    },
+                    {
+                      name: "columns",
+                      type: "number",
+                      default: "4",
+                      description: "Number of skeleton columns to display",
+                    },
+                  ]}
+                />
+              </div>
+            </ComponentSection>
+
+            <ComponentSection title="Card Grid Loading">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-3">Card Grid Skeleton</h4>
+                  <CardGridSkeleton count={3} />
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Usage</h4>
+                  <CodeBlock code={`<CardGridSkeleton count={6} />`} />
+                </div>
+
+                <PropTable
+                  props={[
+                    {
+                      name: "count",
+                      type: "number",
+                      default: "6",
+                      description: "Number of skeleton cards to display",
+                    },
+                  ]}
+                />
+              </div>
+            </ComponentSection>
+
+            <ComponentSection title="Statistics Loading">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-3">Stats Cards Skeleton</h4>
+                  <StatsSkeleton count={4} />
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Usage</h4>
+                  <CodeBlock code={`<StatsSkeleton count={4} />`} />
+                </div>
+
+                <PropTable
+                  props={[
+                    {
+                      name: "count",
+                      type: "number",
+                      default: "4",
+                      description: "Number of stat cards to display",
+                    },
+                  ]}
+                />
+              </div>
+            </ComponentSection>
+
+            <ComponentSection title="Form Loading">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-3">Form Skeleton</h4>
+                  <FormSkeleton fields={4} />
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Usage</h4>
+                  <CodeBlock code={`<FormSkeleton fields={6} />`} />
+                </div>
+
+                <PropTable
+                  props={[
+                    {
+                      name: "fields",
+                      type: "number",
+                      default: "4",
+                      description: "Number of form fields to display",
+                    },
+                  ]}
+                />
+              </div>
+            </ComponentSection>
+
+            <ComponentSection title="List Loading">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-3">List Items Skeleton</h4>
+                  <ListSkeleton items={3} />
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Usage</h4>
+                  <CodeBlock code={`<ListSkeleton items={5} />`} />
+                </div>
+
+                <PropTable
+                  props={[
+                    {
+                      name: "items",
+                      type: "number",
+                      default: "5",
+                      description: "Number of list items to display",
+                    },
+                  ]}
+                />
+              </div>
+            </ComponentSection>
+
+            <ComponentSection title="Page-Specific Loading">
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Complete Page Skeleton</h4>
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <PageSkeleton />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">
+                    Vendor Details Skeleton
+                  </h4>
+                  <div className="border rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto">
+                    <VendorDetailsSkeleton />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Order Form Skeleton</h4>
+                  <div className="border rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto">
+                    <OrderFormSkeleton />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Price List Skeleton</h4>
+                  <div className="border rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto">
+                    <PriceListSkeleton />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">
+                    Activities Page Skeleton
+                  </h4>
+                  <div className="border rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto">
+                    <ActivitiesPageSkeleton />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Usage</h4>
+                  <CodeBlock
+                    code={`// For general page loading
+<PageSkeleton />
+
+// For specific vendor details page
+<VendorDetailsSkeleton />
+
+// For order creation form
+<OrderFormSkeleton />
+
+// For price lists page
+<PriceListSkeleton />
+
+// For activities page
+<ActivitiesPageSkeleton />`}
+                  />
+                </div>
+              </div>
+            </ComponentSection>
+
+            <ComponentSection title="Implementation Guidelines">
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-blue-800 mb-2">
+                    Best Practices
+                  </h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>
+                      • Use skeleton components that match the actual content
+                      layout
+                    </li>
+                    <li>
+                      • Keep skeleton animations subtle with animate-pulse
+                    </li>
+                    <li>
+                      • Match skeleton dimensions to real content for smooth
+                      transitions
+                    </li>
+                    <li>
+                      • Use appropriate skeleton variants for different content
+                      types
+                    </li>
+                    <li>
+                      • Combine multiple skeleton components for complex layouts
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Integration Example</h4>
+                  <CodeBlock
+                    code={`import { TableSkeleton } from "@/components/LoadingComponents";
+
+function DataTable() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["vendors"],
+    queryFn: fetchVendors
+  });
+
+  if (isLoading) {
+    return <TableSkeleton rows={5} columns={6} />;
+  }
+
+  return (
+    <Table>
+      {/* Actual table content */}
+    </Table>
+  );
+}`}
+                  />
+                </div>
+              </div>
+            </ComponentSection>
+          </div>
+        </TabsContent>
+        <TabsContent value="errors">
+          <div className="space-y-8">
+            <ComponentSection title="Error Types">
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Network Error</h4>
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <NetworkError />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Server Error</h4>
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <ServerError error={{ code: "500" }} />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Permission Error</h4>
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <PermissionError error={{ code: "403" }} />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Not Found Error</h4>
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <NotFoundError />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Validation Error</h4>
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <ValidationError
+                      error={{
+                        message: "Please check the form data and try again.",
+                        details:
+                          "Required fields are missing or contain invalid data.",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </ComponentSection>
+
+            <ComponentSection title="Custom Error Component">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-3">Custom Error Example</h4>
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <ErrorComponent
+                      error={{
+                        type: "server",
+                        title: "Database Connection Failed",
+                        message: "Unable to connect to the database server.",
+                        code: "DB_001",
+                        details:
+                          "The database server is temporarily unavailable. Please try again in a few minutes.",
+                        timestamp: new Date().toISOString(),
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Usage</h4>
+                  <CodeBlock
+                    code={`// Pre-configured error components
+<NetworkError />
+<ServerError error={{ code: "500" }} />
+<NotFoundError />
+<PermissionError error={{ code: "403" }} />
+<ValidationError />
+
+// Custom error component
+<ErrorComponent
+  error={{
+    type: "server",
+    title: "Custom Error Title",
+    message: "Custom error message",
+    code: "ERR_001",
+    details: "Additional details...",
+    timestamp: new Date().toISOString()
+  }}
+  onRetry={() => window.location.reload()}
+  onGoBack={() => window.history.back()}
+  onGoHome={() => navigate('/')}
+/>`}
+                  />
+                </div>
+
+                <PropTable
+                  props={[
+                    {
+                      name: "error",
+                      type: "ErrorInfo",
+                      description: "Error information object",
+                    },
+                    {
+                      name: "onRetry",
+                      type: "function",
+                      description: "Optional retry handler",
+                    },
+                    {
+                      name: "onGoBack",
+                      type: "function",
+                      description: "Optional go back handler",
+                    },
+                    {
+                      name: "onGoHome",
+                      type: "function",
+                      description: "Optional go home handler",
+                    },
+                    {
+                      name: "className",
+                      type: "string",
+                      description: "Additional CSS classes",
+                    },
+                  ]}
+                />
+              </div>
+            </ComponentSection>
+
+            <ComponentSection title="Error Types Configuration">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-3">Available Error Types</h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Icon</TableHead>
+                        <TableHead>Color</TableHead>
+                        <TableHead>Use Case</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="font-mono">network</TableCell>
+                        <TableCell>Wifi Icon</TableCell>
+                        <TableCell>
+                          <Badge className="bg-orange-100 text-orange-800">
+                            Orange
+                          </Badge>
+                        </TableCell>
+                        <TableCell>Connection issues, offline states</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-mono">server</TableCell>
+                        <TableCell>Server Icon</TableCell>
+                        <TableCell>
+                          <Badge className="bg-red-100 text-red-800">Red</Badge>
+                        </TableCell>
+                        <TableCell>5xx errors, server downtime</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-mono">permission</TableCell>
+                        <TableCell>Shield Icon</TableCell>
+                        <TableCell>
+                          <Badge className="bg-yellow-100 text-yellow-800">
+                            Yellow
+                          </Badge>
+                        </TableCell>
+                        <TableCell>401, 403 errors, access denied</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-mono">notFound</TableCell>
+                        <TableCell>FileX Icon</TableCell>
+                        <TableCell>
+                          <Badge className="bg-blue-100 text-blue-800">
+                            Blue
+                          </Badge>
+                        </TableCell>
+                        <TableCell>404 errors, missing resources</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-mono">validation</TableCell>
+                        <TableCell>AlertTriangle Icon</TableCell>
+                        <TableCell>
+                          <Badge className="bg-purple-100 text-purple-800">
+                            Purple
+                          </Badge>
+                        </TableCell>
+                        <TableCell>Form validation, 400 errors</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-mono">unknown</TableCell>
+                        <TableCell>Bug Icon</TableCell>
+                        <TableCell>
+                          <Badge className="bg-gray-100 text-gray-800">
+                            Gray
+                          </Badge>
+                        </TableCell>
+                        <TableCell>Unexpected errors, fallback</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">ErrorInfo Interface</h4>
+                  <CodeBlock
+                    code={`interface ErrorInfo {
+  type: 'network' | 'server' | 'permission' | 'notFound' | 'validation' | 'unknown';
+  title?: string;
+  message?: string;
+  details?: string;
+  code?: string | number;
+  timestamp?: string;
+  canRetry?: boolean;
+  canGoBack?: boolean;
+  canGoHome?: boolean;
+}`}
+                  />
+                </div>
+              </div>
+            </ComponentSection>
+
+            <ComponentSection title="Implementation Guidelines">
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-blue-800 mb-2">
+                    Best Practices
+                  </h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>
+                      • Use appropriate error types for different scenarios
+                    </li>
+                    <li>• Provide clear, actionable error messages</li>
+                    <li>• Include helpful suggestions for users</li>
+                    <li>
+                      • Always provide navigation options (retry, back, home)
+                    </li>
+                    <li>
+                      • Log errors for debugging while showing user-friendly
+                      messages
+                    </li>
+                    <li>
+                      • Use error boundaries to catch unexpected React errors
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-amber-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-amber-800 mb-2">
+                    Integration with Routing
+                  </h4>
+                  <p className="text-sm text-amber-700 mb-2">
+                    Error components integrate seamlessly with the routing
+                    system. They replace the main content area while preserving
+                    navigation.
+                  </p>
+                  <CodeBlock
+                    code={`// Use in route handlers
+<Route path="/error/:code" component={ErrorPage} />
+
+// Use in components
+const { data, error, isLoading } = useQuery({
+  queryKey: ['vendors'],
+  queryFn: fetchVendors
+});
+
+if (error) {
+  return <ServerError error={{ 
+    message: error.message,
+    timestamp: new Date().toISOString()
+  }} />;
+}
+
+if (isLoading) {
+  return <TableSkeleton />;
+}
+
+return <VendorTable data={data} />;`}
                   />
                 </div>
               </div>
