@@ -1,4 +1,5 @@
 import http from "./http";
 import authServices from "./authServices";
+import activitieServices from "./activitieServices";
 
-export { http, authServices };
+export { http, authServices, activitieServices };

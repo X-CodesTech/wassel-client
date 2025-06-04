@@ -1,8 +1,9 @@
 import axios from "axios";
+import { BASE_BACKEND_URL } from "./apiUrlConstants";
 
 // Create axios instance with base URL
 const http = axios.create({
-  baseURL: "http://localhost:8080",
+  baseURL: BASE_BACKEND_URL,
   headers: {
     "Content-Type": "application/json",
   },
