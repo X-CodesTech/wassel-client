@@ -395,7 +395,7 @@ export default function ActivityManagement() {
 
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
-            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 flex-1">
               <SearchFilter
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
