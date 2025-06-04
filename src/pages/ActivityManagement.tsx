@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import ActivityTable from "@/components/ActivityTable";
 import AddActivityForm from "@/components/AddActivityForm";
@@ -18,8 +18,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { actGetActivities } from "@/store/activities/activitiesSlice";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ActivitiesPageSkeleton,
+  TableSkeleton,
+} from "@/components/LoadingComponents";
+import { ErrorComponent } from "@/components/ErrorComponents";
 
 export default function ActivityManagement() {
+  const dispatch = useAppDispatch();
+  const { records, loading, error } = useAppSelector(
+    (state) => state.activities
+  );
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string | null>(null);
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
@@ -256,7 +269,7 @@ export default function ActivityManagement() {
   };
 
   // Filter activities based on search term and filter type
-  const filteredActivities = activities.filter((activity: Activity) => {
+  const filteredActivities = activities?.filter((activity: Activity) => {
     const matchesSearch =
       activity.actSrl.toLowerCase().includes(searchTerm.toLowerCase()) ||
       activity.activityCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -379,6 +392,27 @@ export default function ActivityManagement() {
       description: "Sub-activity updated successfully",
     });
   };
+
+  useEffect(() => {
+    dispatch(actGetActivities());
+  }, [dispatch]);
+
+  if (loading === "pending") {
+    return <ActivitiesPageSkeleton />;
+  }
+
+  if (loading === "rejected" && error) {
+    return (
+      <div className="w-full h-full grid place-items-center">
+        <ErrorComponent
+          error={{
+            type: "server",
+            message: error,
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <main>
