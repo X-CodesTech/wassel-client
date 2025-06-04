@@ -14,6 +14,7 @@ import {
   FileText,
   CreditCard,
   Receipt,
+  Palette,
 } from "lucide-react";
 
 export default function SideNav() {
@@ -83,6 +84,12 @@ export default function SideNav() {
       icon: <FileText className="h-5 w-5" />,
       active: location === "/transaction-types",
     },
+    {
+      name: "Design System",
+      href: "/design-system",
+      icon: <Palette className="h-5 w-5" />,
+      active: location === "/design-system",
+    },
   ];
 
   const paymentItems = [
@@ -101,7 +108,7 @@ export default function SideNav() {
   ];
 
   return (
-    <div className="w-full bg-blue-600 shadow-lg h-full flex flex-col">
+    <div className="h-full min-h-full flex flex-col shadow-lg">
       {/* Create New Order Button - Fixed at top */}
       <div className="p-4 flex-shrink-0">
         <button
@@ -114,7 +121,7 @@ export default function SideNav() {
       </div>
 
       {/* Scrollable Navigation */}
-      <nav className="flex-1 min-h-full">
+      <nav className="flex-1 min-h-0">
         <LayoutGroup>
           {/* Main Navigation Items */}
           <ul className="space-y-0">
