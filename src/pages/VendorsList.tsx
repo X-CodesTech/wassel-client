@@ -240,6 +240,7 @@ export default function VendorsList() {
 
   return (
     <div className="space-y-6">
+      <title>Vendors List | Wassel</title>
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Vendors</h1>

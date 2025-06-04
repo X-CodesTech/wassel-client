@@ -133,6 +133,7 @@ export default function DesignSystem() {
 
   return (
     <div className="space-y-6">
+      <title>Design System | Wassel</title>
       <div className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight mb-4">
           Design System

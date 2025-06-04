@@ -5,12 +5,34 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, Package, MapPin, User, Calendar, Printer, Save, Send } from "lucide-react";
+import {
+  ArrowRight,
+  Package,
+  MapPin,
+  User,
+  Calendar,
+  Printer,
+  Save,
+  Send,
+} from "lucide-react";
 import { useLocation } from "wouter";
 
 const serviceRequestSchema = z.object({
@@ -18,47 +40,53 @@ const serviceRequestSchema = z.object({
   freightService: z.string().min(1, "Please select a freight service"),
   operationPoint: z.string().min(1, "Operation point is required"),
   billingAmount: z.string().min(1, "Billing amount is required"),
-  
+
   // Requester info
   requesterName: z.string().min(1, "Requester name is required"),
   requesterContact1: z.string().min(1, "Primary contact is required"),
   requesterContact2: z.string().optional(),
   emailAddress: z.string().email("Valid email address is required"),
-  
+
   // Pickup info
   pickupLocation: z.string().min(1, "Pickup location is required"),
   pickupAddress: z.string().min(1, "Pickup address is required"),
   pickupDateTime: z.string().min(1, "Pickup date and time is required"),
   pickupNotes: z.string().optional(),
-  
+
   // Pickup coordinator info
   coordinatorName: z.string().min(1, "Coordinator name is required"),
   coordinatorContact1: z.string().min(1, "Coordinator contact is required"),
   coordinatorContact2: z.string().optional(),
   coordinatorEmail: z.string().email("Valid coordinator email is required"),
-  
+
   // Labor requirements
   laborRequired: z.enum(["yes", "no"]),
   laborDetails: z.string().optional(),
   pickupNotes2: z.string().optional(),
-  
+
   // Delivery info
   deliveryLocation: z.string().min(1, "Delivery location is required"),
   deliveryAddress: z.string().min(1, "Delivery address is required"),
   deliveryDateTime: z.string().min(1, "Delivery date and time is required"),
   deliveryNotes: z.string().optional(),
-  
+
   // Delivery coordinator info
-  deliveryCoordinatorName: z.string().min(1, "Delivery coordinator name is required"),
-  deliveryCoordinatorContact1: z.string().min(1, "Delivery coordinator contact is required"),
+  deliveryCoordinatorName: z
+    .string()
+    .min(1, "Delivery coordinator name is required"),
+  deliveryCoordinatorContact1: z
+    .string()
+    .min(1, "Delivery coordinator contact is required"),
   deliveryCoordinatorContact2: z.string().optional(),
-  deliveryCoordinatorEmail: z.string().email("Valid delivery coordinator email is required"),
-  
+  deliveryCoordinatorEmail: z
+    .string()
+    .email("Valid delivery coordinator email is required"),
+
   // Delivery labor requirements
   deliveryLaborRequired: z.enum(["yes", "no"]),
   deliveryLaborDetails: z.string().optional(),
   deliveryNotes2: z.string().optional(),
-  
+
   // Shipping details
   serviceType: z.string().min(1, "Service type is required"),
   dimensions: z.string().optional(),
@@ -73,42 +101,48 @@ type ServiceRequestFormData = z.infer<typeof serviceRequestSchema>;
 export default function CreateOrder() {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
-  
+
   const form = useForm<ServiceRequestFormData>({
     resolver: zodResolver(serviceRequestSchema),
     defaultValues: {
       laborRequired: "no",
       deliveryLaborRequired: "no",
-    }
+    },
   });
 
   const onSubmit = (data: ServiceRequestFormData) => {
     console.log("Service request data:", data);
-    
+
     toast({
       title: "Service Request Submitted",
-      description: "Your service request has been submitted successfully and is being processed.",
+      description:
+        "Your service request has been submitted successfully and is being processed.",
     });
-    
+
     // Navigate back to orders list
     navigate("/orders");
   };
 
   return (
     <div className="w-full space-y-6 p-6">
+      <title>Create Order | Wassel</title>
       <div className="flex items-center space-x-4 mb-8 relative">
         <div className="bg-blue-600 text-white p-3 rounded-lg">
           <Package className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Request a service</h1>
-          <p className="text-muted-foreground">Fill out the form below to request a new service</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Request a service
+          </h1>
+          <p className="text-muted-foreground">
+            Fill out the form below to request a new service
+          </p>
         </div>
-        
+
         {/* Absolute positioned button */}
         <div className="absolute top-0 right-0">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             form="service-request-form"
             className="bg-green-600 hover:bg-green-700 px-8 py-3 text-white font-medium rounded-lg"
           >
@@ -119,7 +153,11 @@ export default function CreateOrder() {
       </div>
 
       <Form {...form}>
-        <form id="service-request-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form
+          id="service-request-form"
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-8"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Service Info */}
             <Card>
@@ -136,24 +174,35 @@ export default function CreateOrder() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Freight service</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Type of service" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="express">Express Delivery</SelectItem>
-                          <SelectItem value="standard">Standard Shipping</SelectItem>
-                          <SelectItem value="freight">Freight Service</SelectItem>
-                          <SelectItem value="international">International</SelectItem>
+                          <SelectItem value="express">
+                            Express Delivery
+                          </SelectItem>
+                          <SelectItem value="standard">
+                            Standard Shipping
+                          </SelectItem>
+                          <SelectItem value="freight">
+                            Freight Service
+                          </SelectItem>
+                          <SelectItem value="international">
+                            International
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="operationPoint"
@@ -167,7 +216,7 @@ export default function CreateOrder() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="billingAmount"
@@ -206,7 +255,7 @@ export default function CreateOrder() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="requesterContact1"
@@ -220,7 +269,7 @@ export default function CreateOrder() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="requesterContact2"
@@ -234,7 +283,7 @@ export default function CreateOrder() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="emailAddress"
@@ -242,7 +291,11 @@ export default function CreateOrder() {
                     <FormItem>
                       <FormLabel>Email address</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="Email address" {...field} />
+                        <Input
+                          type="email"
+                          placeholder="Email address"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -255,9 +308,11 @@ export default function CreateOrder() {
           {/* Pickup Info Section */}
           <div className="bg-blue-50 p-1 rounded-lg">
             <div className="bg-blue-600 text-white p-3 rounded-lg mb-6">
-              <h3 className="font-medium">Trip schedule for pickup operation</h3>
+              <h3 className="font-medium">
+                Trip schedule for pickup operation
+              </h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
               {/* Pickup Info */}
               <Card>
@@ -281,7 +336,7 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="pickupAddress"
@@ -295,7 +350,7 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="pickupDateTime"
@@ -309,7 +364,7 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="pickupNotes"
@@ -323,20 +378,28 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="space-y-4">
                     <div>
                       <Label className="text-sm font-medium mb-2 block">
                         Pickup special requirements
                       </Label>
                       <div className="flex space-x-2">
-                        <Button type="button" variant="outline" size="sm">Equipment</Button>
-                        <Button type="button" variant="outline" size="sm">Teflon</Button>
-                        <Button type="button" variant="outline" size="sm">Crane</Button>
-                        <Button type="button" variant="outline" size="sm">Electric unit</Button>
+                        <Button type="button" variant="outline" size="sm">
+                          Equipment
+                        </Button>
+                        <Button type="button" variant="outline" size="sm">
+                          Teflon
+                        </Button>
+                        <Button type="button" variant="outline" size="sm">
+                          Crane
+                        </Button>
+                        <Button type="button" variant="outline" size="sm">
+                          Electric unit
+                        </Button>
                       </div>
                     </div>
-                    
+
                     <FormField
                       control={form.control}
                       name="laborRequired"
@@ -367,7 +430,7 @@ export default function CreateOrder() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="laborDetails"
@@ -381,7 +444,7 @@ export default function CreateOrder() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="pickupNotes2"
@@ -389,7 +452,10 @@ export default function CreateOrder() {
                         <FormItem>
                           <FormLabel>Pickup notes</FormLabel>
                           <FormControl>
-                            <Textarea placeholder="Additional pickup notes" {...field} />
+                            <Textarea
+                              placeholder="Additional pickup notes"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -421,7 +487,7 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="coordinatorContact1"
@@ -429,13 +495,16 @@ export default function CreateOrder() {
                       <FormItem>
                         <FormLabel>Requester contact 1</FormLabel>
                         <FormControl>
-                          <Input placeholder="Coordinator contact 1" {...field} />
+                          <Input
+                            placeholder="Coordinator contact 1"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="coordinatorContact2"
@@ -443,13 +512,16 @@ export default function CreateOrder() {
                       <FormItem>
                         <FormLabel>Requester contact 2</FormLabel>
                         <FormControl>
-                          <Input placeholder="Coordinator contact 2" {...field} />
+                          <Input
+                            placeholder="Coordinator contact 2"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="coordinatorEmail"
@@ -457,7 +529,11 @@ export default function CreateOrder() {
                       <FormItem>
                         <FormLabel>Email address</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="Coordinator email" {...field} />
+                          <Input
+                            type="email"
+                            placeholder="Coordinator email"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -471,9 +547,11 @@ export default function CreateOrder() {
           {/* Delivery Info Section */}
           <div className="bg-blue-50 p-1 rounded-lg">
             <div className="bg-blue-600 text-white p-3 rounded-lg mb-6">
-              <h3 className="font-medium">Trip schedule for delivery operation</h3>
+              <h3 className="font-medium">
+                Trip schedule for delivery operation
+              </h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
               {/* Delivery Info */}
               <Card>
@@ -497,7 +575,7 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="deliveryAddress"
@@ -511,7 +589,7 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="deliveryDateTime"
@@ -525,7 +603,7 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="deliveryNotes"
@@ -539,20 +617,28 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="space-y-4">
                     <div>
                       <Label className="text-sm font-medium mb-2 block">
                         Delivery special requirements
                       </Label>
                       <div className="flex space-x-2">
-                        <Button type="button" variant="outline" size="sm">Equipment</Button>
-                        <Button type="button" variant="outline" size="sm">Teflon</Button>
-                        <Button type="button" variant="outline" size="sm">Crane</Button>
-                        <Button type="button" variant="outline" size="sm">Electric unit</Button>
+                        <Button type="button" variant="outline" size="sm">
+                          Equipment
+                        </Button>
+                        <Button type="button" variant="outline" size="sm">
+                          Teflon
+                        </Button>
+                        <Button type="button" variant="outline" size="sm">
+                          Crane
+                        </Button>
+                        <Button type="button" variant="outline" size="sm">
+                          Electric unit
+                        </Button>
                       </div>
                     </div>
-                    
+
                     <FormField
                       control={form.control}
                       name="deliveryLaborRequired"
@@ -583,7 +669,7 @@ export default function CreateOrder() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="deliveryLaborDetails"
@@ -591,13 +677,16 @@ export default function CreateOrder() {
                         <FormItem>
                           <FormLabel>Other requirement</FormLabel>
                           <FormControl>
-                            <Input placeholder="Additional requirements" {...field} />
+                            <Input
+                              placeholder="Additional requirements"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="deliveryNotes2"
@@ -605,7 +694,10 @@ export default function CreateOrder() {
                         <FormItem>
                           <FormLabel>Pickup notes</FormLabel>
                           <FormControl>
-                            <Textarea placeholder="Additional delivery notes" {...field} />
+                            <Textarea
+                              placeholder="Additional delivery notes"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -631,13 +723,16 @@ export default function CreateOrder() {
                       <FormItem>
                         <FormLabel>Requester Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Delivery coordinator name" {...field} />
+                          <Input
+                            placeholder="Delivery coordinator name"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="deliveryCoordinatorContact1"
@@ -645,13 +740,16 @@ export default function CreateOrder() {
                       <FormItem>
                         <FormLabel>Requester contact 1</FormLabel>
                         <FormControl>
-                          <Input placeholder="Delivery coordinator contact 1" {...field} />
+                          <Input
+                            placeholder="Delivery coordinator contact 1"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="deliveryCoordinatorContact2"
@@ -659,13 +757,16 @@ export default function CreateOrder() {
                       <FormItem>
                         <FormLabel>Requester contact 2</FormLabel>
                         <FormControl>
-                          <Input placeholder="Delivery coordinator contact 2" {...field} />
+                          <Input
+                            placeholder="Delivery coordinator contact 2"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="deliveryCoordinatorEmail"
@@ -673,7 +774,11 @@ export default function CreateOrder() {
                       <FormItem>
                         <FormLabel>Email address</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="Delivery coordinator email" {...field} />
+                          <Input
+                            type="email"
+                            placeholder="Delivery coordinator email"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -687,9 +792,11 @@ export default function CreateOrder() {
           {/* Shipping Details */}
           <div className="bg-blue-50 p-1 rounded-lg">
             <div className="bg-blue-600 text-white p-3 rounded-lg mb-6">
-              <h3 className="font-medium">Trip schedule for shipping operation</h3>
+              <h3 className="font-medium">
+                Trip schedule for shipping operation
+              </h3>
             </div>
-            
+
             <Card className="m-6">
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -700,16 +807,28 @@ export default function CreateOrder() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div>
-                    <Label className="text-sm font-medium mb-2 block">Service Type</Label>
+                    <Label className="text-sm font-medium mb-2 block">
+                      Service Type
+                    </Label>
                     <div className="flex space-x-1">
-                      <Button type="button" variant="outline" size="sm">FCL</Button>
-                      <Button type="button" variant="outline" size="sm">LCL</Button>
-                      <Button type="button" variant="outline" size="sm">FTL</Button>
-                      <Button type="button" variant="outline" size="sm">LTL</Button>
-                      <Button type="button" variant="outline" size="sm">Express</Button>
+                      <Button type="button" variant="outline" size="sm">
+                        FCL
+                      </Button>
+                      <Button type="button" variant="outline" size="sm">
+                        LCL
+                      </Button>
+                      <Button type="button" variant="outline" size="sm">
+                        FTL
+                      </Button>
+                      <Button type="button" variant="outline" size="sm">
+                        LTL
+                      </Button>
+                      <Button type="button" variant="outline" size="sm">
+                        Express
+                      </Button>
                     </div>
                   </div>
-                  
+
                   <FormField
                     control={form.control}
                     name="dimensions"
@@ -723,7 +842,7 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="weight"
@@ -737,7 +856,7 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="quantity"
@@ -751,7 +870,7 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="specialInstructions"
@@ -766,7 +885,7 @@ export default function CreateOrder() {
                     )}
                   />
                 </div>
-                
+
                 <FormField
                   control={form.control}
                   name="assignedTo"
@@ -774,7 +893,10 @@ export default function CreateOrder() {
                     <FormItem>
                       <FormLabel>Assigned to</FormLabel>
                       <FormControl>
-                        <Input placeholder="Personnel assigned to this shipment for tracking" {...field} />
+                        <Input
+                          placeholder="Personnel assigned to this shipment for tracking"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -783,8 +905,6 @@ export default function CreateOrder() {
               </CardContent>
             </Card>
           </div>
-
-
         </form>
       </Form>
     </div>

@@ -3,13 +3,36 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { FileText, Plus, Edit, Trash } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 // Define transaction type interface
 interface TransactionType {
@@ -20,7 +43,7 @@ interface TransactionType {
 
 // Form schema
 const formSchema = z.object({
-  name: z.string().min(1, { message: "Transaction name is required" })
+  name: z.string().min(1, { message: "Transaction name is required" }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -29,37 +52,38 @@ export default function TransactionTypes() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedTransactionType, setSelectedTransactionType] = useState<TransactionType | null>(null);
+  const [selectedTransactionType, setSelectedTransactionType] =
+    useState<TransactionType | null>(null);
   const { toast } = useToast();
 
   // Sample transaction types data (client-side)
   const [transactionTypes, setTransactionTypes] = useState<TransactionType[]>([
     { id: 1, name: "Sale", createdAt: new Date().toISOString() },
     { id: 2, name: "Purchase", createdAt: new Date().toISOString() },
-    { id: 3, name: "Transfer", createdAt: new Date().toISOString() }
+    { id: 3, name: "Transfer", createdAt: new Date().toISOString() },
   ]);
 
   // Form for adding transaction type
   const addForm = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: ""
-    }
+      name: "",
+    },
   });
 
   // Form for editing transaction type
   const editForm = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: selectedTransactionType?.name || ""
-    }
+      name: selectedTransactionType?.name || "",
+    },
   });
 
   // Reset edit form when selected transaction changes
   useEffect(() => {
     if (selectedTransactionType) {
       editForm.reset({
-        name: selectedTransactionType.name
+        name: selectedTransactionType.name,
       });
     }
   }, [selectedTransactionType, editForm]);
@@ -67,13 +91,13 @@ export default function TransactionTypes() {
   // Handle add transaction type
   const handleAddTransactionType = (values: FormValues) => {
     // Generate a new ID
-    const newId = Math.max(...transactionTypes.map(t => t.id), 0) + 1;
+    const newId = Math.max(...transactionTypes.map((t) => t.id), 0) + 1;
 
     // Create new transaction type
     const newTransactionType: TransactionType = {
       id: newId,
       name: values.name,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     // Add to transaction types state
@@ -94,11 +118,13 @@ export default function TransactionTypes() {
   const handleEditTransactionType = (values: FormValues) => {
     if (selectedTransactionType) {
       // Update the transaction type in the state
-      setTransactionTypes(transactionTypes.map(transactionType =>
-        transactionType.id === selectedTransactionType.id
-          ? { ...transactionType, name: values.name }
-          : transactionType
-      ));
+      setTransactionTypes(
+        transactionTypes.map((transactionType) =>
+          transactionType.id === selectedTransactionType.id
+            ? { ...transactionType, name: values.name }
+            : transactionType
+        )
+      );
 
       // Show success toast
       toast({
@@ -116,9 +142,11 @@ export default function TransactionTypes() {
   const handleDeleteTransactionType = () => {
     if (selectedTransactionType) {
       // Remove the transaction type from state
-      setTransactionTypes(transactionTypes.filter(
-        transactionType => transactionType.id !== selectedTransactionType.id
-      ));
+      setTransactionTypes(
+        transactionTypes.filter(
+          (transactionType) => transactionType.id !== selectedTransactionType.id
+        )
+      );
 
       // Show success toast
       toast({
@@ -133,9 +161,12 @@ export default function TransactionTypes() {
 
   return (
     <div className="space-y-6">
+      <title>Transaction Types | Wassel</title>
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Transaction Types</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Transaction Types
+          </h2>
           <p className="text-gray-500 mt-2">
             Configure and manage transaction types in the system
           </p>
@@ -144,9 +175,9 @@ export default function TransactionTypes() {
           onClick={() => setAddModalOpen(true)}
           className="flex items-center"
           style={{
-            backgroundColor: '#1e88e5',
-            color: 'white',
-            border: 'none'
+            backgroundColor: "#1e88e5",
+            color: "white",
+            border: "none",
           }}
         >
           <Plus className="mr-2 h-4 w-4" /> Add Transaction Type
@@ -161,19 +192,24 @@ export default function TransactionTypes() {
             </div>
             <h3 className="text-lg font-medium mb-2">No Transaction Types</h3>
             <p className="text-gray-500 max-w-md">
-              You haven't added any transaction types yet. Click the "Add Transaction Type" button to create your first one.
+              You haven't added any transaction types yet. Click the "Add
+              Transaction Type" button to create your first one.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
-            {transactionTypes.map((transactionType) => (
+          {transactionTypes.map((transactionType) => (
             <Card key={transactionType.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="flex justify-between items-center p-6">
                   <div>
-                    <h3 className="text-lg font-medium">{transactionType.name}</h3>
-                    <p className="text-sm text-gray-500">ID: {transactionType.id}</p>
+                    <h3 className="text-lg font-medium">
+                      {transactionType.name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      ID: {transactionType.id}
+                    </p>
                   </div>
                   <div className="flex space-x-2">
                     <Button
@@ -215,7 +251,10 @@ export default function TransactionTypes() {
             </DialogDescription>
           </DialogHeader>
           <Form {...addForm}>
-            <form onSubmit={addForm.handleSubmit(handleAddTransactionType)} className="space-y-4">
+            <form
+              onSubmit={addForm.handleSubmit(handleAddTransactionType)}
+              className="space-y-4"
+            >
               <FormField
                 control={addForm.control}
                 name="name"
@@ -230,7 +269,11 @@ export default function TransactionTypes() {
                 )}
               />
               <DialogFooter>
-                <Button variant="outline" type="button" onClick={() => setAddModalOpen(false)}>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setAddModalOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit">Save</Button>
@@ -250,7 +293,10 @@ export default function TransactionTypes() {
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleEditTransactionType)} className="space-y-4">
+            <form
+              onSubmit={editForm.handleSubmit(handleEditTransactionType)}
+              className="space-y-4"
+            >
               <FormField
                 control={editForm.control}
                 name="name"
@@ -265,7 +311,11 @@ export default function TransactionTypes() {
                 )}
               />
               <DialogFooter>
-                <Button variant="outline" type="button" onClick={() => setEditModalOpen(false)}>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setEditModalOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit">Save</Button>
@@ -281,8 +331,8 @@ export default function TransactionTypes() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the transaction type "{selectedTransactionType?.name}".
-              This action cannot be undone.
+              This will permanently delete the transaction type "
+              {selectedTransactionType?.name}". This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

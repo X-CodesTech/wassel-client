@@ -99,6 +99,7 @@ export default function OrdersList() {
   return (
     <div className="w-full p-6 space-y-6">
       {/* Header with Order Info and Actions */}
+      <title>Orders | Wassel</title>
       <div className="flex justify-between items-start">
         <div className="flex items-center space-x-4">
           <div>

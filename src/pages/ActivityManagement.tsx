@@ -382,6 +382,7 @@ export default function ActivityManagement() {
 
   return (
     <main>
+      <title>Activities Management | Wassel</title>
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">

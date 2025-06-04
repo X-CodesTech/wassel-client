@@ -1,9 +1,32 @@
 import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { DollarSign, Edit, Trash, ArrowLeft } from "lucide-react";
 
 interface PriceListItem {
@@ -26,20 +49,20 @@ export default function PriceListDetails() {
   const [, setLocation] = useLocation();
   const [priceList, setPriceList] = useState<PriceList | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  
+
   // In a real application, we would fetch the price list from the server
   // For now, we'll use localStorage to retrieve our saved price lists
   useEffect(() => {
     if (match && params.id) {
       const id = parseInt(params.id);
-      const storedPriceLists = localStorage.getItem('priceLists');
+      const storedPriceLists = localStorage.getItem("priceLists");
       let redirectToList = false;
-      
+
       if (storedPriceLists) {
         try {
           const priceLists: PriceList[] = JSON.parse(storedPriceLists);
-          const found = priceLists.find(pl => pl.id === id);
-          
+          const found = priceLists.find((pl) => pl.id === id);
+
           if (found) {
             setPriceList(found);
           } else {
@@ -54,10 +77,13 @@ export default function PriceListDetails() {
         // No price lists in storage
         redirectToList = true;
       }
-      
+
       if (redirectToList) {
         // We'll redirect outside the main logic to avoid potential loop
-        const timer = setTimeout(() => setLocation("/price-lists?tab=price-lists"), 0);
+        const timer = setTimeout(
+          () => setLocation("/price-lists?tab=price-lists"),
+          0
+        );
         return () => clearTimeout(timer);
       }
     }
@@ -66,20 +92,20 @@ export default function PriceListDetails() {
   const handleDelete = () => {
     if (priceList) {
       // Get current price lists
-      const storedPriceLists = localStorage.getItem('priceLists');
-      
+      const storedPriceLists = localStorage.getItem("priceLists");
+
       if (storedPriceLists) {
         let priceLists: PriceList[] = JSON.parse(storedPriceLists);
         // Filter out the current price list
-        priceLists = priceLists.filter(pl => pl.id !== priceList.id);
+        priceLists = priceLists.filter((pl) => pl.id !== priceList.id);
         // Save updated list
-        localStorage.setItem('priceLists', JSON.stringify(priceLists));
+        localStorage.setItem("priceLists", JSON.stringify(priceLists));
       }
-      
+
       // Navigate back to price lists with tab preserved
       setLocation("/price-lists?tab=price-lists");
     }
-    
+
     setDeleteDialogOpen(false);
   };
 
@@ -103,12 +129,15 @@ export default function PriceListDetails() {
 
   return (
     <div className="space-y-6">
+      <title>Price List Details | Wassel</title>
       <div className="flex items-center gap-2">
         <Button variant="ghost" onClick={handleBack} className="p-1 mr-1">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">{priceList.name}</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {priceList.name}
+          </h2>
           <p className="text-gray-500 mt-1">{priceList.description}</p>
         </div>
       </div>
@@ -126,16 +155,16 @@ export default function PriceListDetails() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="flex items-center gap-2"
             onClick={handleEdit}
           >
             <Edit className="h-4 w-4" />
             Edit
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="flex items-center gap-2 text-red-500 hover:text-red-600"
             onClick={() => setDeleteDialogOpen(true)}
           >
@@ -175,7 +204,9 @@ export default function PriceListDetails() {
               <TableBody>
                 {priceList.items.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.subActivityName}</TableCell>
+                    <TableCell className="font-medium">
+                      {item.subActivityName}
+                    </TableCell>
                     <TableCell>${item.price.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
