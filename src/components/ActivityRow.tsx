@@ -7,6 +7,9 @@ import SubActivityTable from "@/components/SubActivityTable";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/utils";
 import { useState } from "react";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { actUpdateActivity } from "@/store/activities/act/actUpdateActivity";
+import { actGetActivities } from "@/store/activities/activitiesSlice";
 
 interface ActivityRowProps {
   activity: Activity;
@@ -31,22 +34,35 @@ export default function ActivityRow({
   onDeleteSubActivity,
   subActivities = [],
 }: ActivityRowProps) {
+  const dispatch = useAppDispatch();
+  const { records } = useAppSelector((state) => state.transactionTypes);
+  const { loading } = useAppSelector((state) => state.activities);
+
   const { toast } = useToast();
-  const [active, setActive] = useState(activity.active);
 
   // Handle toggle active status client-side
   const handleToggleActive = (isActive: boolean) => {
-    setActive(isActive);
-
-    // Update the activity's active status - in a real app, this would be part of a store
-    activity.active = isActive;
-
-    toast({
-      title: `Activity ${isActive ? "activated" : "deactivated"}`,
-      description: `${activity.activityName} has been ${
-        isActive ? "activated" : "deactivated"
-      }.`,
-    });
+    dispatch(
+      actUpdateActivity({ ...activity, _id: activity._id, isActive: isActive })
+    )
+      .unwrap()
+      .then(() => {
+        dispatch(actGetActivities());
+        toast({
+          title: `Activity ${isActive ? "activated" : "deactivated"}`,
+          description: `${activity.activityNameEn} has been ${
+            isActive ? "activated" : "deactivated"
+          }.`,
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to update activity status:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update activity status. Please try again.",
+          variant: "destructive",
+        });
+      });
   };
 
   return (
@@ -67,8 +83,16 @@ export default function ActivityRow({
           </button>
         </TableCell>
         <TableCell>{activity.activityCode}</TableCell>
-        <TableCell>{activity.activityType}</TableCell>
-        <TableCell>{activity.activityName}</TableCell>
+        <TableCell>
+          {
+            records.find(
+              (transactionType) =>
+                transactionType._id === activity.activityTransactionType
+            )?.name
+          }
+        </TableCell>
+        <TableCell>{activity.activityNameEn}</TableCell>
+        <TableCell>{activity.activityNameAr}</TableCell>
         <TableCell>
           <span
             className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -83,17 +107,62 @@ export default function ActivityRow({
         <TableCell>
           <span
             className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-              activity.financeEffect !== "No"
+              activity.isOpsActive
                 ? "bg-green-100 text-green-800"
                 : "bg-gray-100 text-gray-800"
             }`}
           >
-            {activity.financeEffect}
+            {activity.isOpsActive ? "Yes" : "No"}
+          </span>
+        </TableCell>
+        <TableCell>
+          <span
+            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+              activity.isPortalActive
+                ? "bg-green-100 text-green-800"
+                : "bg-gray-100 text-gray-800"
+            }`}
+          >
+            {activity.isPortalActive ? "Yes" : "No"}
+          </span>
+        </TableCell>
+        <TableCell>
+          <span
+            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+              activity.isInOrderScreen
+                ? "bg-green-100 text-green-800"
+                : "bg-gray-100 text-gray-800"
+            }`}
+          >
+            {activity.isInOrderScreen ? "Yes" : "No"}
+          </span>
+        </TableCell>
+        <TableCell>
+          <span
+            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+              activity.isInShippingUnit
+                ? "bg-green-100 text-green-800"
+                : "bg-gray-100 text-gray-800"
+            }`}
+          >
+            {activity.isInShippingUnit ? "Yes" : "No"}
+          </span>
+        </TableCell>
+        <TableCell>
+          <span
+            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+              activity.isInSpecialRequirement
+                ? "bg-green-100 text-green-800"
+                : "bg-gray-100 text-gray-800"
+            }`}
+          >
+            {activity.isInSpecialRequirement ? "Yes" : "No"}
           </span>
         </TableCell>
         <TableCell>
           <Switch
-            checked={active}
+            checked={activity.isActive}
+            disabled={loading === "pending"}
             onCheckedChange={handleToggleActive}
             aria-label="Toggle activity status"
           />

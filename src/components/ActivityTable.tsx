@@ -14,11 +14,18 @@ import { ArrowUpDown } from "lucide-react";
 type SortField =
   | "actSrl"
   | "activityCode"
-  | "activityType"
-  | "activityName"
+  | "activityNameAr"
+  | "activityNameEn"
+  | "activityTransactionType"
+  | "isActive"
+  | "isInOrderScreen"
+  | "isInShippingUnit"
+  | "isInSpecialRequirement"
+  | "isOpsActive"
   | "isWithItems"
-  | "financeEffect"
-  | "active";
+  | "portalActivityNameAr"
+  | "portalActivityNameEn"
+  | "isPortalActive";
 type SortDirection = "asc" | "desc";
 
 interface ActivityTableProps {
@@ -99,7 +106,7 @@ export default function ActivityTable({
               </div>
             </TableHead>
             <TableHead
-              onClick={() => handleSort("activityType")}
+              onClick={() => handleSort("activityTransactionType")}
               className="cursor-pointer"
             >
               <div className="flex items-center">
@@ -108,11 +115,20 @@ export default function ActivityTable({
               </div>
             </TableHead>
             <TableHead
-              onClick={() => handleSort("activityName")}
+              onClick={() => handleSort("activityNameEn")}
               className="cursor-pointer"
             >
               <div className="flex items-center">
-                Activity Name
+                Activity Name (EN)
+                <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
+              </div>
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("activityNameAr")}
+              className="cursor-pointer"
+            >
+              <div className="flex items-center">
+                Activity Name (AR)
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
               </div>
             </TableHead>
@@ -121,21 +137,57 @@ export default function ActivityTable({
               className="cursor-pointer"
             >
               <div className="flex items-center">
-                Is with Items
+                With Items
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
               </div>
             </TableHead>
             <TableHead
-              onClick={() => handleSort("financeEffect")}
+              onClick={() => handleSort("isOpsActive")}
               className="cursor-pointer"
             >
               <div className="flex items-center">
-                Finance Effect
+                Ops active
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
               </div>
             </TableHead>
             <TableHead
-              onClick={() => handleSort("active")}
+              onClick={() => handleSort("isPortalActive")}
+              className="cursor-pointer"
+            >
+              <div className="flex items-center">
+                Portal active
+                <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
+              </div>
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("isInOrderScreen")}
+              className="cursor-pointer"
+            >
+              <div className="flex items-center">
+                In order screen
+                <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
+              </div>
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("isInShippingUnit")}
+              className="cursor-pointer"
+            >
+              <div className="flex items-center">
+                In shipping unit
+                <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
+              </div>
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("isInSpecialRequirement")}
+              className="cursor-pointer"
+            >
+              <div className="flex items-center">
+                In special requirement
+                <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
+              </div>
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("isActive")}
               className="cursor-pointer"
             >
               <div className="flex items-center">
@@ -156,7 +208,7 @@ export default function ActivityTable({
           ) : (
             sortedActivities.map((activity) => (
               <ActivityRow
-                key={activity.id}
+                key={activity._id}
                 activity={activity}
                 isExpanded={expandedActivity === activity.actSrl}
                 onToggleExpand={onToggleExpand}
@@ -166,7 +218,7 @@ export default function ActivityTable({
                 onEditSubActivity={onEditSubActivity}
                 onDeleteSubActivity={onDeleteSubActivity}
                 subActivities={subActivities.filter(
-                  (subActivity) => subActivity.parentId === activity.id
+                  (subActivity) => subActivity.parentId === activity._id
                 )}
               />
             ))

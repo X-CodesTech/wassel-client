@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 export interface Activity {
-  _id: string;
+  _id?: string;
   actSrl: string;
   activityTransactionType: string;
   activityNameEn: string;
@@ -20,9 +20,9 @@ export interface Activity {
   isInShippingUnit: boolean;
   isActive: boolean;
   isInSpecialRequirement: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  subActivities: SubActivity[];
+  createdAt?: string;
+  updatedAt?: string;
+  subActivities?: any[];
 }
 
 export interface SubActivity {
@@ -43,10 +43,11 @@ export interface ActivityWithSubActivities {
 }
 
 export interface TransactionType {
-  id: number;
+  _id: string;
   name: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
 }
 
 // Schemas for form validation - copied from shared schema

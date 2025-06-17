@@ -29,6 +29,7 @@ import {
   TableSkeleton,
 } from "@/components/LoadingComponents";
 import { ErrorComponent } from "@/components/ErrorComponents";
+import { actGetTransactionTypes } from "@/store/transactionTypes/transactionTypesSlice";
 
 export default function ActivityManagement() {
   const dispatch = useAppDispatch();
@@ -361,21 +362,6 @@ export default function ActivityManagement() {
     });
   };
 
-  // Update activity handler
-  const handleUpdateActivity = (updatedActivity: Activity) => {
-    setActivities(
-      activities.map((activity) =>
-        activity._id === updatedActivity._id ? updatedActivity : activity
-      )
-    );
-    setEditActivityOpen(false);
-
-    toast({
-      title: "Success",
-      description: "Activity updated successfully",
-    });
-  };
-
   // Add sub-activity handler
   const handleAddSubActivity2 = (newSubActivity: SubActivity) => {
     setSubActivities([...subActivities, newSubActivity]);
@@ -406,9 +392,10 @@ export default function ActivityManagement() {
 
   useEffect(() => {
     dispatch(actGetActivities());
+    dispatch(actGetTransactionTypes());
   }, [dispatch]);
 
-  if (loading === "pending") {
+  if (loading === "pending" && !records.length) {
     return <ActivitiesPageSkeleton />;
   }
 
@@ -467,7 +454,7 @@ export default function ActivityManagement() {
 
       {/* Add Activity Dialog */}
       <Dialog open={addActivityOpen} onOpenChange={setAddActivityOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-[974px] w-full">
           <AddActivityForm
             onClose={() => setAddActivityOpen(false)}
             onAdd={handleAddActivity}
@@ -477,12 +464,11 @@ export default function ActivityManagement() {
 
       {/* Edit Activity Dialog */}
       <Dialog open={editActivityOpen} onOpenChange={setEditActivityOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-[974px] w-full">
           {selectedActivity && (
             <EditActivityForm
               activity={selectedActivity}
               onClose={() => setEditActivityOpen(false)}
-              onUpdate={handleUpdateActivity}
             />
           )}
         </DialogContent>

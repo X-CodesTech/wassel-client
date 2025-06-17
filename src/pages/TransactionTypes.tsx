@@ -33,6 +33,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { actAddTransactionType } from "@/store/transactionTypes/transactionTypesSlice";
 
 // Define transaction type interface
 interface TransactionType {
@@ -49,6 +51,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function TransactionTypes() {
+  const dispatch = useAppDispatch();
+  const { records } = useAppSelector((state) => state.transactionTypes);
+
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -91,27 +96,28 @@ export default function TransactionTypes() {
   // Handle add transaction type
   const handleAddTransactionType = (values: FormValues) => {
     // Generate a new ID
-    const newId = Math.max(...transactionTypes.map((t) => t.id), 0) + 1;
+    dispatch(actAddTransactionType(values.name));
+    // const newId = Math.max(...transactionTypes.map((t) => t.id), 0) + 1;
 
-    // Create new transaction type
-    const newTransactionType: TransactionType = {
-      id: newId,
-      name: values.name,
-      createdAt: new Date().toISOString(),
-    };
+    // // Create new transaction type
+    // const newTransactionType: TransactionType = {
+    //   id: newId,
+    //   name: values.name,
+    //   createdAt: new Date().toISOString(),
+    // };
 
-    // Add to transaction types state
-    setTransactionTypes([...transactionTypes, newTransactionType]);
+    // // Add to transaction types state
+    // setTransactionTypes([...transactionTypes, newTransactionType]);
 
-    // Show success toast
-    toast({
-      title: "Success",
-      description: "Transaction type added successfully",
-    });
+    // // Show success toast
+    // toast({
+    //   title: "Success",
+    //   description: "Transaction type added successfully",
+    // });
 
-    // Close modal and reset form
-    setAddModalOpen(false);
-    addForm.reset();
+    // // Close modal and reset form
+    // setAddModalOpen(false);
+    // addForm.reset();
   };
 
   // Handle edit transaction type
@@ -199,8 +205,8 @@ export default function TransactionTypes() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {transactionTypes.map((transactionType) => (
-            <Card key={transactionType.id} className="overflow-hidden">
+          {records.map((transactionType) => (
+            <Card key={transactionType._id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="flex justify-between items-center p-6">
                   <div>
@@ -208,7 +214,7 @@ export default function TransactionTypes() {
                       {transactionType.name}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      ID: {transactionType.id}
+                      ID: {transactionType._id}
                     </p>
                   </div>
                   <div className="flex space-x-2">

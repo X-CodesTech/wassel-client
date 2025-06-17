@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,21 +20,31 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import { FormSkeleton } from "./LoadingComponents";
-import { Skeleton } from "./ui/skeleton";
-import { actGetTransactionTypes } from "@/store/transactionTypes/transactionTypesSlice";
+import { actAddActivity } from "@/store/activities/activitiesSlice";
 
-// Form validation schema
+// Form validation schema matching the backend API
 const formSchema = z.object({
-  actSrl: z.string().min(1, "ACTsrl is required"),
-  activityCode: z.string().min(1, "Activity Code is required"),
-  activityName: z.string().min(1, "Activity Name is required"),
-  activityType: z.string().min(1, "Activity Type is required"),
+  actSrl: z.string().min(1, "Activity serial number is required"),
+  activityCode: z.string().min(1, "Activity code is required"),
+  activityNameEn: z.string().min(1, "Activity (EN) name is required"),
+  activityNameAr: z.string().min(1, "Activity (AR) name is required"),
+  activityTransactionType: z.string().min(1, "Activity type is required"),
   isWithItems: z.boolean(),
-  financeEffect: z.string(),
-  active: z.boolean(),
+  isActive: z.boolean(),
+  // Additional fields for the new form
+  portalActivityNameAr: z
+    .string()
+    .min(1, "Portal Activity name (AR) is required"),
+  portalActivityNameEn: z
+    .string()
+    .min(1, "Portal Activity name (EN) is required"),
+  isOpsActive: z.boolean(),
+  isInShippingUnit: z.boolean(),
+  isPortalActive: z.boolean(),
+  isInOrderScreen: z.boolean(),
+  isInSpecialRequirement: z.boolean(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -44,115 +54,83 @@ interface AddActivityFormProps {
 }
 
 export default function AddActivityForm({ onClose }: AddActivityFormProps) {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const dispatch = useAppDispatch();
-  const { records, loading, error } = useAppSelector(
-    (state) => state.transactionTypes
-  );
+  const { loading } = useAppSelector((state) => state.activities);
+
+  const { toast } = useToast();
+  const { records } = useAppSelector((state) => state.transactionTypes);
 
   // Initialize form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {},
+    defaultValues: {
+      actSrl: "",
+      activityCode: "",
+      activityNameEn: "",
+      activityNameAr: "",
+      activityTransactionType: "",
+      isWithItems: false,
+      isActive: false,
+      portalActivityNameAr: "",
+      portalActivityNameEn: "",
+      isOpsActive: false,
+      isInShippingUnit: false,
+      isPortalActive: false,
+      isInOrderScreen: false,
+      isInSpecialRequirement: false,
+    },
   });
-
-  // Add activity mutation
 
   // Submit handler
   const onSubmit = (values: FormValues) => {
-    setIsSubmitting(true);
+    dispatch(actAddActivity(values))
+      .unwrap()
+      .then(() => {
+        toast({
+          title: "Success",
+          description: "Activity added successfully",
+        });
+        onClose();
+      })
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to add activity",
+          variant: "destructive",
+        });
+      });
   };
 
-  useEffect(() => {
-    dispatch(actGetTransactionTypes());
-  }, [dispatch]);
-
-  if (loading === "pending") {
-    return (
-      <div>
-        <Skeleton className="h-10 w-32" />
-        <FormSkeleton fields={5} />
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-4">Add New Activity</h3>
+    <div className="p-6">
+      <h2 className="text-xl font-semibold mb-6">Define new activity</h2>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="actSrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ACTsrl</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. X01" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="activityCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Activity Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. PKGN" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Transaction Type */}
           <FormField
             control={form.control}
-            name="activityName"
+            name="activityTransactionType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Activity Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g. Packaging" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="activityType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Activity Type</FormLabel>
+                <FormLabel className="text-sm text-gray-600">
+                  *Select type of transaction
+                </FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
                 >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select activity type" />
+                  <FormControl className="max-w-[250px]">
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder={records?.[0]?.name} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {records.map((record) => (
-                      <SelectItem key={record.id} value={record.id}>
+                      <SelectItem key={record._id} value={record._id}>
                         {record.name}
                       </SelectItem>
                     ))}
-                    {/* <SelectItem value="X-work">X-work</SelectItem>
-                    <SelectItem value="Material">Material</SelectItem>
-                    <SelectItem value="Transportation">
-                      Transportation
-                    </SelectItem>
-                    <SelectItem value="Finance">Finance</SelectItem> */}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -160,88 +138,253 @@ export default function AddActivityForm({ onClose }: AddActivityFormProps) {
             )}
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Row 1: Serial, Name EN, Name AR */}
+          <div className="grid grid-cols-3 gap-4">
             <FormField
               control={form.control}
-              name="isWithItems"
+              name="actSrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Is with Items</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(value === "yes")}
-                    defaultValue={field.value ? "yes" : "no"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select option" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel className="text-sm text-gray-600">
+                    Activity Serial number
+                  </FormLabel>
+                  <FormControl>
+                    <Input className="h-12" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
-              name="financeEffect"
+              name="activityNameEn"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Finance Effect</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select option" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Yes (Positive)">
-                        Yes (Positive)
-                      </SelectItem>
-                      <SelectItem value="Yes (Negative)">
-                        Yes (Negative)
-                      </SelectItem>
-                      <SelectItem value="Yes">Yes</SelectItem>
-                      <SelectItem value="No">No</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel className="text-sm text-gray-600">
+                    Activity name (En)
+                  </FormLabel>
+                  <FormControl>
+                    <Input className="h-12" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="activityNameAr"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm text-gray-600">
+                    Activity name (AR)
+                  </FormLabel>
+                  <FormControl>
+                    <Input className="h-12" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
 
-          <FormField
-            control={form.control}
-            name="active"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <FormLabel>Active</FormLabel>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          {/* Row 2: Code, Portal Name AR, Portal Name EN */}
+          <div className="grid grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="activityCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm text-gray-600">
+                    Activity code
+                  </FormLabel>
+                  <FormControl>
+                    <Input className="h-12" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="portalActivityNameAr"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm text-gray-600">
+                    Portal Activity name (AR)
+                  </FormLabel>
+                  <FormControl>
+                    <Input className="h-12" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="portalActivityNameEn"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm text-gray-600">
+                    Portal activity name (EN)
+                  </FormLabel>
+                  <FormControl>
+                    <Input className="h-12" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-          <div className="flex justify-end space-x-2 pt-2">
-            <Button variant="outline" onClick={onClose} type="button">
+          {/* Checkboxes Grid */}
+          <div className="grid grid-cols-3 gap-8 mt-8">
+            {/* Column 1 */}
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="isWithItems"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Is with items
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isInShippingUnit"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Is in shipping unit
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isInSpecialRequirement"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Is in special requirement
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Column 2 */}
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="isOpsActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Is active in OPS system
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isPortalActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Active in portal
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Column 3 */}
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Is active
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isInOrderScreen"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Choose in order screen
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-6 mt-8 border-t">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              type="button"
+              className="px-6"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save"}
+            <Button
+              type="submit"
+              disabled={loading === "pending"}
+              className="px-6"
+            >
+              {loading === "pending" ? "Saving..." : "Save"}
             </Button>
           </div>
         </form>
