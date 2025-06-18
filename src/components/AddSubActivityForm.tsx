@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, SubActivity } from "@/types/types";
 import {
   Form,
   FormControl,
@@ -21,18 +20,33 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Activity } from "@/types/types";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { subActivityServices } from "@/services";
 
-// Form validation schema
+// Form validation schema matching the new design
 const formSchema = z.object({
-  parentId: z.number(),
-  itmSrl: z.number().int().positive("Item serial must be a positive number"),
-  itemCode: z.string().min(1, "Item Code is required"),
-  itemName: z.string().min(1, "Item Name is required"),
-  activityName: z.string().min(1, "Activity Name is required"),
-  activityType: z.string().min(1, "Activity Type is required"),
-  pricingMethod: z.string().min(1, "Pricing Method is required"),
+  parentId: z.string(),
+  activity: z.string().min(1, "Activity is required"),
+  transactionType: z.string().min(1, "Transaction type is required"),
+  financeEffect: z.union([
+    z.literal("none"),
+    z.literal("positive"),
+    z.literal("negative"),
+  ]),
+  pricingMethod: z.union([
+    z.literal("perLocation"),
+    z.literal("perItem"),
+    z.literal("perTrip"),
+  ]),
+  portalItemNameEn: z.string().min(1, "Portal item name (English) is required"),
+  portalItemNameAr: z.string().min(1, "Portal item name (Arabic) is required"),
+  usedByFinance: z.boolean(),
+  usedByOperations: z.boolean(),
+  inShippingUnit: z.boolean(),
   active: z.boolean(),
+  specialRequirement: z.boolean(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -46,161 +60,164 @@ export default function AddSubActivityForm({
   parentActivity,
   onClose,
 }: AddSubActivityFormProps) {
+  const dispatch = useAppDispatch();
+  const {
+    records: transactionTypes,
+    loading: transactionTypesLoading,
+    error: transactionTypesError,
+  } = useAppSelector((state) => state.transactionTypes);
+
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Get current sub-activities to determine next itmSrl
-  const { data: activityWithSubs } = useQuery({
-    queryKey: ["/api/activities", parentActivity.id, "sub-activities"],
-  });
-
-  // Safely access sub-activities from the query response
-  const subActivities: SubActivity[] =
-    activityWithSubs &&
-    typeof activityWithSubs === "object" &&
-    activityWithSubs !== null &&
-    "subActivities" in activityWithSubs
-      ? (activityWithSubs.subActivities as SubActivity[])
-      : [];
-
-  // Calculate next itmSrl
-  const nextItmSrl =
-    subActivities.length > 0
-      ? Math.max(...subActivities.map((sub: SubActivity) => sub.itmSrl)) + 1
-      : 1;
 
   // Initialize form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      parentId: parentActivity.id,
-      itmSrl: nextItmSrl,
-      itemCode: "",
-      itemName: "",
-      activityName: parentActivity.activityName,
-      activityType: parentActivity.activityType,
-      pricingMethod: "Fixed",
-      active: true,
+      parentId: parentActivity._id!,
+      activity: parentActivity.actSrl || "",
+      transactionType: transactionTypes[0]._id,
+      financeEffect: "none",
+      pricingMethod: "perLocation",
+      portalItemNameEn: "",
+      portalItemNameAr: "",
+      usedByFinance: false,
+      usedByOperations: false,
+      inShippingUnit: false,
+      active: false,
+      specialRequirement: false,
     },
   });
 
   // Add sub-activity mutation
+  const addSubActivityMutation = () => {};
+  // useMutation({
+  //   mutationFn: async (values: FormValues) => {
+  //     // Transform values to match backend API
+  //     const subActivityData = {
+  //       parentId: values.parentId,
+  //       itmSrl: 1, // Auto-increment will be handled by backend
+  //       itemCode: `${values.activity}-ITEM`,
+  //       itemName: values.portalItemNameEn,
+  //       activityName: values.activity,
+  //       activityType: "Portal Item",
+  //       pricingMethod: values.pricingMethod,
+  //       active: values.active,
+  //     };
+  //     return apiRequest("POST", "/api/sub-activities", subActivityData);
+  //   },
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries();
+  //     queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+  //     queryClient.invalidateQueries({
+  //       queryKey: ["/api/activities", parentActivity.id, "sub-activities"],
+  //     });
+
+  //     toast({
+  //       title: "Success",
+  //       description: "Portal item added successfully",
+  //     });
+
+  //     setTimeout(() => {
+  //       onClose();
+  //     }, 100);
+  //   },
+  //   onError: (error) => {
+  //     toast({
+  //       title: "Error",
+  //       description: `Failed to add portal item: ${error}`,
+  //       variant: "destructive",
+  //     });
+  //     setIsSubmitting(false);
+  //   },
+  // });
 
   // Submit handler
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
-
-    // Prefix the itmSrl with the parent activity's ACTsrl in the itemCode field to display
-    // but keep the numeric itmSrl for the database
-    const submissionValues = {
-      ...values,
-      itmSrl: Number(values.itmSrl),
-      itemCode: `${parentActivity.actSrl}-${values.itmSrl}-${values.itemCode}`,
-    };
+    try {
+      const { data } = await subActivityServices.addSubActivity(
+        parentActivity._id!,
+        {
+          activity: parentActivity._id!,
+          financeEffect: values.financeEffect,
+          pricingMethod: values.pricingMethod,
+          portalItemNameEn: values.portalItemNameEn,
+          isActive: values.active,
+          isInShippingUnit: values.inShippingUnit,
+          isInSpecialRequirement: values.specialRequirement,
+          isUsedByFinance: values.usedByFinance,
+          isUsedByOps: values.usedByOperations,
+          portalItemNameAr: values.portalItemNameAr,
+          transactionType: values.transactionType,
+        }
+      );
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to add portal item: ${error}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-4">Add New Sub-Activity</h3>
-      <p className="text-sm text-gray-500 mb-4">
-        Adding sub-activity to: <strong>{parentActivity.activityName}</strong> (
-        {parentActivity.actSrl})
+    <div className="p-6">
+      <h2 className="text-xl font-semibold mb-2">Add New Portal Item</h2>
+      <p className="text-sm text-gray-500 mb-6">
+        Fill in the details for the new portal item. All fields are required
+        unless specified.
       </p>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* First Row: Activity and Transaction Type */}
+          <div className="grid grid-cols-2 gap-6">
             <FormField
               control={form.control}
-              name="itmSrl"
+              name="activity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ITMsrl</FormLabel>
-                  <div className="flex items-center space-x-2">
-                    <div className="bg-gray-100 px-3 py-2 border rounded-l-md text-sm font-medium text-gray-700">
-                      {parentActivity.actSrl}-
-                    </div>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        className="rounded-l-none"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(parseInt(e.target.value) || "")
-                        }
-                      />
-                    </FormControl>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="itemCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Item Code</FormLabel>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    Activity
+                  </FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. CRTNNMH" {...field} />
+                    <Input className="h-12" {...field} readOnly disabled />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="itemName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Item Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g. Packaging carton" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="activityName"
+              name="transactionType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Activity Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="activityType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Activity Type</FormLabel>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    Transaction Type
+                  </FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
+                      <SelectTrigger className="h-12">
+                        <SelectValue
+                          placeholder={transactionTypes?.[0]?.name}
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="X-work">X-work</SelectItem>
-                      <SelectItem value="Material">Material</SelectItem>
-                      <SelectItem value="Transportation">
-                        Transportation
-                      </SelectItem>
-                      <SelectItem value="Finance">Finance</SelectItem>
+                      {transactionTypes.map((transactionType) => (
+                        <SelectItem
+                          key={transactionType._id}
+                          value={transactionType._id}
+                        >
+                          {transactionType.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -209,57 +226,213 @@ export default function AddSubActivityForm({
             />
           </div>
 
-          <FormField
-            control={form.control}
-            name="pricingMethod"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pricing Method</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
+          {/* Second Row: Finance Effect and Pricing Method */}
+          <div className="grid grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="financeEffect"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    Finance Effect
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="positive">Positive</SelectItem>
+                      <SelectItem value="negative">Negative</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="pricingMethod"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    Pricing Method
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Per Location" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="perLocation">Per Location</SelectItem>
+                      <SelectItem value="perItem">Per Item</SelectItem>
+                      <SelectItem value="perTrip">Per Trip</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Third Row: Portal Item Names */}
+          <div className="grid grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="portalItemNameEn"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    Portal Item Name (English)
+                  </FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select method" />
-                    </SelectTrigger>
+                    <Input className="h-12" {...field} />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="Fixed">Fixed</SelectItem>
-                    <SelectItem value="Manual">Manual</SelectItem>
-                    <SelectItem value="Per item">Per item</SelectItem>
-                    <SelectItem value="Per location">Per location</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="portalItemNameAr"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-gray-700">
+                    Portal Item Name (Arabic)
+                  </FormLabel>
+                  <FormControl>
+                    <Input className="h-12" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-          <FormField
-            control={form.control}
-            name="active"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <FormLabel>Active</FormLabel>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          {/* Settings Section */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-4">Settings</h3>
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="usedByFinance"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="text-sm font-normal leading-none">
+                        Used by Finance
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="inShippingUnit"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="text-sm font-normal leading-none">
+                        In Shipping Unit
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="specialRequirement"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="text-sm font-normal leading-none">
+                        Special Requirement
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-          <div className="flex justify-end space-x-2 pt-2">
-            <Button variant="outline" onClick={onClose} type="button">
+              {/* Right Column */}
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="usedByOperations"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="text-sm font-normal leading-none">
+                        Used by Operations
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="active"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="text-sm font-normal leading-none">
+                        Active
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-6 mt-8 border-t">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              type="button"
+              className="px-6"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save"}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              // disabled={loading === "pending"}
+              className="px-6"
+            >
+              {isSubmitting ? "Adding..." : "Add Item"}
             </Button>
           </div>
         </form>

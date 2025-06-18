@@ -40,9 +40,9 @@ export default function SubActivityTable({
   const [activeStatuses, setActiveStatuses] = useState<Record<number, boolean>>(
     () => {
       // Initialize with current active status
-      const initialStatuses: Record<number, boolean> = {};
-      subActivities.forEach((subActivity) => {
-        initialStatuses[subActivity.id] = subActivity.active;
+      const initialStatuses: Record<string, boolean> = {};
+      subActivities?.forEach((subActivity) => {
+        initialStatuses[subActivity._id!] = subActivity.isActive;
       });
       return initialStatuses;
     }
@@ -65,9 +65,9 @@ export default function SubActivityTable({
     }));
 
     // Update the sub-activity's active status - in a real app, this would be part of a store
-    const subActivity = subActivities.find((sa) => sa.id === id);
+    const subActivity = subActivities.find((sa) => sa._id === id);
     if (subActivity) {
-      subActivity.active = active;
+      subActivity.isActive = active;
     }
 
     toast({
@@ -76,31 +76,33 @@ export default function SubActivityTable({
     });
   };
 
-  const sortedSubActivities = [...subActivities].sort((a, b) => {
-    const fieldA = a[sortField];
-    const fieldB = b[sortField];
+  const sortedSubActivities =
+    subActivities?.length &&
+    [...subActivities].sort((a, b) => {
+      const fieldA = a[sortField];
+      const fieldB = b[sortField];
 
-    if (typeof fieldA === "boolean" && typeof fieldB === "boolean") {
-      return sortDirection === "asc"
-        ? Number(fieldA) - Number(fieldB)
-        : Number(fieldB) - Number(fieldA);
-    }
+      if (typeof fieldA === "boolean" && typeof fieldB === "boolean") {
+        return sortDirection === "asc"
+          ? Number(fieldA) - Number(fieldB)
+          : Number(fieldB) - Number(fieldA);
+      }
 
-    if (typeof fieldA === "string" && typeof fieldB === "string") {
-      return sortDirection === "asc"
-        ? fieldA.localeCompare(fieldB)
-        : fieldB.localeCompare(fieldA);
-    }
+      if (typeof fieldA === "string" && typeof fieldB === "string") {
+        return sortDirection === "asc"
+          ? fieldA.localeCompare(fieldB)
+          : fieldB.localeCompare(fieldA);
+      }
 
-    if (typeof fieldA === "number" && typeof fieldB === "number") {
-      return sortDirection === "asc" ? fieldA - fieldB : fieldB - fieldA;
-    }
+      if (typeof fieldA === "number" && typeof fieldB === "number") {
+        return sortDirection === "asc" ? fieldA - fieldB : fieldB - fieldA;
+      }
 
-    return 0;
-  });
+      return 0;
+    });
 
   return (
-    <Table>
+    <Table className="w-full">
       <TableHeader className="bg-gray-100">
         <TableRow>
           <TableHead
@@ -149,7 +151,7 @@ export default function SubActivityTable({
         </TableRow>
       </TableHeader>
       <TableBody className="bg-gray-50">
-        {subActivities.length === 0 ? (
+        {subActivities?.length === 0 ? (
           <TableRow>
             <TableCell colSpan={8} className="text-center py-6 text-gray-500">
               No sub-activities found. Add your first sub-activity using the
@@ -157,8 +159,8 @@ export default function SubActivityTable({
             </TableCell>
           </TableRow>
         ) : (
-          sortedSubActivities.map((subActivity) => (
-            <TableRow key={subActivity.id} className="hover:bg-gray-100">
+          sortedSubActivities?.map((subActivity) => (
+            <TableRow key={subActivity._id} className="hover:bg-gray-100">
               <TableCell>{subActivity.itmSrl}</TableCell>
               <TableCell>{subActivity.itemCode}</TableCell>
               <TableCell>{subActivity.itemName}</TableCell>

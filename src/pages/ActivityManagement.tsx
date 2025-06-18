@@ -20,14 +20,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import {
-  actAddActivity,
   actGetActivities,
+  actRemoveActivity,
 } from "@/store/activities/activitiesSlice";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  ActivitiesPageSkeleton,
-  TableSkeleton,
-} from "@/components/LoadingComponents";
+import { ActivitiesPageSkeleton } from "@/components/LoadingComponents";
 import { ErrorComponent } from "@/components/ErrorComponents";
 import { actGetTransactionTypes } from "@/store/transactionTypes/transactionTypesSlice";
 
@@ -56,219 +52,43 @@ export default function ActivityManagement() {
 
   const { toast } = useToast();
 
-  // Sample client-side activities data
-  const [activities, setActivities] = useState<Activity[]>([
-    {
-      id: 1,
-      actSrl: "X01",
-      activityCode: "PKGN",
-      activityType: "X-work",
-      activityName: "Packaging",
-      isWithItems: true,
-      financeEffect: "Positive Effect",
-      active: true,
-    },
-    {
-      id: 2,
-      actSrl: "I01",
-      activityCode: "INSR",
-      activityType: "Service",
-      activityName: "Insurance",
-      isWithItems: true,
-      financeEffect: "No Effect",
-      active: true,
-    },
-    {
-      id: 3,
-      actSrl: "M01",
-      activityCode: "MATL",
-      activityType: "Material",
-      activityName: "Material Handling",
-      isWithItems: true,
-      financeEffect: "Positive Effect",
-      active: true,
-    },
-    {
-      id: 4,
-      actSrl: "T01",
-      activityCode: "TRNS",
-      activityType: "Transport",
-      activityName: "Transportation",
-      isWithItems: true,
-      financeEffect: "Positive Effect",
-      active: true,
-    },
-    {
-      id: 5,
-      actSrl: "F01",
-      activityCode: "FINC",
-      activityType: "Finance",
-      activityName: "Financial Services",
-      isWithItems: false,
-      financeEffect: "Positive Effect",
-      active: true,
-    },
-  ]);
-
-  // Sample client-side sub-activities data
-  const [subActivities, setSubActivities] = useState<SubActivity[]>([
-    {
-      id: 1,
-      parentId: 1,
-      itmSrl: 1001,
-      itemCode: "BOX",
-      itemName: "Box Packaging (Standard)",
-      activityName: "Packaging",
-      activityType: "X-work",
-      pricingMethod: "Fixed",
-      active: true,
-    },
-    {
-      id: 2,
-      parentId: 1,
-      itmSrl: 1002,
-      itemCode: "WRAP",
-      itemName: "Wrap Packaging (Premium)",
-      activityName: "Packaging",
-      activityType: "X-work",
-      pricingMethod: "Variable",
-      active: true,
-    },
-    {
-      id: 3,
-      parentId: 1,
-      itmSrl: 1003,
-      itemCode: "LABL",
-      itemName: "Label Printing",
-      activityName: "Packaging",
-      activityType: "X-work",
-      pricingMethod: "Fixed",
-      active: true,
-    },
-    {
-      id: 4,
-      parentId: 2,
-      itmSrl: 2001,
-      itemCode: "BINS",
-      itemName: "Basic Insurance",
-      activityName: "Insurance",
-      activityType: "Service",
-      pricingMethod: "Percentage",
-      active: true,
-    },
-    {
-      id: 5,
-      parentId: 2,
-      itmSrl: 2002,
-      itemCode: "PINS",
-      itemName: "Premium Insurance",
-      activityName: "Insurance",
-      activityType: "Service",
-      pricingMethod: "Percentage",
-      active: true,
-    },
-    {
-      id: 6,
-      parentId: 3,
-      itmSrl: 3001,
-      itemCode: "WOOD",
-      itemName: "Wood Material",
-      activityName: "Material Handling",
-      activityType: "Material",
-      pricingMethod: "Fixed",
-      active: true,
-    },
-    {
-      id: 7,
-      parentId: 3,
-      itmSrl: 3002,
-      itemCode: "PLST",
-      itemName: "Plastic Material",
-      activityName: "Material Handling",
-      activityType: "Material",
-      pricingMethod: "Fixed",
-      active: true,
-    },
-    {
-      id: 8,
-      parentId: 4,
-      itmSrl: 4001,
-      itemCode: "LCDL",
-      itemName: "Local Delivery",
-      activityName: "Transportation",
-      activityType: "Transport",
-      pricingMethod: "Variable",
-      active: true,
-    },
-    {
-      id: 9,
-      parentId: 4,
-      itmSrl: 4002,
-      itemCode: "INTL",
-      itemName: "International Delivery",
-      activityName: "Transportation",
-      activityType: "Transport",
-      pricingMethod: "Variable",
-      active: true,
-    },
-    {
-      id: 10,
-      parentId: 5,
-      itmSrl: 5001,
-      itemCode: "INIT",
-      itemName: "Initial Payment",
-      activityName: "Financial Services",
-      activityType: "Finance",
-      pricingMethod: "Percentage",
-      active: true,
-    },
-    {
-      id: 11,
-      parentId: 5,
-      itmSrl: 5002,
-      itemCode: "FINL",
-      itemName: "Final Payment",
-      activityName: "Financial Services",
-      activityType: "Finance",
-      pricingMethod: "Percentage",
-      active: true,
-    },
-  ]);
-
   // Delete activity function
   const deleteActivity = (id: string) => {
-    // Delete all sub-activities of the activity first
-    setSubActivities(
-      subActivities.filter((subActivity) => subActivity.parentId !== id)
-    );
-
-    // Then delete the activity itself
-    setActivities(activities.filter((activity) => activity._id !== id));
-
-    // Show success toast
-    toast({
-      title: "Success",
-      description: "Activity deleted successfully",
-    });
-
-    // Close delete confirmation dialog
-    setDeleteConfirmOpen(false);
+    dispatch(actRemoveActivity(id))
+      .unwrap()
+      .then(() => {
+        toast({
+          title: "Success",
+          description: "Sub-activity deleted successfully",
+        });
+        dispatch(actGetActivities());
+      })
+      .catch(() => {
+        toast({
+          title: "Failed",
+          description: "An Erorr Occurred while deleting the Activity",
+        });
+      });
+    setDeleteSubConfirmOpen(false);
   };
 
   // Delete sub-activity function
   const deleteSubActivity = (id: string) => {
-    // Delete the sub-activity
-    setSubActivities(
-      subActivities.filter((subActivity) => subActivity._id !== id)
-    );
-
-    // Show success toast
-    toast({
-      title: "Success",
-      description: "Sub-activity deleted successfully",
-    });
-
-    // Close delete confirmation dialog
+    dispatch(actRemoveActivity(id))
+      .unwrap()
+      .then(() => {
+        toast({
+          title: "Success",
+          description: "Sub-activity deleted successfully",
+        });
+        dispatch(actGetActivities());
+      })
+      .catch(() => {
+        toast({
+          title: "Failed",
+          description: "An Erorr Occurred while deleting the Activity",
+        });
+      });
     setDeleteSubConfirmOpen(false);
   };
 
@@ -321,7 +141,7 @@ export default function ActivityManagement() {
   // Confirm delete activity
   const confirmDeleteActivity = () => {
     if (selectedActivity) {
-      deleteActivity(selectedActivity._id);
+      deleteActivity(selectedActivity._id!);
     }
   };
 
@@ -348,46 +168,6 @@ export default function ActivityManagement() {
   const handleAddSubActivity = (activity: Activity) => {
     setSelectedActivity(activity);
     setAddSubActivityOpen(true);
-  };
-
-  // Add activity handler
-  const handleAddActivity = (newActivity: Activity) => {
-    // setActivities([...activities, newActivity]);
-    dispatch(actAddActivity(newActivity));
-    setAddActivityOpen(false);
-
-    toast({
-      title: "Success",
-      description: "Activity added successfully",
-    });
-  };
-
-  // Add sub-activity handler
-  const handleAddSubActivity2 = (newSubActivity: SubActivity) => {
-    setSubActivities([...subActivities, newSubActivity]);
-    setAddSubActivityOpen(false);
-
-    toast({
-      title: "Success",
-      description: "Sub-activity added successfully",
-    });
-  };
-
-  // Update sub-activity handler
-  const handleUpdateSubActivity = (updatedSubActivity: SubActivity) => {
-    setSubActivities(
-      subActivities.map((subActivity) =>
-        subActivity._id === updatedSubActivity._id
-          ? updatedSubActivity
-          : subActivity
-      )
-    );
-    setEditSubActivityOpen(false);
-
-    toast({
-      title: "Success",
-      description: "Sub-activity updated successfully",
-    });
   };
 
   useEffect(() => {
@@ -447,7 +227,6 @@ export default function ActivityManagement() {
             onAddSubActivity={handleAddSubActivity}
             onEditSubActivity={handleEditSubActivity}
             onDeleteSubActivity={handleDeleteSubActivity}
-            subActivities={subActivities}
           />
         </div>
       </div>
@@ -455,10 +234,7 @@ export default function ActivityManagement() {
       {/* Add Activity Dialog */}
       <Dialog open={addActivityOpen} onOpenChange={setAddActivityOpen}>
         <DialogContent className="max-w-[974px] w-full">
-          <AddActivityForm
-            onClose={() => setAddActivityOpen(false)}
-            onAdd={handleAddActivity}
-          />
+          <AddActivityForm onClose={() => setAddActivityOpen(false)} />
         </DialogContent>
       </Dialog>
 
@@ -476,12 +252,11 @@ export default function ActivityManagement() {
 
       {/* Add Sub-Activity Dialog */}
       <Dialog open={addSubActivityOpen} onOpenChange={setAddSubActivityOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-w-[974px] w-full">
           {selectedActivity && (
             <AddSubActivityForm
               parentActivity={selectedActivity}
               onClose={() => setAddSubActivityOpen(false)}
-              onAdd={handleAddSubActivity2}
             />
           )}
         </DialogContent>
@@ -494,7 +269,6 @@ export default function ActivityManagement() {
             <EditSubActivityForm
               subActivity={selectedSubActivity}
               onClose={() => setEditSubActivityOpen(false)}
-              onUpdate={handleUpdateSubActivity}
             />
           )}
         </DialogContent>

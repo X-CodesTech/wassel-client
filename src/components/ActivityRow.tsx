@@ -6,10 +6,12 @@ import { ChevronRight } from "lucide-react";
 import SubActivityTable from "@/components/SubActivityTable";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actUpdateActivity } from "@/store/activities/act/actUpdateActivity";
 import { actGetActivities } from "@/store/activities/activitiesSlice";
+import { set } from "date-fns";
+import { subActivityServices } from "@/services";
 
 interface ActivityRowProps {
   activity: Activity;
@@ -35,6 +37,8 @@ export default function ActivityRow({
   subActivities = [],
 }: ActivityRowProps) {
   const dispatch = useAppDispatch();
+  const [subActivitiesLoading, setSubActivitiesLoading] = useState(false);
+  const [subActivityRecords, setSubActivityRecords] = useState([]);
   const { records } = useAppSelector((state) => state.transactionTypes);
   const { loading } = useAppSelector((state) => state.activities);
 
@@ -64,6 +68,28 @@ export default function ActivityRow({
         });
       });
   };
+
+  const getSubActivities = async () => {
+    setSubActivitiesLoading(true);
+    try {
+      const { data } = await subActivityServices.getSubActivityByActivityId(
+        activity._id!
+      );
+      setSubActivityRecords(data.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch sub-activities. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubActivitiesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getSubActivities();
+  }, []);
 
   return (
     <>
@@ -198,7 +224,7 @@ export default function ActivityRow({
           <TableCell colSpan={8} className="px-0 py-0">
             <div className="px-4 py-2">
               <SubActivityTable
-                subActivities={subActivities}
+                subActivities={subActivityRecords}
                 onEditSubActivity={onEditSubActivity}
                 onDeleteSubActivity={onDeleteSubActivity}
               />

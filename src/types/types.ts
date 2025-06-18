@@ -26,15 +26,20 @@ export interface Activity {
 }
 
 export interface SubActivity {
-  _id: string;
-  parentId: string;
-  itmSrl: number;
-  itemCode: string;
-  itemName: string;
-  activityName: string;
-  activityType: string;
-  pricingMethod: string;
-  active: boolean;
+  _id?: string;
+  activity: string;
+  transactionType: string;
+  financeEffect: "none" | "positive" | "negative";
+  pricingMethod: "perLocation" | "perItem" | "perTrip";
+  portalItemNameEn: string;
+  portalItemNameAr: string;
+  isUsedByFinance: boolean;
+  isUsedByOps: boolean;
+  isInShippingUnit: boolean;
+  isActive: boolean;
+  isInSpecialRequirement: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface ActivityWithSubActivities {

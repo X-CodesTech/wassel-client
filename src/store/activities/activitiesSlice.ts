@@ -4,6 +4,7 @@ import { actGetActivities } from "./act/actGetActivities";
 import { actAddActivity } from "./act/actAddActivity";
 import { Activity } from "@/types/types";
 import { actUpdateActivity } from "./act/actUpdateActivity";
+import { actRemoveActivity } from "./act/actRemoveActivity";
 
 interface IActivitiesState {
   records: Activity[];
@@ -64,11 +65,28 @@ const activitiesSlice = createSlice({
         state.error = action.payload;
       }
     });
+    builder.addCase(actRemoveActivity.pending, (state) => {
+      state.loading = "pending";
+    });
+    builder.addCase(actRemoveActivity.fulfilled, (state) => {
+      state.loading = "fulfilled";
+    });
+    builder.addCase(actRemoveActivity.rejected, (state, action) => {
+      state.loading = "rejected";
+      if (isString(action.payload)) {
+        state.error = action.payload;
+      }
+    });
   },
 });
 
 export const {} = activitiesSlice.actions;
 
-export { actGetActivities, actAddActivity };
+export {
+  actGetActivities,
+  actAddActivity,
+  actUpdateActivity,
+  actRemoveActivity,
+};
 
 export default activitiesSlice.reducer;
