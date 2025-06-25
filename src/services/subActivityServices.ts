@@ -12,11 +12,34 @@ class SubActivityServices {
     });
   }
 
+  async getSubActivityByActivityId(id: string) {
+    return await http.get(`${apiUrlConstants.subActivities}/by-activity/${id}`);
+  }
+
   async getSubActivityById(id: string) {
     return await http.get(`${apiUrlConstants.subActivities}/${id}`);
   }
-  async getSubActivityByActivityId(id: string) {
-    return await http.get(`${apiUrlConstants.subActivities}/by-activity/${id}`);
+
+  async updateSubActivity(id: string, subActivity: SubActivity) {
+    return await http.put(
+      `${apiUrlConstants.subActivities}/${id}`,
+      subActivity
+    );
+  }
+
+  async deleteSubActivity(id: string) {
+    return await http.delete(`${apiUrlConstants.subActivities}/${id}`);
+  }
+
+  async getSubActivityByPricingMethod(pricingMethods: string) {
+    return await http.get(
+      `${apiUrlConstants.subActivities}/by-pricing-method`,
+      {
+        params: {
+          pricingMethods,
+        },
+      }
+    );
   }
 }
 export default new SubActivityServices();

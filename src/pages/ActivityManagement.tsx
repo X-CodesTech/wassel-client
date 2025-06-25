@@ -3,10 +3,8 @@ import { useToast } from "@/hooks/use-toast";
 import ActivityTable from "@/components/ActivityTable";
 import AddActivityForm from "@/components/AddActivityForm";
 import EditActivityForm from "@/components/EditActivityForm";
-import AddSubActivityForm from "@/components/AddSubActivityForm";
-import EditSubActivityForm from "@/components/EditSubActivityForm";
 import SearchFilter from "@/components/SearchFilter";
-import { Activity, SubActivity } from "@/types/types";
+import { Activity } from "@/types/types";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -39,16 +37,12 @@ export default function ActivityManagement() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
     null
   );
-  const [selectedSubActivity, setSelectedSubActivity] =
-    useState<SubActivity | null>(null);
 
   // Modal states
   const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [editActivityOpen, setEditActivityOpen] = useState(false);
   const [addSubActivityOpen, setAddSubActivityOpen] = useState(false);
-  const [editSubActivityOpen, setEditSubActivityOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteSubConfirmOpen, setDeleteSubConfirmOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -69,27 +63,7 @@ export default function ActivityManagement() {
           description: "An Erorr Occurred while deleting the Activity",
         });
       });
-    setDeleteSubConfirmOpen(false);
-  };
-
-  // Delete sub-activity function
-  const deleteSubActivity = (id: string) => {
-    dispatch(actRemoveActivity(id))
-      .unwrap()
-      .then(() => {
-        toast({
-          title: "Success",
-          description: "Sub-activity deleted successfully",
-        });
-        dispatch(actGetActivities());
-      })
-      .catch(() => {
-        toast({
-          title: "Failed",
-          description: "An Erorr Occurred while deleting the Activity",
-        });
-      });
-    setDeleteSubConfirmOpen(false);
+    setDeleteConfirmOpen(false);
   };
 
   // Filter activities based on search term and filter type
@@ -112,8 +86,6 @@ export default function ActivityManagement() {
     switch (filterType) {
       case "activityType":
         return matchesSearch && activity.activityTransactionType === "X-work";
-      case "financeEffect":
-        return matchesSearch && activity.financeEffect.includes("Positive");
       case "activeStatus":
         return matchesSearch && activity.isActive;
       default:
@@ -142,25 +114,6 @@ export default function ActivityManagement() {
   const confirmDeleteActivity = () => {
     if (selectedActivity) {
       deleteActivity(selectedActivity._id!);
-    }
-  };
-
-  // Handle edit sub-activity
-  const handleEditSubActivity = (subActivity: SubActivity) => {
-    setSelectedSubActivity(subActivity);
-    setEditSubActivityOpen(true);
-  };
-
-  // Handle delete sub-activity
-  const handleDeleteSubActivity = (subActivity: SubActivity) => {
-    setSelectedSubActivity(subActivity);
-    setDeleteSubConfirmOpen(true);
-  };
-
-  // Confirm delete sub-activity
-  const confirmDeleteSubActivity = () => {
-    if (selectedSubActivity) {
-      deleteSubActivity(selectedSubActivity._id);
     }
   };
 
@@ -225,8 +178,7 @@ export default function ActivityManagement() {
             onEditActivity={handleEditActivity}
             onDeleteActivity={handleDeleteActivity}
             onAddSubActivity={handleAddSubActivity}
-            onEditSubActivity={handleEditSubActivity}
-            onDeleteSubActivity={handleDeleteSubActivity}
+            handleAddSubActivityOpen={() => setAddSubActivityOpen(true)}
           />
         </div>
       </div>
@@ -250,30 +202,6 @@ export default function ActivityManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Sub-Activity Dialog */}
-      <Dialog open={addSubActivityOpen} onOpenChange={setAddSubActivityOpen}>
-        <DialogContent className="max-w-[974px] w-full">
-          {selectedActivity && (
-            <AddSubActivityForm
-              parentActivity={selectedActivity}
-              onClose={() => setAddSubActivityOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Sub-Activity Dialog */}
-      <Dialog open={editSubActivityOpen} onOpenChange={setEditSubActivityOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          {selectedSubActivity && (
-            <EditSubActivityForm
-              subActivity={selectedSubActivity}
-              onClose={() => setEditSubActivityOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Activity Confirmation */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
@@ -289,31 +217,6 @@ export default function ActivityManagement() {
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={confirmDeleteActivity}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Sub-Activity Confirmation */}
-      <AlertDialog
-        open={deleteSubConfirmOpen}
-        onOpenChange={setDeleteSubConfirmOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the sub-activity. This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={confirmDeleteSubActivity}
             >
               Delete
             </AlertDialogAction>

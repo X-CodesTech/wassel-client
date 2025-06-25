@@ -35,9 +35,7 @@ interface ActivityTableProps {
   onEditActivity: (activity: Activity) => void;
   onDeleteActivity: (activity: Activity) => void;
   onAddSubActivity: (activity: Activity) => void;
-  onEditSubActivity: (subActivity: SubActivity) => void;
-  onDeleteSubActivity: (subActivity: SubActivity) => void;
-  subActivities?: SubActivity[];
+  handleAddSubActivityOpen: () => void;
 }
 
 export default function ActivityTable({
@@ -47,9 +45,7 @@ export default function ActivityTable({
   onEditActivity,
   onDeleteActivity,
   onAddSubActivity,
-  onEditSubActivity,
-  onDeleteSubActivity,
-  subActivities = [],
+  handleAddSubActivityOpen,
 }: ActivityTableProps) {
   const [sortField, setSortField] = useState<SortField>("actSrl");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -214,12 +210,6 @@ export default function ActivityTable({
                 onToggleExpand={onToggleExpand}
                 onEditActivity={onEditActivity}
                 onDeleteActivity={onDeleteActivity}
-                onAddSubActivity={onAddSubActivity}
-                onEditSubActivity={onEditSubActivity}
-                onDeleteSubActivity={onDeleteSubActivity}
-                subActivities={subActivities.filter(
-                  (subActivity) => subActivity.parentId === activity._id
-                )}
               />
             ))
           )}

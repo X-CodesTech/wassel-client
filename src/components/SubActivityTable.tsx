@@ -10,43 +10,52 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import {
+  FINANCE_EFFECT_OPTIONS,
+  PRICING_METHOD_OPTIONS,
+} from "@/utils/constants";
 
 type SortField =
-  | "itmSrl"
-  | "itemCode"
-  | "itemName"
-  | "activityName"
-  | "activityType"
+  | "portalItemNameEn"
+  | "portalItemNameAr"
   | "pricingMethod"
-  | "active";
+  | "financeEffect"
+  | "transactionType"
+  | "isUsedByFinance"
+  | "isUsedByOps"
+  | "isInShippingUnit"
+  | "isInSpecialRequirement"
+  | "isActive";
 type SortDirection = "asc" | "desc";
 
 interface SubActivityTableProps {
   subActivities: SubActivity[];
-  onEditSubActivity: (subActivity: SubActivity) => void;
-  onDeleteSubActivity: (subActivity: SubActivity) => void;
   isLoading?: boolean;
+  onToggleSubActive: (id: string, active: boolean) => void;
+  onDeleteSubActivity: (id: string) => void;
+  onEditSubActivity: (id: string) => void;
 }
+
+const YesOrNoBadge = ({ value }: { value: boolean }) => {
+  return (
+    <span
+      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+        value ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+      }`}
+    >
+      {value ? "Yes" : "No"}
+    </span>
+  );
+};
 
 export default function SubActivityTable({
   subActivities,
-  onEditSubActivity,
+  onToggleSubActive,
   onDeleteSubActivity,
+  onEditSubActivity,
 }: SubActivityTableProps) {
-  const { toast } = useToast();
-  const [sortField, setSortField] = useState<SortField>("itmSrl");
+  const [sortField, setSortField] = useState<SortField>("portalItemNameEn");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [activeStatuses, setActiveStatuses] = useState<Record<number, boolean>>(
-    () => {
-      // Initialize with current active status
-      const initialStatuses: Record<string, boolean> = {};
-      subActivities?.forEach((subActivity) => {
-        initialStatuses[subActivity._id!] = subActivity.isActive;
-      });
-      return initialStatuses;
-    }
-  );
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -55,25 +64,6 @@ export default function SubActivityTable({
       setSortField(field);
       setSortDirection("asc");
     }
-  };
-
-  const handleToggleSubActive = (id: number, active: boolean) => {
-    // Update local state
-    setActiveStatuses((prev) => ({
-      ...prev,
-      [id]: active,
-    }));
-
-    // Update the sub-activity's active status - in a real app, this would be part of a store
-    const subActivity = subActivities.find((sa) => sa._id === id);
-    if (subActivity) {
-      subActivity.isActive = active;
-    }
-
-    toast({
-      title: `Sub-activity ${active ? "activated" : "deactivated"}`,
-      description: "Sub-activity status has been updated successfully.",
-    });
   };
 
   const sortedSubActivities =
@@ -97,7 +87,6 @@ export default function SubActivityTable({
       if (typeof fieldA === "number" && typeof fieldB === "number") {
         return sortDirection === "asc" ? fieldA - fieldB : fieldB - fieldA;
       }
-
       return 0;
     });
 
@@ -106,43 +95,61 @@ export default function SubActivityTable({
       <TableHeader className="bg-gray-100">
         <TableRow>
           <TableHead
-            onClick={() => handleSort("itmSrl")}
+            onClick={() => handleSort("portalItemNameEn")}
             className="cursor-pointer"
           >
-            ITMsrl
+            Portal Item Name (English)
           </TableHead>
           <TableHead
-            onClick={() => handleSort("itemCode")}
+            onClick={() => handleSort("portalItemNameAr")}
             className="cursor-pointer"
           >
-            Item Code
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("itemName")}
-            className="cursor-pointer"
-          >
-            Item Name
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("activityName")}
-            className="cursor-pointer"
-          >
-            Activity Name
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("activityType")}
-            className="cursor-pointer"
-          >
-            Activity type
+            Portal Item Name (Arabic)
           </TableHead>
           <TableHead
             onClick={() => handleSort("pricingMethod")}
             className="cursor-pointer"
           >
-            Pricing method
+            Pricing Method
           </TableHead>
           <TableHead
-            onClick={() => handleSort("active")}
+            onClick={() => handleSort("financeEffect")}
+            className="cursor-pointer"
+          >
+            Finance Effect
+          </TableHead>
+          <TableHead
+            onClick={() => handleSort("transactionType")}
+            className="cursor-pointer"
+          >
+            Transaction Type
+          </TableHead>
+          <TableHead
+            onClick={() => handleSort("isUsedByFinance")}
+            className="cursor-pointer"
+          >
+            Is Used By Finance
+          </TableHead>
+          <TableHead
+            onClick={() => handleSort("isUsedByOps")}
+            className="cursor-pointer"
+          >
+            Is Used By Ops
+          </TableHead>
+          <TableHead
+            onClick={() => handleSort("isInShippingUnit")}
+            className="cursor-pointer"
+          >
+            Is In Shipping Unit
+          </TableHead>
+          <TableHead
+            onClick={() => handleSort("isInSpecialRequirement")}
+            className="cursor-pointer"
+          >
+            Is In Special Requirement
+          </TableHead>
+          <TableHead
+            onClick={() => handleSort("isActive")}
             className="cursor-pointer"
           >
             Active
@@ -159,19 +166,35 @@ export default function SubActivityTable({
             </TableCell>
           </TableRow>
         ) : (
-          sortedSubActivities?.map((subActivity) => (
+          sortedSubActivities &&
+          sortedSubActivities?.map((subActivity: SubActivity) => (
             <TableRow key={subActivity._id} className="hover:bg-gray-100">
-              <TableCell>{subActivity.itmSrl}</TableCell>
-              <TableCell>{subActivity.itemCode}</TableCell>
-              <TableCell>{subActivity.itemName}</TableCell>
-              <TableCell>{subActivity.activityName}</TableCell>
-              <TableCell>{subActivity.activityType}</TableCell>
-              <TableCell>{subActivity.pricingMethod}</TableCell>
+              <TableCell>{subActivity.portalItemNameEn}</TableCell>
+              <TableCell>{subActivity.portalItemNameAr}</TableCell>
+              <TableCell>
+                {PRICING_METHOD_OPTIONS[subActivity.pricingMethod]}
+              </TableCell>
+              <TableCell>
+                {FINANCE_EFFECT_OPTIONS[subActivity.financeEffect]}
+              </TableCell>
+              <TableCell>{subActivity.transactionType.name}</TableCell>
+              <TableCell>
+                <YesOrNoBadge value={subActivity.isUsedByFinance} />
+              </TableCell>
+              <TableCell>
+                <YesOrNoBadge value={subActivity.isUsedByOps} />
+              </TableCell>
+              <TableCell>
+                <YesOrNoBadge value={subActivity.isInShippingUnit} />
+              </TableCell>
+              <TableCell>
+                <YesOrNoBadge value={subActivity.isInSpecialRequirement} />
+              </TableCell>
               <TableCell>
                 <Switch
-                  checked={activeStatuses[subActivity.id] ?? subActivity.active}
+                  checked={subActivity.isActive}
                   onCheckedChange={(checked) =>
-                    handleToggleSubActive(subActivity.id, checked)
+                    onToggleSubActive(subActivity._id!, checked)
                   }
                   className="scale-90"
                 />
@@ -181,14 +204,14 @@ export default function SubActivityTable({
                   <Button
                     variant="link"
                     className="text-indigo-600 hover:text-indigo-900 px-2 py-1 h-auto"
-                    onClick={() => onEditSubActivity(subActivity)}
+                    onClick={() => onEditSubActivity(subActivity._id!)}
                   >
                     Edit
                   </Button>
                   <Button
                     variant="link"
                     className="text-red-600 hover:text-red-900 px-2 py-1 h-auto"
-                    onClick={() => onDeleteSubActivity(subActivity)}
+                    onClick={() => onDeleteSubActivity(subActivity._id!)}
                   >
                     Delete
                   </Button>

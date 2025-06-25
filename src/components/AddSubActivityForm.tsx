@@ -152,6 +152,7 @@ export default function AddSubActivityForm({
           transactionType: values.transactionType,
         }
       );
+      onClose();
     } catch (error) {
       toast({
         title: "Error",

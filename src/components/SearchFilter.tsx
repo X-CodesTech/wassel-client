@@ -31,8 +31,6 @@ export default function SearchFilter({
     switch (filterType) {
       case "activityType":
         return "X-work Type";
-      case "financeEffect":
-        return "Positive Finance";
       case "activeStatus":
         return "Active Only";
       default:

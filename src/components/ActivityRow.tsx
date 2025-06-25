@@ -10,8 +10,20 @@ import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actUpdateActivity } from "@/store/activities/act/actUpdateActivity";
 import { actGetActivities } from "@/store/activities/activitiesSlice";
-import { set } from "date-fns";
-import { subActivityServices } from "@/services";
+import subActivityServices from "@/services/subActivityServices";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import EditSubActivityForm from "./EditSubActivityForm";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
+import AddSubActivityForm from "./AddSubActivityForm";
 
 interface ActivityRowProps {
   activity: Activity;
@@ -19,10 +31,6 @@ interface ActivityRowProps {
   onToggleExpand: (actSrl: string) => void;
   onEditActivity: (activity: Activity) => void;
   onDeleteActivity: (activity: Activity) => void;
-  onAddSubActivity: (activity: Activity) => void;
-  onEditSubActivity: (subActivity: SubActivity) => void;
-  onDeleteSubActivity: (subActivity: SubActivity) => void;
-  subActivities?: SubActivity[];
 }
 
 export default function ActivityRow({
@@ -31,12 +39,14 @@ export default function ActivityRow({
   onToggleExpand,
   onEditActivity,
   onDeleteActivity,
-  onAddSubActivity,
-  onEditSubActivity,
-  onDeleteSubActivity,
-  subActivities = [],
 }: ActivityRowProps) {
   const dispatch = useAppDispatch();
+  const [addSubActivityOpen, setAddSubActivityOpen] = useState(false);
+  const [editSubActivityOpen, setEditSubActivityOpen] = useState(false);
+  const [deleteSubConfirmOpen, setDeleteSubConfirmOpen] = useState(false);
+  const [selectedSubActivity, setSelectedSubActivity] = useState<string | null>(
+    null
+  );
   const [subActivitiesLoading, setSubActivitiesLoading] = useState(false);
   const [subActivityRecords, setSubActivityRecords] = useState([]);
   const { records } = useAppSelector((state) => state.transactionTypes);
@@ -87,13 +97,78 @@ export default function ActivityRow({
     }
   };
 
+  const handleToggleSubActive = async (id: string, active: boolean) => {
+    await subActivityServices
+      .updateSubActivity(id, {
+        isActive: active,
+      } as SubActivity)
+      .then(() => {
+        getSubActivities();
+        toast({
+          title: `Sub-activity ${active ? "activated" : "deactivated"}`,
+          description: "Sub-activity status has been updated successfully.",
+        });
+      })
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: "Failed to update sub-activity status.",
+        });
+      });
+  };
+
+  const deleteSubActivity = async (id: string) => {
+    await subActivityServices
+      .deleteSubActivity(id)
+      .then(() => {
+        toast({
+          title: "Success",
+          description: "Sub-activity deleted successfully",
+        });
+        getSubActivities();
+      })
+      .catch(() => {
+        toast({
+          title: "Failed",
+          description: "An Erorr Occurred while deleting the Activity",
+        });
+      })
+      .finally(() => {
+        setDeleteSubConfirmOpen(false);
+      });
+  };
+
+  const onEditSubActivity = async (id: string) => {
+    await subActivityServices
+      .updateSubActivity(id, {
+        isActive: true,
+      } as SubActivity)
+      .then(() => {
+        getSubActivities();
+      })
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: "Failed to update sub-activity status.",
+        });
+      });
+  };
+
+  const handleOpenDeleteSubActivityModal = (id: string) => {
+    setSelectedSubActivity(id);
+    setDeleteSubConfirmOpen(true);
+  };
+
   useEffect(() => {
     getSubActivities();
   }, []);
 
   return (
     <>
-      <TableRow className="hover:bg-gray-50 cursor-pointer">
+      <TableRow
+        className="hover:bg-gray-50 cursor-pointer"
+        onClick={() => onToggleExpand(activity.actSrl)}
+      >
         <TableCell>
           <button
             className="flex items-center space-x-2 focus:outline-none"
@@ -221,12 +296,13 @@ export default function ActivityRow({
 
       {isExpanded && (
         <TableRow className="bg-gray-50">
-          <TableCell colSpan={8} className="px-0 py-0">
+          <TableCell colSpan={13} className="px-0 py-0">
             <div className="px-4 py-2">
               <SubActivityTable
                 subActivities={subActivityRecords}
+                onDeleteSubActivity={handleOpenDeleteSubActivityModal}
+                onToggleSubActive={handleToggleSubActive}
                 onEditSubActivity={onEditSubActivity}
-                onDeleteSubActivity={onDeleteSubActivity}
               />
               <div className="mt-3 ml-6">
                 {activity.isWithItems ? (
@@ -234,7 +310,7 @@ export default function ActivityRow({
                     variant="outline"
                     size="sm"
                     className="text-indigo-700 bg-indigo-100 hover:bg-indigo-200 border-transparent"
-                    onClick={() => onAddSubActivity(activity)}
+                    onClick={() => setAddSubActivityOpen(true)}
                   >
                     <svg
                       className="-ml-0.5 mr-2 h-4 w-4"
@@ -260,6 +336,58 @@ export default function ActivityRow({
           </TableCell>
         </TableRow>
       )}
+
+      {/* Add Sub-Activity Dialog */}
+      <Dialog open={addSubActivityOpen} onOpenChange={setAddSubActivityOpen}>
+        <DialogContent className="max-w-[974px] w-full">
+          {activity._id && (
+            <AddSubActivityForm
+              parentActivity={activity}
+              onClose={() => {
+                setAddSubActivityOpen(false);
+                getSubActivities();
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Sub-Activity Dialog */}
+      <Dialog open={editSubActivityOpen} onOpenChange={setEditSubActivityOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          {selectedSubActivity && (
+            <EditSubActivityForm
+              subActivity={selectedSubActivity}
+              onClose={() => setEditSubActivityOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Sub-Activity Confirmation */}
+      <AlertDialog
+        open={deleteSubConfirmOpen}
+        onOpenChange={setDeleteSubConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the sub-activity. This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => deleteSubActivity(selectedSubActivity!)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
