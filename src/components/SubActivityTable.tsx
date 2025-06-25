@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SubActivity } from "@/types/types";
+import { Activity, SubActivity } from "@/types/types";
 import {
   Table,
   TableBody,
@@ -14,6 +14,8 @@ import {
   FINANCE_EFFECT_OPTIONS,
   PRICING_METHOD_OPTIONS,
 } from "@/utils/constants";
+import { Dialog, DialogContent } from "./ui/dialog";
+import EditSubActivityForm from "./EditSubActivityForm";
 
 type SortField =
   | "portalItemNameEn"
@@ -29,6 +31,7 @@ type SortField =
 type SortDirection = "asc" | "desc";
 
 interface SubActivityTableProps {
+  parentActivity: Activity;
   subActivities: SubActivity[];
   isLoading?: boolean;
   onToggleSubActive: (id: string, active: boolean) => void;
@@ -49,11 +52,15 @@ const YesOrNoBadge = ({ value }: { value: boolean }) => {
 };
 
 export default function SubActivityTable({
+  parentActivity,
   subActivities,
   onToggleSubActive,
   onDeleteSubActivity,
   onEditSubActivity,
 }: SubActivityTableProps) {
+  const [editSubActivityOpen, setEditSubActivityOpen] = useState(false);
+  const [selectedSubActivity, setSelectedSubActivity] =
+    useState<SubActivity | null>(null);
   const [sortField, setSortField] = useState<SortField>("portalItemNameEn");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
@@ -91,136 +98,153 @@ export default function SubActivityTable({
     });
 
   return (
-    <Table className="w-full">
-      <TableHeader className="bg-gray-100">
-        <TableRow>
-          <TableHead
-            onClick={() => handleSort("portalItemNameEn")}
-            className="cursor-pointer"
-          >
-            Portal Item Name (English)
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("portalItemNameAr")}
-            className="cursor-pointer"
-          >
-            Portal Item Name (Arabic)
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("pricingMethod")}
-            className="cursor-pointer"
-          >
-            Pricing Method
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("financeEffect")}
-            className="cursor-pointer"
-          >
-            Finance Effect
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("transactionType")}
-            className="cursor-pointer"
-          >
-            Transaction Type
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("isUsedByFinance")}
-            className="cursor-pointer"
-          >
-            Is Used By Finance
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("isUsedByOps")}
-            className="cursor-pointer"
-          >
-            Is Used By Ops
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("isInShippingUnit")}
-            className="cursor-pointer"
-          >
-            Is In Shipping Unit
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("isInSpecialRequirement")}
-            className="cursor-pointer"
-          >
-            Is In Special Requirement
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("isActive")}
-            className="cursor-pointer"
-          >
-            Active
-          </TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody className="bg-gray-50">
-        {subActivities?.length === 0 ? (
+    <>
+      <Table className="w-full">
+        <TableHeader className="bg-gray-100">
           <TableRow>
-            <TableCell colSpan={8} className="text-center py-6 text-gray-500">
-              No sub-activities found. Add your first sub-activity using the
-              button below.
-            </TableCell>
+            <TableHead
+              onClick={() => handleSort("portalItemNameEn")}
+              className="cursor-pointer"
+            >
+              Portal Item Name (English)
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("portalItemNameAr")}
+              className="cursor-pointer"
+            >
+              Portal Item Name (Arabic)
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("pricingMethod")}
+              className="cursor-pointer"
+            >
+              Pricing Method
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("financeEffect")}
+              className="cursor-pointer"
+            >
+              Finance Effect
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("transactionType")}
+              className="cursor-pointer"
+            >
+              Transaction Type
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("isUsedByFinance")}
+              className="cursor-pointer"
+            >
+              Is Used By Finance
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("isUsedByOps")}
+              className="cursor-pointer"
+            >
+              Is Used By Ops
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("isInShippingUnit")}
+              className="cursor-pointer"
+            >
+              Is In Shipping Unit
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("isInSpecialRequirement")}
+              className="cursor-pointer"
+            >
+              Is In Special Requirement
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("isActive")}
+              className="cursor-pointer"
+            >
+              Active
+            </TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ) : (
-          sortedSubActivities &&
-          sortedSubActivities?.map((subActivity: SubActivity) => (
-            <TableRow key={subActivity._id} className="hover:bg-gray-100">
-              <TableCell>{subActivity.portalItemNameEn}</TableCell>
-              <TableCell>{subActivity.portalItemNameAr}</TableCell>
-              <TableCell>
-                {PRICING_METHOD_OPTIONS[subActivity.pricingMethod]}
-              </TableCell>
-              <TableCell>
-                {FINANCE_EFFECT_OPTIONS[subActivity.financeEffect]}
-              </TableCell>
-              <TableCell>{subActivity.transactionType.name}</TableCell>
-              <TableCell>
-                <YesOrNoBadge value={subActivity.isUsedByFinance} />
-              </TableCell>
-              <TableCell>
-                <YesOrNoBadge value={subActivity.isUsedByOps} />
-              </TableCell>
-              <TableCell>
-                <YesOrNoBadge value={subActivity.isInShippingUnit} />
-              </TableCell>
-              <TableCell>
-                <YesOrNoBadge value={subActivity.isInSpecialRequirement} />
-              </TableCell>
-              <TableCell>
-                <Switch
-                  checked={subActivity.isActive}
-                  onCheckedChange={(checked) =>
-                    onToggleSubActive(subActivity._id!, checked)
-                  }
-                  className="scale-90"
-                />
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    variant="link"
-                    className="text-indigo-600 hover:text-indigo-900 px-2 py-1 h-auto"
-                    onClick={() => onEditSubActivity(subActivity._id!)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="link"
-                    className="text-red-600 hover:text-red-900 px-2 py-1 h-auto"
-                    onClick={() => onDeleteSubActivity(subActivity._id!)}
-                  >
-                    Delete
-                  </Button>
-                </div>
+        </TableHeader>
+        <TableBody className="bg-gray-50">
+          {subActivities?.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center py-6 text-gray-500">
+                No sub-activities found. Add your first sub-activity using the
+                button below.
               </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+          ) : (
+            sortedSubActivities &&
+            sortedSubActivities?.map((subActivity: SubActivity) => (
+              <TableRow key={subActivity._id} className="hover:bg-gray-100">
+                <TableCell>{subActivity.portalItemNameEn}</TableCell>
+                <TableCell>{subActivity.portalItemNameAr}</TableCell>
+                <TableCell>
+                  {PRICING_METHOD_OPTIONS[subActivity.pricingMethod]}
+                </TableCell>
+                <TableCell>
+                  {FINANCE_EFFECT_OPTIONS[subActivity.financeEffect]}
+                </TableCell>
+                <TableCell>{subActivity.transactionType.name}</TableCell>
+                <TableCell>
+                  <YesOrNoBadge value={subActivity.isUsedByFinance} />
+                </TableCell>
+                <TableCell>
+                  <YesOrNoBadge value={subActivity.isUsedByOps} />
+                </TableCell>
+                <TableCell>
+                  <YesOrNoBadge value={subActivity.isInShippingUnit} />
+                </TableCell>
+                <TableCell>
+                  <YesOrNoBadge value={subActivity.isInSpecialRequirement} />
+                </TableCell>
+                <TableCell>
+                  <Switch
+                    checked={subActivity.isActive}
+                    onCheckedChange={(checked) =>
+                      onToggleSubActive(subActivity._id!, checked)
+                    }
+                    className="scale-90"
+                  />
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="link"
+                      className="text-indigo-600 hover:text-indigo-900 px-2 py-1 h-auto"
+                      onClick={() => {
+                        setSelectedSubActivity(subActivity);
+                        setEditSubActivityOpen(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="link"
+                      className="text-red-600 hover:text-red-900 px-2 py-1 h-auto"
+                      onClick={() => onDeleteSubActivity(subActivity._id!)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+      {/* Edit Sub-Activity Dialog */}
+      <Dialog open={editSubActivityOpen} onOpenChange={setEditSubActivityOpen}>
+        <DialogContent className="max-w-[974px] w-full">
+          {selectedSubActivity && (
+            <EditSubActivityForm
+              parentActivity={parentActivity}
+              subActivity={selectedSubActivity}
+              onClose={() => setEditSubActivityOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

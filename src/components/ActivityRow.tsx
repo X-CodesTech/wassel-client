@@ -12,7 +12,6 @@ import { actUpdateActivity } from "@/store/activities/act/actUpdateActivity";
 import { actGetActivities } from "@/store/activities/activitiesSlice";
 import subActivityServices from "@/services/subActivityServices";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import EditSubActivityForm from "./EditSubActivityForm";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -139,19 +138,8 @@ export default function ActivityRow({
   };
 
   const onEditSubActivity = async (id: string) => {
-    await subActivityServices
-      .updateSubActivity(id, {
-        isActive: true,
-      } as SubActivity)
-      .then(() => {
-        getSubActivities();
-      })
-      .catch((error) => {
-        toast({
-          title: "Error",
-          description: "Failed to update sub-activity status.",
-        });
-      });
+    setSelectedSubActivity(id);
+    setEditSubActivityOpen(true);
   };
 
   const handleOpenDeleteSubActivityModal = (id: string) => {
@@ -299,6 +287,7 @@ export default function ActivityRow({
           <TableCell colSpan={13} className="px-0 py-0">
             <div className="px-4 py-2">
               <SubActivityTable
+                parentActivity={activity}
                 subActivities={subActivityRecords}
                 onDeleteSubActivity={handleOpenDeleteSubActivityModal}
                 onToggleSubActive={handleToggleSubActive}
@@ -347,18 +336,6 @@ export default function ActivityRow({
                 setAddSubActivityOpen(false);
                 getSubActivities();
               }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Sub-Activity Dialog */}
-      <Dialog open={editSubActivityOpen} onOpenChange={setEditSubActivityOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          {selectedSubActivity && (
-            <EditSubActivityForm
-              subActivity={selectedSubActivity}
-              onClose={() => setEditSubActivityOpen(false)}
             />
           )}
         </DialogContent>
