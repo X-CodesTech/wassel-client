@@ -34,14 +34,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import { actAddTransactionType } from "@/store/transactionTypes/transactionTypesSlice";
-
-// Define transaction type interface
-interface TransactionType {
-  id: number;
-  name: string;
-  createdAt?: string;
-}
+import {
+  actGetTransactionTypes,
+  actAddTransactionType,
+  actUpdateTransactionType,
+  actDeleteTransactionType,
+} from "@/store/transactionTypes/transactionTypesSlice";
+import { TransactionType } from "@/types/types";
 
 // Form schema
 const formSchema = z.object({
@@ -52,7 +51,9 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function TransactionTypes() {
   const dispatch = useAppDispatch();
-  const { records } = useAppSelector((state) => state.transactionTypes);
+  const { records, loading } = useAppSelector(
+    (state) => state.transactionTypes
+  );
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -61,12 +62,10 @@ export default function TransactionTypes() {
     useState<TransactionType | null>(null);
   const { toast } = useToast();
 
-  // Sample transaction types data (client-side)
-  const [transactionTypes, setTransactionTypes] = useState<TransactionType[]>([
-    { id: 1, name: "Sale", createdAt: new Date().toISOString() },
-    { id: 2, name: "Purchase", createdAt: new Date().toISOString() },
-    { id: 3, name: "Transfer", createdAt: new Date().toISOString() },
-  ]);
+  // Load transaction types on component mount
+  useEffect(() => {
+    dispatch(actGetTransactionTypes());
+  }, [dispatch]);
 
   // Form for adding transaction type
   const addForm = useForm<FormValues>({
@@ -94,74 +93,81 @@ export default function TransactionTypes() {
   }, [selectedTransactionType, editForm]);
 
   // Handle add transaction type
-  const handleAddTransactionType = (values: FormValues) => {
-    // Generate a new ID
-    dispatch(actAddTransactionType(values.name));
-    // const newId = Math.max(...transactionTypes.map((t) => t.id), 0) + 1;
-
-    // // Create new transaction type
-    // const newTransactionType: TransactionType = {
-    //   id: newId,
-    //   name: values.name,
-    //   createdAt: new Date().toISOString(),
-    // };
-
-    // // Add to transaction types state
-    // setTransactionTypes([...transactionTypes, newTransactionType]);
-
-    // // Show success toast
-    // toast({
-    //   title: "Success",
-    //   description: "Transaction type added successfully",
-    // });
-
-    // // Close modal and reset form
-    // setAddModalOpen(false);
-    // addForm.reset();
-  };
-
-  // Handle edit transaction type
-  const handleEditTransactionType = (values: FormValues) => {
-    if (selectedTransactionType) {
-      // Update the transaction type in the state
-      setTransactionTypes(
-        transactionTypes.map((transactionType) =>
-          transactionType.id === selectedTransactionType.id
-            ? { ...transactionType, name: values.name }
-            : transactionType
-        )
-      );
+  const handleAddTransactionType = async (values: FormValues) => {
+    try {
+      await dispatch(actAddTransactionType(values.name)).unwrap();
 
       // Show success toast
       toast({
         title: "Success",
-        description: "Transaction type updated successfully",
+        description: "Transaction type added successfully",
       });
 
       // Close modal and reset form
-      setEditModalOpen(false);
-      editForm.reset();
+      setAddModalOpen(false);
+      addForm.reset();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add transaction type",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle edit transaction type
+  const handleEditTransactionType = async (values: FormValues) => {
+    if (selectedTransactionType) {
+      try {
+        await dispatch(
+          actUpdateTransactionType({
+            id: selectedTransactionType._id,
+            name: values.name,
+          })
+        ).unwrap();
+
+        // Show success toast
+        toast({
+          title: "Success",
+          description: "Transaction type updated successfully",
+        });
+
+        // Close modal and reset form
+        setEditModalOpen(false);
+        editForm.reset();
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update transaction type",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   // Handle delete transaction type
-  const handleDeleteTransactionType = () => {
+  const handleDeleteTransactionType = async () => {
     if (selectedTransactionType) {
-      // Remove the transaction type from state
-      setTransactionTypes(
-        transactionTypes.filter(
-          (transactionType) => transactionType.id !== selectedTransactionType.id
-        )
-      );
+      try {
+        await dispatch(
+          actDeleteTransactionType(selectedTransactionType._id)
+        ).unwrap();
 
-      // Show success toast
-      toast({
-        title: "Success",
-        description: "Transaction type deleted successfully",
-      });
+        // Show success toast
+        toast({
+          title: "Success",
+          description: "Transaction type deleted successfully",
+        });
 
-      // Close the delete dialog
-      setDeleteDialogOpen(false);
+        // Close the delete dialog
+        setDeleteDialogOpen(false);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete transaction type",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -190,7 +196,19 @@ export default function TransactionTypes() {
         </Button>
       </div>
 
-      {transactionTypes.length === 0 ? (
+      {loading === "pending" ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
+            <div className="rounded-full bg-blue-100 p-4 mb-4">
+              <FileText className="h-8 w-8 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">Loading...</h3>
+            <p className="text-gray-500">
+              Please wait while we fetch transaction types.
+            </p>
+          </CardContent>
+        </Card>
+      ) : records.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
             <div className="rounded-full bg-blue-100 p-4 mb-4">
@@ -282,7 +300,9 @@ export default function TransactionTypes() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Save</Button>
+                <Button type="submit" disabled={loading === "pending"}>
+                  {loading === "pending" ? "Saving..." : "Save"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -324,7 +344,9 @@ export default function TransactionTypes() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Save</Button>
+                <Button type="submit" disabled={loading === "pending"}>
+                  {loading === "pending" ? "Saving..." : "Save"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
@@ -346,8 +368,9 @@ export default function TransactionTypes() {
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={handleDeleteTransactionType}
+              disabled={loading === "pending"}
             >
-              Delete
+              {loading === "pending" ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
