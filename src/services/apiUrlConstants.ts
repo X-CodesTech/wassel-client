@@ -1,4 +1,5 @@
-export const BASE_BACKEND_URL = "http://localhost:8080";
+export const BASE_BACKEND_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export const apiUrlConstants = {
   activities: "/api/v1/activities",
