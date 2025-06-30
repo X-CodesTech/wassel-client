@@ -80,7 +80,7 @@ const locationFormSchema = z.object({
   cityAr: z.string().min(1, "City (Arabic) is required"),
   village: z.string().min(1, "Village is required"),
   villageAr: z.string().min(1, "Village (Arabic) is required"),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 type LocationFormData = z.infer<typeof locationFormSchema>;
@@ -253,7 +253,9 @@ const LocationForm = memo(
               <FormControl>
                 <Switch
                   checked={field.value}
-                  onCheckedChange={field.onChange}
+                  onCheckedChange={(checked) => {
+                    field.onChange(checked);
+                  }}
                 />
               </FormControl>
             </FormItem>

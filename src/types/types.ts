@@ -167,7 +167,7 @@ export const locationSchema = z.object({
   cityAr: z.string().min(1, "City (Arabic) is required"),
   village: z.string().min(1, "Village is required"),
   villageAr: z.string().min(1, "Village (Arabic) is required"),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
