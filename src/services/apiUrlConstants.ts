@@ -6,4 +6,5 @@ export const apiUrlConstants = {
   subActivities: "/api/v1/sub-activities",
   transactionTypes: "/api/v1/transaction-types",
   locations: "/api/v1/locations",
+  customers: "/api/v1/customers",
 };
