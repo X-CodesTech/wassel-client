@@ -141,6 +141,53 @@ export type InsertArea = z.infer<typeof insertAreaSchema>;
 export type InsertCity = z.infer<typeof insertCitySchema>;
 export type InsertVillage = z.infer<typeof insertVillageSchema>;
 
+// Location interface and schema
+export interface Location {
+  _id: string;
+  country: string;
+  countryAr: string;
+  area: string;
+  areaAr: string;
+  city: string;
+  cityAr: string;
+  village: string;
+  villageAr: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const locationSchema = z.object({
+  _id: z.string().optional(),
+  country: z.string().min(1, "Country is required"),
+  countryAr: z.string().min(1, "Country (Arabic) is required"),
+  area: z.string().min(1, "Area is required"),
+  areaAr: z.string().min(1, "Area (Arabic) is required"),
+  city: z.string().min(1, "City is required"),
+  cityAr: z.string().min(1, "City (Arabic) is required"),
+  village: z.string().min(1, "Village is required"),
+  villageAr: z.string().min(1, "Village (Arabic) is required"),
+  isActive: z.boolean().default(true),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+export const insertLocationSchema = locationSchema.omit({
+  _id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertLocation = z.infer<typeof insertLocationSchema>;
+
+// Location filter interface
+export interface LocationFilters {
+  country?: string;
+  area?: string;
+  city?: string;
+  isActive?: boolean;
+}
+
 // Order interface and schemas
 export interface Order {
   id: number;

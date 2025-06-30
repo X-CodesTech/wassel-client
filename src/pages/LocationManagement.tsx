@@ -1,12 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
+import { useDispatch } from "react-redux";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { AppDispatch } from "@/store";
+import {
+  actGetLocations,
+  actAddLocation,
+  actUpdateLocation,
+  actDeleteLocation,
+  clearError,
+} from "@/store/locations";
+import { Location } from "@/types/types";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -24,327 +42,675 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Plus, Edit, Trash2, AlertCircle } from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  MapPin,
+  Filter,
+  ChevronDown,
+} from "lucide-react";
 
-// Define location interface and schema
-interface Location {
-  id: number;
+// Form schema matching the bilingual JSON structure
+const locationFormSchema = z.object({
+  country: z.string().min(1, "Country is required"),
+  countryAr: z.string().min(1, "Country (Arabic) is required"),
+  area: z.string().min(1, "Area is required"),
+  areaAr: z.string().min(1, "Area (Arabic) is required"),
+  city: z.string().min(1, "City is required"),
+  cityAr: z.string().min(1, "City (Arabic) is required"),
+  village: z.string().min(1, "Village is required"),
+  villageAr: z.string().min(1, "Village (Arabic) is required"),
+  isActive: z.boolean().default(true),
+});
+
+type LocationFormData = z.infer<typeof locationFormSchema>;
+
+interface LocationFilters {
+  search: string;
   country: string;
   area: string;
   city: string;
-  village: string;
+  showActiveOnly: boolean;
 }
 
-const locationSchema = z.object({
-  country: z.string().min(1, "Country is required"),
-  area: z.string().min(1, "Area is required"),
-  city: z.string().min(1, "City is required"),
-  village: z.string().min(1, "Village is required"),
-});
+// Memoized form component to prevent re-renders
+const LocationForm = memo(
+  ({
+    form,
+    onSubmit,
+    isLoading,
+    onCancel,
+  }: {
+    form: any;
+    onSubmit: (data: LocationFormData) => void;
+    isLoading: boolean;
+    onCancel: () => void;
+  }) => (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Country Fields */}
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country (English)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter country name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="countryAr"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country (Arabic)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="أدخل اسم البلد" {...field} dir="rtl" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-type LocationFormValues = z.infer<typeof locationSchema>;
+          {/* Area Fields */}
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="area"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Area (English)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter area name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="areaAr"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Area (Arabic)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="أدخل اسم المنطقة"
+                      {...field}
+                      dir="rtl"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-// Main component
+          {/* City Fields */}
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City (English)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter city name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="cityAr"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City (Arabic)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="أدخل اسم المدينة"
+                      {...field}
+                      dir="rtl"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Village Fields */}
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="village"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Village (English)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter village name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="villageAr"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Village (Arabic)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="أدخل اسم القرية" {...field} dir="rtl" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Active Status */}
+        <FormField
+          control={form.control}
+          name="isActive"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Active Status</FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  Enable or disable this location
+                </div>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Saving..." : "Save Location"}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  )
+);
+
+LocationForm.displayName = "LocationForm";
+
 export default function LocationManagement() {
+  const dispatch = useDispatch<AppDispatch>();
   const { toast } = useToast();
+  const {
+    records: locations,
+    loading,
+    error,
+  } = useAppSelector((state) => state.locations);
 
-  // Dialog states
+  // State for dialogs and filters
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(
-    null
-  );
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [filters, setFilters] = useState<LocationFilters>({
+    search: "",
+    country: "",
+    area: "",
+    city: "",
+    showActiveOnly: true,
+  });
 
-  // Sample location data
-  const [locations, setLocations] = useState<Location[]>([
-    {
-      id: 1,
-      country: "United States",
-      area: "California",
-      city: "San Francisco",
-      village: "Mission District",
-    },
-    {
-      id: 2,
-      country: "United States",
-      area: "New York",
-      city: "New York City",
-      village: "Manhattan",
-    },
-    {
-      id: 3,
-      country: "United Kingdom",
-      area: "England",
-      city: "London",
-      village: "Westminster",
-    },
-    {
-      id: 4,
-      country: "Canada",
-      area: "Ontario",
-      city: "Toronto",
-      village: "Downtown",
-    },
-    {
-      id: 5,
-      country: "Australia",
-      area: "New South Wales",
-      city: "Sydney",
-      village: "The Rocks",
-    },
-  ]);
+  // Load locations on component mount
+  useEffect(() => {
+    dispatch(actGetLocations());
+  }, [dispatch]);
 
-  // Set up form
-  const form = useForm<LocationFormValues>({
-    resolver: zodResolver(locationSchema),
+  // Clear error when component unmounts or error changes
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+      dispatch(clearError());
+    }
+  }, [error, toast, dispatch]);
+
+  // Add form
+  const addForm = useForm<LocationFormData>({
+    resolver: zodResolver(locationFormSchema),
     defaultValues: {
       country: "",
+      countryAr: "",
       area: "",
+      areaAr: "",
       city: "",
+      cityAr: "",
       village: "",
+      villageAr: "",
+      isActive: true,
     },
   });
 
-  // Add a new location
-  const addLocation = (values: LocationFormValues) => {
-    // Generate a new ID
-    const newId = Math.max(...locations.map((loc) => loc.id), 0) + 1;
+  // Edit form
+  const editForm = useForm<LocationFormData>({
+    resolver: zodResolver(locationFormSchema),
+    defaultValues: {
+      country: "",
+      countryAr: "",
+      area: "",
+      areaAr: "",
+      city: "",
+      cityAr: "",
+      village: "",
+      villageAr: "",
+      isActive: true,
+    },
+  });
 
-    // Create new location
-    const newLocation: Location = {
-      ...values,
-      id: newId,
-    };
+  // Handle add form submission
+  const handleAddSubmit = useCallback(
+    (data: LocationFormData) => {
+      dispatch(actAddLocation(data));
+      setIsAddDialogOpen(false);
+      addForm.reset();
+      toast({
+        title: "Success",
+        description: "Location added successfully",
+      });
+    },
+    [dispatch, addForm, toast]
+  );
 
-    // Add to locations state
-    setLocations([...locations, newLocation]);
+  // Handle edit form submission
+  const handleEditSubmit = useCallback(
+    (data: LocationFormData) => {
+      if (editingLocation) {
+        dispatch(
+          actUpdateLocation({ id: editingLocation._id, location: data })
+        );
+        setEditingLocation(null);
+        editForm.reset();
+        toast({
+          title: "Success",
+          description: "Location updated successfully",
+        });
+      }
+    },
+    [dispatch, editingLocation, editForm, toast]
+  );
 
-    // Show success toast
-    toast({
-      title: "Success",
-      description: "Location added successfully",
-    });
+  // Handle edit click
+  const handleEditClick = useCallback(
+    (location: Location) => {
+      setEditingLocation(location);
+      editForm.reset({
+        country: location.country,
+        countryAr: location.countryAr,
+        area: location.area,
+        areaAr: location.areaAr,
+        city: location.city,
+        cityAr: location.cityAr,
+        village: location.village,
+        villageAr: location.villageAr,
+        isActive: location.isActive,
+      });
+    },
+    [editForm]
+  );
 
-    // Close modal and reset form
+  // Handle delete
+  const handleDelete = useCallback(
+    (id: string) => {
+      if (confirm("Are you sure you want to delete this location?")) {
+        dispatch(actDeleteLocation(id));
+        toast({
+          title: "Success",
+          description: "Location deleted successfully",
+        });
+      }
+    },
+    [dispatch, toast]
+  );
+
+  // Handle filter changes
+  const handleFilterChange = useCallback(
+    (updates: Partial<LocationFilters>) => {
+      setFilters((prev) => ({ ...prev, ...updates }));
+    },
+    []
+  );
+
+  // Handle cancel
+  const handleCancel = useCallback(() => {
     setIsAddDialogOpen(false);
-    form.reset();
-  };
+    setEditingLocation(null);
+  }, []);
 
-  // Update an existing location
-  const updateLocation = (values: LocationFormValues & { id: number }) => {
-    const { id, ...updateData } = values;
+  // Filter locations
+  const filteredLocations = locations.filter((location) => {
+    const matchesSearch =
+      location.country.toLowerCase().includes(filters.search.toLowerCase()) ||
+      location.countryAr.includes(filters.search) ||
+      location.area.toLowerCase().includes(filters.search.toLowerCase()) ||
+      location.areaAr.includes(filters.search) ||
+      location.city.toLowerCase().includes(filters.search.toLowerCase()) ||
+      location.cityAr.includes(filters.search) ||
+      location.village.toLowerCase().includes(filters.search.toLowerCase()) ||
+      location.villageAr.includes(filters.search);
 
-    // Update the location in the state
-    setLocations(
-      locations.map((location) =>
-        location.id === id ? { ...location, ...updateData } : location
-      )
+    const matchesCountry =
+      !filters.country || location.country === filters.country;
+    const matchesArea = !filters.area || location.area === filters.area;
+    const matchesCity = !filters.city || location.city === filters.city;
+    const matchesActiveStatus = !filters.showActiveOnly || location.isActive;
+
+    return (
+      matchesSearch &&
+      matchesCountry &&
+      matchesArea &&
+      matchesCity &&
+      matchesActiveStatus
     );
+  });
 
-    // Show success toast
-    toast({
-      title: "Success",
-      description: "Location updated successfully",
-    });
-
-    // Close modal and reset form
-    setIsEditDialogOpen(false);
-    form.reset();
-  };
-
-  // Delete a location
-  const deleteLocation = (id: number) => {
-    // Remove the location from state
-    setLocations(locations.filter((location) => location.id !== id));
-
-    // Show success toast
-    toast({
-      title: "Success",
-      description: "Location deleted successfully",
-    });
-
-    // Close the delete dialog
-    setIsDeleteDialogOpen(false);
-  };
-
-  // Form submission handler
-  const onSubmit = (values: LocationFormValues) => {
-    if (isEditDialogOpen && selectedLocation) {
-      updateLocation({ ...values, id: selectedLocation.id });
-    } else {
-      addLocation(values);
-    }
-  };
-
-  // Edit button handler
-  const handleEdit = (location: Location) => {
-    setSelectedLocation(location);
-    form.reset({
-      country: location.country,
-      area: location.area,
-      city: location.city,
-      village: location.village,
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  // Delete button handler
-  const handleDelete = (location: Location) => {
-    setSelectedLocation(location);
-    setIsDeleteDialogOpen(true);
-  };
-
-  // Confirm delete handler
-  const confirmDelete = () => {
-    if (selectedLocation) {
-      deleteLocation(selectedLocation.id);
-    }
-  };
+  // Get unique values for filter dropdowns
+  const uniqueCountries = [...new Set(locations.map((l) => l.country))];
+  const uniqueAreas = [
+    ...new Set(
+      locations
+        .filter((l) => !filters.country || l.country === filters.country)
+        .map((l) => l.area)
+    ),
+  ];
+  const uniqueCities = [
+    ...new Set(
+      locations
+        .filter(
+          (l) =>
+            (!filters.country || l.country === filters.country) &&
+            (!filters.area || l.area === filters.area)
+        )
+        .map((l) => l.city)
+    ),
+  ];
 
   return (
-    <div className="container mx-auto py-6">
-      <title>Location Management | Wassel</title>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Location Management
-        </h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-row justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <MapPin className="h-6 w-6 text-blue-600" />
+          <h1 className="text-2xl font-bold">Location Management</h1>
+        </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4" />
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
               Add Location
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Location</DialogTitle>
             </DialogHeader>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Country</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter country name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="area"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Area</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter area name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>City</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter city name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="village"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Village</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter village name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button
-                    type="submit"
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Save Location
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
+            <LocationForm
+              form={addForm}
+              onSubmit={handleAddSubmit}
+              isLoading={loading}
+              onCancel={handleCancel}
+            />
           </DialogContent>
         </Dialog>
       </div>
 
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-row justify-between items-center">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Filter className="h-5 w-5 text-gray-500" />
+                <h3 className="text-lg font-semibold">Filters</h3>
+              </div>
+            </div>
+
+            <div className="flex flex-row items-center gap-20">
+              {/* Nested Location Filter */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                  >
+                    <span>
+                      {filters.country
+                        ? `${filters.country}${
+                            filters.area ? ` > ${filters.area}` : ""
+                          }${filters.city ? ` > ${filters.city}` : ""}`
+                        : "All Locations"}
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Select Location</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() =>
+                      handleFilterChange({
+                        country: "",
+                        area: "",
+                        city: "",
+                      })
+                    }
+                  >
+                    All Locations
+                  </DropdownMenuItem>
+                  {uniqueCountries.map((country) => (
+                    <DropdownMenuSub key={country}>
+                      <DropdownMenuSubTrigger>{country}</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleFilterChange({
+                              country,
+                              area: "",
+                              city: "",
+                            })
+                          }
+                        >
+                          All {country}
+                        </DropdownMenuItem>
+                        {locations
+                          .filter((loc) => loc.country === country)
+                          .map((loc) => loc.area)
+                          .filter(
+                            (area, index, self) => self.indexOf(area) === index
+                          )
+                          .map((area) => (
+                            <DropdownMenuSub key={area}>
+                              <DropdownMenuSubTrigger>
+                                {area}
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleFilterChange({
+                                      country,
+                                      area,
+                                      city: "",
+                                    })
+                                  }
+                                >
+                                  All {area}
+                                </DropdownMenuItem>
+                                {locations
+                                  .filter(
+                                    (loc) =>
+                                      loc.country === country &&
+                                      loc.area === area
+                                  )
+                                  .map((loc) => loc.city)
+                                  .filter(
+                                    (city, index, self) =>
+                                      self.indexOf(city) === index
+                                  )
+                                  .map((city) => (
+                                    <DropdownMenuItem
+                                      key={city}
+                                      onClick={() =>
+                                        handleFilterChange({
+                                          country,
+                                          area,
+                                          city,
+                                        })
+                                      }
+                                    >
+                                      {city}
+                                    </DropdownMenuItem>
+                                  ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                          ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Active Only Switch */}
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="show-active-only"
+                  checked={filters.showActiveOnly}
+                  onCheckedChange={(checked) =>
+                    handleFilterChange({ showActiveOnly: checked })
+                  }
+                />
+                <label
+                  htmlFor="show-active-only"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Show Active Only
+                </label>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Locations Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Country</TableHead>
-                <TableHead>Area</TableHead>
-                <TableHead>City</TableHead>
-                <TableHead>Village</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Country (EN)</TableHead>
+                <TableHead>Country (AR)</TableHead>
+                <TableHead>Area (EN)</TableHead>
+                <TableHead>Area (AR)</TableHead>
+                <TableHead>City (EN)</TableHead>
+                <TableHead>City (AR)</TableHead>
+                <TableHead>Village (EN)</TableHead>
+                <TableHead>Village (AR)</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {locations.length === 0 ? (
+              {loading ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center py-8 text-gray-500"
-                  >
-                    No locations found. Click 'Add Location' to create one.
+                  <TableCell colSpan={10} className="text-center py-8">
+                    Loading locations...
+                  </TableCell>
+                </TableRow>
+              ) : filteredLocations.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center py-8">
+                    No locations found
                   </TableCell>
                 </TableRow>
               ) : (
-                locations.map((location) => (
-                  <TableRow key={location.id}>
-                    <TableCell>{location.country}</TableCell>
+                filteredLocations.map((location: Location) => (
+                  <TableRow key={location._id}>
+                    <TableCell className="font-medium">
+                      {location.country}
+                    </TableCell>
+                    <TableCell className="font-medium" dir="rtl">
+                      {location.countryAr}
+                    </TableCell>
                     <TableCell>{location.area}</TableCell>
+                    <TableCell dir="rtl">{location.areaAr}</TableCell>
                     <TableCell>{location.city}</TableCell>
+                    <TableCell dir="rtl">{location.cityAr}</TableCell>
                     <TableCell>{location.village}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(location)}
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                    <TableCell dir="rtl">{location.villageAr}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          location.isActive
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
                       >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(location)}
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        {location.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditClick(location)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(location._id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -354,104 +720,21 @@ export default function LocationManagement() {
         </CardContent>
       </Card>
 
-      {/* Edit Location Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+      {/* Edit Dialog */}
+      <Dialog
+        open={!!editingLocation}
+        onOpenChange={() => setEditingLocation(null)}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Location</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="country"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Country</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter country name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="area"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Area</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter area name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter city name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="village"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Village</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter village name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  Update Location
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p>Are you sure you want to delete this location?</p>
-            {selectedLocation && (
-              <p className="text-sm text-gray-500 mt-2">
-                {`${selectedLocation.country} > ${selectedLocation.area} > ${selectedLocation.city} > ${selectedLocation.village}`}
-              </p>
-            )}
-            <p className="text-sm text-red-500 mt-2">
-              This action cannot be undone.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
+          <LocationForm
+            form={editForm}
+            onSubmit={handleEditSubmit}
+            isLoading={loading}
+            onCancel={handleCancel}
+          />
         </DialogContent>
       </Dialog>
     </div>

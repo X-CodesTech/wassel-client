@@ -5,4 +5,5 @@ export const apiUrlConstants = {
   activities: "/api/v1/activities",
   subActivities: "/api/v1/sub-activities",
   transactionTypes: "/api/v1/transaction-types",
+  locations: "/api/v1/locations",
 };
