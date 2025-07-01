@@ -42,7 +42,7 @@ export default function Customers() {
   // Local state for filters
   const [filters, setFilters] = useState<CustomerFilters>({
     page: 1,
-    limit: 10,
+    limit: 12,
     search: "",
     sortBy: "createdDate",
     sortOrder: "desc",
@@ -330,8 +330,8 @@ export default function Customers() {
           {customers.map((customer) => (
             <Card
               key={customer.custAccount}
-              className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow flex flex-col h-[320px]"
-              onClick={() => setLocation(`/customers/${customer.custAccount}`)}
+              className="overflow-hidden hover:shadow-md transition-shadow flex flex-col h-[320px]"
+              // onClick={() => setLocation(`/customers/${customer.custAccount}`)}
             >
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2">
@@ -345,7 +345,11 @@ export default function Customers() {
                   </div>
                   <div className="flex items-center gap-1 text-sm">
                     <span className="font-medium">Chain ID:</span>
-                    <span>{customer.companyChainId}</span>
+                    {customer?.companyChainId ? (
+                      <span>{customer.companyChainId}</span>
+                    ) : (
+                      "N/A"
+                    )}
                   </div>
                   <div className="flex items-center gap-1 text-sm">
                     <span className="font-medium">Status:</span>
@@ -389,16 +393,16 @@ export default function Customers() {
                 <div className="text-xs text-gray-500">
                   Created: {new Date(customer.createdDate).toLocaleDateString()}
                 </div>
-                <Button
+                {/* <Button
                   variant="outline"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation(); // Prevent card click
-                    setLocation(`/customers/${customer.custAccount}`);
+                    // setLocation(`/customers/${customer.custAccount}`);
                   }}
                 >
                   View Details
-                </Button>
+                </Button> */}
               </CardFooter>
             </Card>
           ))}
