@@ -1,5 +1,4 @@
 import { useLocation } from "wouter";
-import { cn } from "@/utils";
 import { LayoutGroup, motion } from "framer-motion";
 import {
   Tooltip,
@@ -23,7 +22,9 @@ import {
   Palette,
   ChevronLeft,
   ChevronRight,
+  BarChart3,
 } from "lucide-react";
+import { cn } from "@/utils";
 
 interface SideNavProps {
   collapsed: boolean;
@@ -34,6 +35,12 @@ export default function SideNav({ collapsed, onToggleCollapse }: SideNavProps) {
   const [location, navigate] = useLocation();
 
   const mainItems = [
+    {
+      name: "Overview",
+      href: "/",
+      icon: <BarChart3 className="h-5 w-5" />,
+      active: location === "/",
+    },
     {
       name: "Order list",
       href: "/orders",
@@ -87,9 +94,9 @@ export default function SideNav({ collapsed, onToggleCollapse }: SideNavProps) {
     },
     {
       name: "Activities",
-      href: "/",
+      href: "/activities",
       icon: <Activity className="h-5 w-5" />,
-      active: location === "/",
+      active: location === "/activities",
     },
     {
       name: "Type of transaction",

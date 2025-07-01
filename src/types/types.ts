@@ -261,3 +261,62 @@ export const insertVendorSchema = vendorSchema.omit({
   createdAt: true,
 });
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
+
+// Customer interfaces and schemas
+export interface Customer {
+  blocked: boolean;
+  companyChainId: string;
+  createdDate: string;
+  custAccount: string;
+  custName: string;
+}
+
+export interface CustomerPriceItem {
+  _id: string;
+  subActivityId: string;
+  subActivityName: string;
+  price: number;
+}
+
+export interface CustomerFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: 'createdDate' | 'custName' | 'custAccount';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface CustomerResponse {
+  data: Customer[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface CustomerImportResponse {
+  message: string;
+  stats: {
+    total: number;
+    inserted: number;
+    updated: number;
+    unchanged: number;
+    failed: number;
+  };
+}
+
+export const customerSchema = z.object({
+  blocked: z.boolean().default(false),
+  companyChainId: z.string().min(1, "Company chain ID is required"),
+  createdDate: z.string().min(1, "Created date is required"),
+  custAccount: z.string().min(1, "Customer account is required"),
+  custName: z.string().min(1, "Customer name is required"),
+});
+
+export const insertCustomerSchema = customerSchema.omit({
+  createdDate: true,
+});
+
+export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
