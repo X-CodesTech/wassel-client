@@ -87,7 +87,8 @@ export default function MainHeader({ onLogout }: MainHeaderProps) {
         {/* Right Section - User Info & Controls */}
         <div className="flex-1 flex items-center justify-between gap-20">
           {/* User Avatar and Info */}
-          <div className="flex items-center space-x-3">
+
+          {/* <div className="flex items-center space-x-3">
             <Avatar className="h-[98px] w-[98px] border-2 border-white rounded-none">
               <AvatarImage
                 src={user.avatar}
@@ -106,11 +107,12 @@ export default function MainHeader({ onLogout }: MainHeaderProps) {
                 {user.company}
               </div>
             </div>
-          </div>
+          </div> */}
 
-          <div className="flex items-center flex-1">
+          <div className="flex items-center flex-1 justify-end">
             {/* Language Selector */}
-            <DropdownMenu>
+
+            {/* <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -133,17 +135,18 @@ export default function MainHeader({ onLogout }: MainHeaderProps) {
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu> */}
 
             {/* Logout Button */}
-            <Button
+
+            {/* <Button
               onClick={onLogout}
               variant="ghost"
               className="text-white hover:bg-blue-700 px-3 py-2 rounded-md"
             >
               <LogOut className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Logout</span>
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>
