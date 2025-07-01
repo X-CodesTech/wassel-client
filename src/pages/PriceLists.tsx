@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
 import {
   Card,
   CardContent,
@@ -8,7 +7,6 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -17,9 +15,27 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -29,46 +45,47 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { DollarSign, Users, Plus, Edit, Trash, FileText } from "lucide-react";
+import { Plus, Edit, Trash, FileText, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-
-// Interface for PriceList items
-interface PriceListItem {
-  id: number;
-  subActivityId: number;
-  subActivityName: string;
-  price: number;
-}
-
-// Interface for PriceList
-interface PriceList {
-  id: number;
-  name: string;
-  description: string;
-  items: PriceListItem[];
-  createdAt: Date;
-}
-
-// Interface for SubActivity
-interface SubActivity {
-  id: number;
-  itemName: string;
-  itemSrl: string;
-  parentId: number;
-}
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import {
+  actGetPriceLists,
+  actAddPriceList,
+  actUpdatePriceList,
+  actDeletePriceList,
+  clearError,
+} from "@/store/priceLists";
+import { useLocation } from "wouter";
+import { PriceList, PricingMethod } from "@/services/priceListServices";
+import { SubActivity } from "@/types/types";
 
 // Form schema for price list
 const priceListFormSchema = z.object({
-  name: z.string().min(1, "Price list name is required"),
+  name: z.string().min(1, "Price list name (English) is required"),
+  nameAr: z.string().min(1, "Price list name (Arabic) is required"),
   description: z.string().optional(),
-  items: z
+  descriptionAr: z.string().optional(),
+  effectiveFrom: z.string().min(1, "Effective from date is required"),
+  effectiveTo: z.string().min(1, "Effective to date is required"),
+  isActive: z.boolean(),
+  subActivityPrices: z
     .array(
       z.object({
-        subActivityId: z.number(),
-        price: z.number().min(0, "Price must be positive"),
+        subActivity: z.string().min(1, "Sub-activity is required"),
+        pricingMethod: z.enum(["perItem", "perLocation"]),
+        basePrice: z.number().min(0, "Base price must be positive").optional(),
+        cost: z.number().min(0, "Cost must be positive"),
+        locationPrices: z
+          .array(
+            z.object({
+              location: z.string().min(1, "Location is required"),
+              price: z.number().min(0, "Location price must be positive"),
+            })
+          )
+          .optional(),
       })
     )
     .optional(),
@@ -77,350 +94,284 @@ const priceListFormSchema = z.object({
 type PriceListFormValues = z.infer<typeof priceListFormSchema>;
 
 export default function PriceLists() {
-  // Get location to check for URL parameters
-  const [location] = useLocation();
+  const dispatch = useAppDispatch();
+  const [, setLocation] = useLocation();
+  const {
+    records: priceLists,
+    loading,
+    error,
+  } = useAppSelector((state) => state.priceLists);
   const { toast } = useToast();
 
-  // Check if we have a tab parameter in the URL
-  const getInitialTab = () => {
-    if (location.includes("?")) {
-      const params = new URLSearchParams(location.split("?")[1]);
-      const tabParam = params.get("tab");
-      return tabParam === "customers" ? "customers" : "price-lists";
-    }
-    return "price-lists";
-  };
-
-  const [activeTab, setActiveTab] = useState(getInitialTab());
-
-  // Update the active tab when URL changes
-  useEffect(() => {
-    setActiveTab(getInitialTab());
-  }, [location]);
-
+  // Modal states
   const [modalOpen, setModalOpen] = useState(false);
-  const [, setLocation] = useLocation();
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(
+    null
+  );
+  const [deletingPriceList, setDeletingPriceList] = useState<PriceList | null>(
+    null
+  );
+
+  // Sub-activities state
+  const [subActivities, setSubActivities] = useState<SubActivity[]>([]);
   const [selectedSubActivities, setSelectedSubActivities] = useState<
     {
-      id: number;
+      id: string;
       name: string;
       price: string;
+      cost: string;
       selected: boolean;
+      pricingMethod: PricingMethod;
     }[]
   >([]);
 
-  // Sample sub-activities data
-  const [subActivities, setSubActivities] = useState<SubActivity[]>([
-    {
-      id: 1,
-      itemName: "Box Packaging (Standard)",
-      itemSrl: "X01-B01",
-      parentId: 1,
-    },
-    {
-      id: 2,
-      itemName: "Wrap Packaging (Premium)",
-      itemSrl: "X01-W01",
-      parentId: 1,
-    },
-    { id: 3, itemName: "Label Printing", itemSrl: "X01-L01", parentId: 1 },
-    { id: 4, itemName: "Basic Insurance", itemSrl: "I01-B01", parentId: 2 },
-    { id: 5, itemName: "Premium Insurance", itemSrl: "I01-P01", parentId: 2 },
-    { id: 6, itemName: "Express Processing", itemSrl: "F01-E01", parentId: 5 },
-    { id: 7, itemName: "Local Delivery", itemSrl: "T01-L01", parentId: 4 },
-    {
-      id: 8,
-      itemName: "International Shipping",
-      itemSrl: "T01-I01",
-      parentId: 4,
-    },
-    { id: 9, itemName: "Same-Day Delivery", itemSrl: "T01-S01", parentId: 4 },
-    { id: 10, itemName: "Next-Day Delivery", itemSrl: "T01-N01", parentId: 4 },
-  ]);
-
-  // Sample price lists data
-  const [priceLists, setPriceLists] = useState<PriceList[]>([
-    {
-      id: 1,
-      name: "Standard Prices 2025",
-      description: "Default pricing for all standard services",
-      items: [
-        {
-          id: 1,
-          subActivityId: 1,
-          subActivityName: "Box Packaging (Standard)",
-          price: 19.99,
-        },
-        {
-          id: 2,
-          subActivityId: 3,
-          subActivityName: "Label Printing",
-          price: 2.5,
-        },
-        {
-          id: 3,
-          subActivityId: 7,
-          subActivityName: "Local Delivery",
-          price: 9.99,
-        },
-      ],
-      createdAt: new Date("2025-01-15"),
-    },
-    {
-      id: 2,
-      name: "Premium Services",
-      description: "Premium pricing for high-end services",
-      items: [
-        {
-          id: 1,
-          subActivityId: 2,
-          subActivityName: "Wrap Packaging (Premium)",
-          price: 39.99,
-        },
-        {
-          id: 2,
-          subActivityId: 5,
-          subActivityName: "Premium Insurance",
-          price: 59.99,
-        },
-        {
-          id: 3,
-          subActivityId: 9,
-          subActivityName: "Same-Day Delivery",
-          price: 29.99,
-        },
-      ],
-      createdAt: new Date("2025-02-01"),
-    },
-    {
-      id: 3,
-      name: "Corporate Package 2025",
-      description: "Discounted rates for corporate clients",
-      items: [
-        {
-          id: 1,
-          subActivityId: 1,
-          subActivityName: "Box Packaging (Standard)",
-          price: 15.99,
-        },
-        {
-          id: 2,
-          subActivityId: 4,
-          subActivityName: "Basic Insurance",
-          price: 14.99,
-        },
-        {
-          id: 3,
-          subActivityId: 8,
-          subActivityName: "International Shipping",
-          price: 69.99,
-        },
-        {
-          id: 4,
-          subActivityId: 10,
-          subActivityName: "Next-Day Delivery",
-          price: 15.99,
-        },
-      ],
-      createdAt: new Date("2025-02-15"),
-    },
-  ]);
-
-  // Initialize form
+  // Initialize form for adding new price list
   const form = useForm<PriceListFormValues>({
     resolver: zodResolver(priceListFormSchema),
     defaultValues: {
       name: "",
+      nameAr: "",
       description: "",
-      items: [],
+      descriptionAr: "",
+      effectiveFrom: "",
+      effectiveTo: "",
+      isActive: true,
+      subActivityPrices: [],
     },
   });
 
-  // Simulated customer data
-  const [customers, setCustomers] = useState<
-    {
-      id: number;
-      name: string;
-      contactPerson?: string;
-      email?: string;
-      phone?: string;
-      priceItems: {
-        id: number;
-        subActivityId: number;
-        subActivityName: string;
-        price: number;
-      }[];
-      lastUpdated: Date;
-    }[]
-  >([
-    {
-      id: 1,
-      name: "ABC Logistics",
-      contactPerson: "John Smith",
-      email: "john@abclogistics.com",
-      phone: "+1 555-123-4567",
-      priceItems: [
-        {
-          id: 1,
-          subActivityId: 1,
-          subActivityName: "Box Packaging (Standard)",
-          price: 25.99,
-        },
-        {
-          id: 2,
-          subActivityId: 2,
-          subActivityName: "Wrap Packaging (Premium)",
-          price: 45.5,
-        },
-        {
-          id: 3,
-          subActivityId: 3,
-          subActivityName: "Label Printing",
-          price: 3.25,
-        },
-      ],
-      lastUpdated: new Date("2025-05-01"),
+  // Initialize edit form for editing existing price list
+  const editForm = useForm<PriceListFormValues>({
+    resolver: zodResolver(priceListFormSchema),
+    defaultValues: {
+      name: "",
+      nameAr: "",
+      description: "",
+      descriptionAr: "",
+      effectiveFrom: "",
+      effectiveTo: "",
+      isActive: true,
+      subActivityPrices: [],
     },
-    {
-      id: 2,
-      name: "XYZ Shipping",
-      contactPerson: "Jane Doe",
-      email: "jane@xyzshipping.com",
-      phone: "+1 555-987-6543",
-      priceItems: [
-        {
-          id: 1,
-          subActivityId: 4,
-          subActivityName: "Basic Insurance",
-          price: 19.99,
-        },
-        {
-          id: 2,
-          subActivityId: 5,
-          subActivityName: "Premium Insurance",
-          price: 49.99,
-        },
-        {
-          id: 3,
-          subActivityId: 6,
-          subActivityName: "Express Processing",
-          price: 15.0,
-        },
-      ],
-      lastUpdated: new Date("2025-04-28"),
-    },
-    {
-      id: 3,
-      name: "Global Transport Ltd",
-      contactPerson: "Robert Johnson",
-      email: "robert@globaltransport.com",
-      phone: "+1 555-555-5555",
-      priceItems: [
-        {
-          id: 1,
-          subActivityId: 7,
-          subActivityName: "Local Delivery",
-          price: 12.99,
-        },
-        {
-          id: 2,
-          subActivityId: 8,
-          subActivityName: "International Shipping",
-          price: 89.99,
-        },
-      ],
-      lastUpdated: new Date("2025-05-05"),
-    },
-    {
-      id: 4,
-      name: "City Couriers",
-      contactPerson: "Maria Garcia",
-      email: "maria@citycouriers.com",
-      phone: "+1 555-222-3333",
-      priceItems: [],
-      lastUpdated: new Date("2025-05-02"),
-    },
-    {
-      id: 5,
-      name: "Fast Track Delivery",
-      contactPerson: "David Wong",
-      email: "david@fasttrack.com",
-      phone: "+1 555-111-9999",
-      priceItems: [
-        {
-          id: 1,
-          subActivityId: 9,
-          subActivityName: "Same-Day Delivery",
-          price: 35.99,
-        },
-        {
-          id: 2,
-          subActivityId: 10,
-          subActivityName: "Next-Day Delivery",
-          price: 18.99,
-        },
-      ],
-      lastUpdated: new Date("2025-04-30"),
-    },
-    {
-      id: 6,
-      name: "Elite Freight Services",
-      contactPerson: "Sarah Johnson",
-      email: "sarah@elitefreight.com",
-      phone: "+1 555-444-7777",
-      priceItems: [],
-      lastUpdated: new Date("2025-05-03"),
-    },
-  ]);
+  });
+
+  // Fetch price lists on component mount
+  useEffect(() => {
+    dispatch(actGetPriceLists());
+  }, [dispatch]);
+
+  // Extract sub-activities from price lists response
+  useEffect(() => {
+    if (priceLists.length > 0) {
+      const allSubActivities = new Map<string, SubActivity>();
+
+      priceLists.forEach((priceList) => {
+        if (
+          priceList.subActivityPrices &&
+          Array.isArray(priceList.subActivityPrices)
+        ) {
+          priceList.subActivityPrices.forEach((subActivityPrice) => {
+            const subActivityId =
+              typeof subActivityPrice.subActivity === "string"
+                ? subActivityPrice.subActivity
+                : subActivityPrice.subActivity._id;
+
+            if (typeof subActivityPrice.subActivity !== "string") {
+              // Create a SubActivity object from the embedded sub-activity data
+              const embeddedSubActivity = subActivityPrice.subActivity;
+              allSubActivities.set(subActivityId, {
+                _id: embeddedSubActivity._id,
+                activity: embeddedSubActivity.activity?._id || "",
+                transactionType: embeddedSubActivity.transactionType,
+                financeEffect: embeddedSubActivity.financeEffect as
+                  | "none"
+                  | "positive"
+                  | "negative",
+                pricingMethod: embeddedSubActivity.pricingMethod as
+                  | "perItem"
+                  | "perLocation"
+                  | "perTrip",
+                portalItemNameEn: embeddedSubActivity.portalItemNameEn,
+                portalItemNameAr: embeddedSubActivity.portalItemNameAr,
+                isUsedByFinance: embeddedSubActivity.isUsedByFinance,
+                isUsedByOps: embeddedSubActivity.isUsedByOps,
+                isInShippingUnit: embeddedSubActivity.isInShippingUnit,
+                isActive: embeddedSubActivity.isActive,
+                isInSpecialRequirement:
+                  embeddedSubActivity.isInSpecialRequirement,
+              });
+            }
+          });
+        }
+      });
+
+      setSubActivities(Array.from(allSubActivities.values()));
+    }
+  }, [priceLists]);
 
   // Initialize selected sub-activities when sub-activities data loads
   useEffect(() => {
     if (subActivities && subActivities.length > 0) {
       const subActivityOptions = subActivities.map((item) => ({
-        id: item.id,
-        name: item.itemName,
+        id: item._id!,
+        name: item.portalItemNameEn,
         price: "0.00",
+        cost: "0.00",
         selected: false,
+        pricingMethod: "perItem" as PricingMethod,
       }));
       setSelectedSubActivities(subActivityOptions);
     }
   }, [subActivities]);
 
+  // Clear error when component unmounts or error changes
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: typeof error === "string" ? error : JSON.stringify(error),
+        variant: "destructive",
+      });
+      dispatch(clearError());
+    }
+  }, [error, toast, dispatch]);
+
   // Handle form submission
-  const onSubmit = (data: PriceListFormValues) => {
-    // Create a new price list
-    const newPriceList: PriceList = {
-      id: Math.max(0, ...priceLists.map((p) => p.id)) + 1,
-      name: data.name,
-      description: data.description || "",
-      items: data.items
-        ? data.items.map((item, index) => ({
-            id: index + 1,
-            subActivityId: item.subActivityId,
-            subActivityName:
-              subActivities.find((sa) => sa.id === item.subActivityId)
-                ?.itemName || "Custom Item",
-            price: item.price,
-          }))
-        : [],
-      createdAt: new Date(),
-    };
+  const onSubmit = async (data: PriceListFormValues) => {
+    try {
+      const priceListData: PriceList = {
+        name: data.name,
+        nameAr: data.nameAr,
+        description: data.description || "",
+        descriptionAr: data.descriptionAr || "",
+        effectiveFrom: data.effectiveFrom,
+        effectiveTo: data.effectiveTo,
+        isActive: data.isActive,
+        subActivityPrices:
+          data.subActivityPrices?.map((subActivityPrice) => ({
+            subActivity: subActivityPrice.subActivity,
+            pricingMethod: subActivityPrice.pricingMethod,
+            basePrice: subActivityPrice.basePrice,
+            cost: subActivityPrice.cost,
+            locationPrices: subActivityPrice.locationPrices,
+          })) || [],
+      };
 
-    // Add it to the list
-    setPriceLists([...priceLists, newPriceList]);
+      await dispatch(actAddPriceList(priceListData)).unwrap();
 
-    // Reset form and close modal
-    form.reset();
-    setModalOpen(false);
+      // Reset form and close modal
+      form.reset();
+      setModalOpen(false);
 
-    // Show success toast
-    toast({
-      title: "Success",
-      description: "Price list created successfully",
-    });
+      // Reset selected sub-activities
+      setSelectedSubActivities((prev) =>
+        prev.map((item) => ({
+          ...item,
+          selected: false,
+          price: "0.00",
+          cost: "0.00",
+        }))
+      );
+
+      toast({
+        title: "Price List Created",
+        description: `"${data.name}" has been created successfully.`,
+      });
+    } catch (error) {
+      console.error("Failed to create price list:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create price list. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleCheckboxChange = (id: number, checked: boolean) => {
+  // Handle edit form submission
+  const onEditSubmit = async (data: PriceListFormValues) => {
+    console.log("Edit form data:", data);
+    if (!editingPriceList?._id) {
+      console.error("No editing price list ID found");
+      return;
+    }
+    console.log("Processing edit for price list:", editingPriceList._id);
+
+    try {
+      const priceListData: PriceList = {
+        _id: editingPriceList._id,
+        name: data.name,
+        nameAr: data.nameAr,
+        description: data.description || "",
+        descriptionAr: data.descriptionAr || "",
+        effectiveFrom: data.effectiveFrom,
+        effectiveTo: data.effectiveTo,
+        isActive: data.isActive,
+        subActivityPrices:
+          data.subActivityPrices?.map((subActivityPrice) => ({
+            subActivity: subActivityPrice.subActivity,
+            pricingMethod: subActivityPrice.pricingMethod,
+            basePrice: subActivityPrice.basePrice,
+            cost: subActivityPrice.cost,
+            locationPrices: subActivityPrice.locationPrices,
+          })) || [],
+      };
+
+      console.log("Sending update request with data:", priceListData);
+
+      await dispatch(
+        actUpdatePriceList({
+          id: editingPriceList._id,
+          priceList: priceListData,
+        })
+      ).unwrap();
+
+      // Reset form and close modal
+      editForm.reset();
+      setEditModalOpen(false);
+      setEditingPriceList(null);
+
+      toast({
+        title: "Price List Updated",
+        description: `"${data.name}" has been updated successfully.`,
+      });
+    } catch (error) {
+      console.error("Failed to update price list:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update price list. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle delete price list
+  const handleDeletePriceList = async () => {
+    if (!deletingPriceList?._id) return;
+
+    try {
+      await dispatch(actDeletePriceList(deletingPriceList._id)).unwrap();
+
+      setDeleteConfirmOpen(false);
+      setDeletingPriceList(null);
+
+      toast({
+        title: "Price List Deleted",
+        description: `"${deletingPriceList.name}" has been deleted successfully.`,
+      });
+    } catch (error) {
+      console.error("Failed to delete price list:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete price list. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle checkbox change for sub-activities
+  const handleCheckboxChange = (id: string, checked: boolean) => {
     setSelectedSubActivities((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, selected: checked } : item
@@ -428,374 +379,383 @@ export default function PriceLists() {
     );
   };
 
-  const handlePriceChange = (id: number, price: string) => {
+  // Handle price change for sub-activities
+  const handlePriceChange = (id: string, price: string) => {
     setSelectedSubActivities((prev) =>
       prev.map((item) => (item.id === id ? { ...item, price } : item))
     );
   };
 
-  // Update form values before submission
-  const handleFormSubmit = form.handleSubmit(() => {
-    const selectedItems = selectedSubActivities
-      .filter((item) => item.selected)
-      .map((item) => ({
-        subActivityId: item.id,
-        price: parseFloat(item.price) || 0,
-      }));
+  // Handle cost change for sub-activities
+  const handleCostChange = (id: string, cost: string) => {
+    setSelectedSubActivities((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, cost } : item))
+    );
+  };
 
-    // Update the form items - even if empty
-    form.setValue("items", selectedItems);
+  // Handle pricing method change for sub-activities
+  const handlePricingMethodChange = (
+    id: string,
+    pricingMethod: PricingMethod
+  ) => {
+    setSelectedSubActivities((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, pricingMethod } : item))
+    );
+  };
 
-    // Submit the form
-    onSubmit(form.getValues());
-  });
+  // Handle form submission with sub-activity data
+  const handleFormSubmit = form.handleSubmit(
+    (data) => {
+      // Get selected items with their prices for subActivityPrices
+      const selectedSubActivityPrices = selectedSubActivities
+        .filter((item) => item.selected)
+        .map((item) => ({
+          subActivity: item.id,
+          pricingMethod: item.pricingMethod,
+          basePrice: parseFloat(item.price) || 0,
+          cost: parseFloat(item.cost) || 0,
+        }));
+
+      // Check if any sub-activities are selected
+      if (selectedSubActivityPrices.length === 0) {
+        toast({
+          title: "No Sub-Activities Selected",
+          description:
+            "Please select at least one sub-activity to create a price list.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create the final data with selected sub-activities
+      const finalData = {
+        ...data,
+        subActivityPrices: selectedSubActivityPrices,
+      };
+
+      // Submit the form with the complete data
+      onSubmit(finalData);
+    },
+    (errors) => {
+      console.error("Form validation errors:", errors);
+      const errorMessages = Object.values(errors)
+        .map((error: any) => error?.message)
+        .filter(Boolean)
+        .join(", ");
+
+      toast({
+        title: "Validation Error",
+        description:
+          errorMessages || "Please check the form and fix any errors.",
+        variant: "destructive",
+      });
+    }
+  );
+
+  // Handle edit form submission with sub-activity data
+  const handleEditFormSubmit = editForm.handleSubmit(
+    (data) => {
+      console.log("Form submitted with data:", data);
+      console.log("Form errors:", editForm.formState.errors);
+      // For edit form, we can get the values directly since they're already populated
+      onEditSubmit(data);
+    },
+    (errors) => {
+      console.error("Form validation errors:", errors);
+      const errorMessages = Object.values(errors)
+        .map((error: any) => error?.message)
+        .filter(Boolean)
+        .join(", ");
+
+      toast({
+        title: "Validation Error",
+        description:
+          errorMessages || "Please check the form and fix any errors.",
+        variant: "destructive",
+      });
+    }
+  );
+
+  // Open edit modal
+  const openEditModal = (priceList: PriceList) => {
+    setEditingPriceList(priceList);
+
+    // Format dates for datetime-local input (YYYY-MM-DDTHH:mm)
+    const formatDateForInput = (dateString: string) => {
+      const date = new Date(dateString);
+      return date.toISOString().slice(0, 16);
+    };
+
+    editForm.reset({
+      name: priceList.name,
+      nameAr: priceList.nameAr,
+      description: priceList.description,
+      descriptionAr: priceList.descriptionAr,
+      effectiveFrom: formatDateForInput(priceList.effectiveFrom),
+      effectiveTo: formatDateForInput(priceList.effectiveTo),
+      isActive: priceList.isActive,
+      subActivityPrices:
+        priceList.subActivityPrices?.map((item) => ({
+          subActivity:
+            typeof item.subActivity === "string"
+              ? item.subActivity
+              : item.subActivity._id,
+          pricingMethod: item.pricingMethod,
+          basePrice: item.basePrice,
+          cost: item.cost,
+          locationPrices: item.locationPrices,
+        })) || [],
+    });
+    setEditModalOpen(true);
+  };
+
+  // Open delete confirmation
+  const openDeleteConfirmation = (priceList: PriceList) => {
+    setDeletingPriceList(priceList);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Handle card click to navigate to details
+  const handleCardClick = (priceList: PriceList) => {
+    setLocation(`/price-lists/${priceList._id}`);
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  // Get sub-activity name by ID
+  const getSubActivityName = (subActivityId: string) => {
+    const subActivity = subActivities.find((sa) => sa._id === subActivityId);
+    return subActivity?.portalItemNameEn || "Unknown Activity";
+  };
+
+  if (loading && priceLists.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading price lists...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <title>Price Lists | Wassel</title>
       <div>
         <h2 className="text-3xl font-bold tracking-tight">
-          Pricing Management
+          Price Lists Management
         </h2>
         <p className="text-gray-500 mt-2">
-          Manage your pricing information, rate cards, and customer data
+          Create and manage pricing configurations for your services and
+          activities
         </p>
       </div>
 
-      <Tabs
-        defaultValue="price-lists"
-        className="w-full"
-        value={activeTab}
-        onValueChange={(value) => {
-          setActiveTab(value);
-          // Update URL to reflect tab change without navigation
-          window.history.replaceState(null, "", `/price-lists?tab=${value}`);
-        }}
-      >
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="price-lists" className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            <span>Price Lists</span>
-          </TabsTrigger>
-          <TabsTrigger value="customers" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            <span>Customers</span>
-          </TabsTrigger>
-        </TabsList>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-medium">Your Price Lists</h3>
+        <Button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-2"
+          style={{
+            backgroundColor: "#1e88e5",
+            color: "white",
+            border: "none",
+          }}
+          disabled={loading}
+        >
+          <Plus className="h-4 w-4" />
+          <span>Add Price List</span>
+        </Button>
+      </div>
 
-        {/* Price Lists Tab */}
-        <TabsContent value="price-lists" className="space-y-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium">Your Price Lists</h3>
-            <Button
-              onClick={() => setModalOpen(true)}
-              className="flex items-center gap-2"
-              style={{
-                backgroundColor: "#1e88e5",
-                color: "white",
-                border: "none",
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Price List</span>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6">
-            {/* Price list cards */}
-            {priceLists.length === 0 ? (
-              <Card className="col-span-full">
-                <CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
-                  <div className="rounded-full bg-blue-100 p-4 mb-4">
-                    <FileText className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">No Price Lists</h3>
-                  <p className="text-gray-500 max-w-md">
-                    You haven't created any price lists yet. Click the "Add
-                    Price List" button to create your first one.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              priceLists.map((priceList) => (
-                <Card
-                  key={priceList.id}
-                  className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1 flex flex-col h-[320px] sm:h-[300px] lg:h-[280px]"
-                  onClick={() => setLocation(`/price-lists/${priceList.id}`)}
-                >
-                  <CardHeader className="pb-3 px-4 sm:px-6">
-                    <CardTitle className="text-base sm:text-lg line-clamp-1">
-                      {priceList.name}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2 h-10 text-xs sm:text-sm">
-                      {priceList.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow overflow-hidden px-4 sm:px-6">
-                    <div className="space-y-2">
-                      <div className="text-xs sm:text-sm font-medium text-gray-500">
-                        {priceList.items.length} items
-                      </div>
-                      <div className="border-t pt-2">
-                        <div className="flex justify-between text-xs sm:text-sm mb-1">
-                          <span className="font-medium">Sample Items:</span>
-                        </div>
-                        <ul className="text-xs sm:text-sm text-gray-600 space-y-1">
-                          {priceList.items.slice(0, 2).map((item) => (
-                            <li
-                              key={item.id}
-                              className="flex justify-between items-center gap-2"
-                            >
-                              <span className="truncate flex-1 min-w-0">
-                                {item.subActivityName}
-                              </span>
-                              <span className="font-medium text-green-600 whitespace-nowrap">
-                                ${item.price.toFixed(2)}
-                              </span>
-                            </li>
-                          ))}
-                          {priceList.items.length > 2 && (
-                            <li className="text-blue-600 text-xs">
-                              + {priceList.items.length - 2} more items
-                            </li>
-                          )}
-                          {priceList.items.length === 0 && (
-                            <li className="text-gray-400 italic text-xs">
-                              No items added yet
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between pt-2 pb-4 mt-auto border-t px-4 sm:px-6">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full sm:w-auto text-xs sm:text-sm"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click
-                        setLocation(`/price-lists/edit/${priceList.id}`);
-                      }}
-                    >
-                      <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full sm:w-auto text-xs sm:text-sm text-red-500 hover:text-red-600 hover:border-red-300"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click
-                        const confirmed = window.confirm(
-                          `Are you sure you want to delete "${priceList.name}"?`
-                        );
-                        if (confirmed) {
-                          setPriceLists(
-                            priceLists.filter((pl) => pl.id !== priceList.id)
-                          );
-                          toast({
-                            title: "Success",
-                            description: "Price list deleted successfully",
-                          });
-                        }
-                      }}
-                    >
-                      <Trash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      Delete
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))
-            )}
-
-            {/* Add price list card */}
-            {priceLists.length > 0 && (
-              <Card
-                className="flex flex-col items-center justify-center h-[280px] border-dashed cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => setModalOpen(true)}
-              >
-                <CardContent className="flex flex-col items-center justify-center h-full text-center p-6">
-                  <div
-                    className="rounded-full p-4 mb-4"
-                    style={{ backgroundColor: "#e3f2fd" }}
-                  >
-                    <Plus className="h-8 w-8" style={{ color: "#1e88e5" }} />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">Add Price List</h3>
-                  <p className="text-gray-500 max-w-[200px]">
-                    Create a new price list for activities and services
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* Customers Tab */}
-        <TabsContent value="customers" className="space-y-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium">Your Customers</h3>
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-gray-500">
-                Data refreshed every 6 hours
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex items-center gap-2"
-                onClick={() => {
-                  // Simulate refreshing data from API
-                  const now = new Date();
-                  const updatedCustomers = customers.map((customer) => ({
-                    ...customer,
-                    lastUpdated: now,
-                  }));
-                  setCustomers(updatedCustomers);
-
-                  // Show success message
-                  toast({
-                    title: "Success",
-                    description: "Customer data refreshed successfully",
-                  });
-                }}
-              >
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M4 12C4 7.58172 7.58172 4 12 4C15.0736 4 17.7548 5.77409 19.1446 8.33116"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M20 12C20 16.4183 16.4183 20 12 20C8.92638 20 6.24516 18.2259 4.85541 15.6688"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M16.9999 8L19.9999 8L19.9999 5"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M7 16L4 16L4 19"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span>Refresh</span>
-              </Button>
+      {priceLists.length === 0 ? (
+        <Card className="col-span-full">
+          <CardContent className="flex flex-col items-center justify-center min-h-[300px] text-center p-6">
+            <div className="rounded-full bg-blue-100 p-4 mb-4">
+              <FileText className="h-8 w-8 text-blue-600" />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {customers.map((customer) => (
-              <Card
-                key={customer.id}
-                className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow flex flex-col h-[280px]"
-                onClick={() => setLocation(`/customers/${customer.id}`)}
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle>{customer.name}</CardTitle>
-                  <CardDescription>
-                    {customer.contactPerson && (
-                      <div className="text-sm">
-                        Contact: {customer.contactPerson}
-                      </div>
-                    )}
-                    {customer.email && (
-                      <div className="text-sm truncate">{customer.email}</div>
-                    )}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow overflow-hidden">
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-500">
-                      {customer.priceItems.length
-                        ? `${customer.priceItems.length} custom prices`
-                        : "No custom pricing"}
+            <h3 className="text-lg font-medium mb-2">No Price Lists</h3>
+            <p className="text-gray-500 max-w-md">
+              You haven't created any price lists yet. Click the "Add Price
+              List" button to create your first one.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6">
+          {/* Price list cards */}
+          {priceLists.map((priceList) => (
+            <Card
+              key={priceList._id}
+              className="overflow-hidden hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1 flex flex-col h-[380px] sm:h-[360px] lg:h-[340px] cursor-pointer"
+              onClick={() => handleCardClick(priceList)}
+            >
+              <CardHeader className="pb-3 px-4 sm:px-6">
+                <CardTitle className="text-base sm:text-lg line-clamp-1">
+                  {priceList.name}
+                </CardTitle>
+                <CardDescription className="line-clamp-2 h-10 text-xs sm:text-sm">
+                  {priceList.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-grow overflow-hidden px-4 sm:px-6">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs sm:text-sm font-medium text-gray-500">
+                      {priceList.subActivityPrices?.length > 0
+                        ? priceList.subActivityPrices.length + " items"
+                        : "No items added yet"}
                     </div>
-                    {customer.priceItems.length > 0 && (
-                      <div className="border-t pt-2">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="font-medium">
-                            Sample Custom Prices:
-                          </span>
-                        </div>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                          {customer.priceItems.slice(0, 3).map((item) => (
-                            <li key={item.id} className="flex justify-between">
-                              <span className="truncate max-w-[120px]">
-                                {item.subActivityName}
-                              </span>
-                              <span className="font-medium">
-                                ${item.price.toFixed(2)}
-                              </span>
-                            </li>
-                          ))}
-                          {customer.priceItems.length > 3 && (
-                            <li className="text-blue-600 text-xs">
-                              + {customer.priceItems.length - 3} more items
+                    <div className="text-xs text-gray-400">
+                      {formatDate(priceList.effectiveFrom)} -{" "}
+                      {formatDate(priceList.effectiveTo)}
+                    </div>
+                  </div>
+                  <div className="border-t pt-3">
+                    <div className="flex justify-between text-xs sm:text-sm mb-2">
+                      <span className="font-medium">Sample Items:</span>
+                    </div>
+                    <ul className="text-xs sm:text-sm text-gray-600 space-y-2">
+                      {priceList.subActivityPrices &&
+                      priceList.subActivityPrices.length > 0 ? (
+                        <>
+                          {priceList.subActivityPrices
+                            .slice(0, 2)
+                            .map((item, index) => (
+                              <li
+                                key={index}
+                                className="flex justify-between items-center gap-2 p-2 bg-gray-50 rounded"
+                              >
+                                <span className="truncate flex-1 min-w-0">
+                                  {getSubActivityName(
+                                    typeof item.subActivity === "string"
+                                      ? item.subActivity
+                                      : item.subActivity._id
+                                  )}
+                                </span>
+                                <span className="font-medium text-green-600 whitespace-nowrap">
+                                  $
+                                  {item.basePrice?.toFixed(2) ||
+                                    item.cost.toFixed(2)}
+                                </span>
+                              </li>
+                            ))}
+                          {priceList.subActivityPrices.length > 2 && (
+                            <li className="text-blue-600 text-xs text-center py-1">
+                              + {priceList.subActivityPrices.length - 2} more
+                              items
                             </li>
                           )}
-                        </ul>
-                      </div>
-                    )}
+                        </>
+                      ) : (
+                        <li className="text-gray-400 italic text-xs text-center py-4">
+                          No items added yet
+                        </li>
+                      )}
+                    </ul>
                   </div>
-                </CardContent>
-                <CardFooter className="flex justify-between items-center pt-2 pb-4 mt-auto border-t">
-                  <div className="text-xs text-gray-500">
-                    Updated:{" "}
-                    {new Date(customer.lastUpdated).toLocaleDateString()}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent card click
-                      setLocation(`/customers/${customer.id}`);
-                    }}
-                  >
-                    View Details
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+                </div>
+              </CardContent>
+              <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between pt-2 pb-4 mt-auto border-t px-4 sm:px-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto text-xs sm:text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditModal(priceList);
+                  }}
+                  disabled={loading}
+                >
+                  <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto text-xs sm:text-sm text-red-500 hover:text-red-600 hover:border-red-300"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openDeleteConfirmation(priceList);
+                  }}
+                  disabled={loading}
+                >
+                  <Trash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  Delete
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+
+          {/* Add price list card */}
+          {priceLists.length > 0 && (
+            <Card
+              className="flex flex-col items-center justify-center h-[340px] border-dashed cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => setModalOpen(true)}
+            >
+              <CardContent className="flex flex-col items-center justify-center h-full text-center p-6">
+                <div
+                  className="rounded-full p-4 mb-4"
+                  style={{ backgroundColor: "#e3f2fd" }}
+                >
+                  <Plus className="h-8 w-8" style={{ color: "#1e88e5" }} />
+                </div>
+                <h3 className="text-lg font-medium mb-2">Add Price List</h3>
+                <p className="text-gray-500 max-w-[200px]">
+                  Create a new price list for activities and services
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Add Price List Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Price List</DialogTitle>
+            <DialogTitle>Add New Bilingual Price List</DialogTitle>
             <DialogDescription>
-              Create a new price list for your activities and services.
+              Create a comprehensive price list with English and Arabic support,
+              date ranges, and flexible pricing methods.
             </DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
             <form onSubmit={handleFormSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price List Name</FormLabel>
+                      <FormLabel>Price List Name (English)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter price list name" {...field} />
+                        <Input
+                          placeholder="Enter price list name in English"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="nameAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price List Name (Arabic)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="أدخل اسم قائمة الأسعار بالعربية"
+                          {...field}
+                          dir="rtl"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -807,14 +767,87 @@ export default function PriceLists() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Description (English)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter description" {...field} />
+                        <Input
+                          placeholder="Enter description in English"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="descriptionAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Arabic)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="أدخل الوصف بالعربية"
+                          {...field}
+                          dir="rtl"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="effectiveFrom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Effective From</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} />
                       </FormControl>
                       <FormDescription>
-                        Provide a brief description for this price list.
+                        When this price list becomes active
                       </FormDescription>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="effectiveTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Effective To</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        When this price list expires
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Active Status</FormLabel>
+                        <FormDescription>
+                          Enable this price list immediately
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
@@ -822,63 +855,377 @@ export default function PriceLists() {
 
               <div>
                 <h4 className="text-sm font-medium mb-2">
-                  Select Sub-Activities and Set Prices
+                  Select Sub-Activities and Set Pricing
                 </h4>
-                <div className="border rounded-md p-3 max-h-[300px] overflow-y-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 px-2 w-8"></th>
-                        <th className="text-left py-2 px-2">Activity</th>
-                        <th className="text-left py-2 px-2 w-32">Price ($)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedSubActivities.map((item) => (
-                        <tr key={item.id} className="border-b last:border-0">
-                          <td className="py-2 px-2">
-                            <Checkbox
-                              checked={item.selected}
-                              onCheckedChange={(checked) =>
-                                handleCheckboxChange(item.id, checked === true)
-                              }
-                            />
-                          </td>
-                          <td className="py-2 px-2">{item.name}</td>
-                          <td className="py-2 px-2">
-                            <Input
-                              disabled={!item.selected}
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.price}
-                              onChange={(e) =>
-                                handlePriceChange(item.id, e.target.value)
-                              }
-                              className="h-8"
-                            />
-                          </td>
+                {subActivities.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <span className="text-gray-500">
+                      No sub-activities available. Create a price list first to
+                      see available activities.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="border rounded-md p-3 max-h-[300px] overflow-y-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 px-2 w-8"></th>
+                          <th className="text-left py-2 px-2">Activity</th>
+                          <th className="text-left py-2 px-2 w-32">
+                            Pricing Method
+                          </th>
+                          <th className="text-left py-2 px-2 w-32">
+                            Base Price ($)
+                          </th>
+                          <th className="text-left py-2 px-2 w-32">Cost ($)</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {selectedSubActivities.map((item) => (
+                          <tr key={item.id} className="border-b last:border-0">
+                            <td className="py-2 px-2">
+                              <Checkbox
+                                checked={item.selected}
+                                onCheckedChange={(checked) =>
+                                  handleCheckboxChange(
+                                    item.id,
+                                    checked === true
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="py-2 px-2">{item.name}</td>
+                            <td className="py-2 px-2">
+                              <Select
+                                disabled={!item.selected}
+                                value={item.pricingMethod}
+                                onValueChange={(value: PricingMethod) =>
+                                  handlePricingMethodChange(item.id, value)
+                                }
+                              >
+                                <SelectTrigger className="h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="perItem">
+                                    Per Item
+                                  </SelectItem>
+                                  <SelectItem value="perLocation">
+                                    Per Location
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="py-2 px-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.price}
+                                onChange={(e) =>
+                                  handlePriceChange(item.id, e.target.value)
+                                }
+                                disabled={!item.selected}
+                                className="h-8"
+                              />
+                            </td>
+                            <td className="py-2 px-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.cost}
+                                onChange={(e) =>
+                                  handleCostChange(item.id, e.target.value)
+                                }
+                                disabled={!item.selected}
+                                className="h-8"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
               <DialogFooter>
                 <Button
-                  variant="outline"
                   type="button"
+                  variant="outline"
                   onClick={() => setModalOpen(false)}
+                  disabled={loading}
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Create Price List</Button>
+                <Button
+                  type="submit"
+                  style={{
+                    backgroundColor: "#1e88e5",
+                    color: "white",
+                    border: "none",
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Price List"
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Price List Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Bilingual Price List</DialogTitle>
+            <DialogDescription>
+              Update your comprehensive price list with English and Arabic
+              support, date ranges, and flexible pricing methods.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...editForm}>
+            <form onSubmit={handleEditFormSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price List Name (English)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter price list name in English"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="nameAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price List Name (Arabic)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="أدخل اسم قائمة الأسعار بالعربية"
+                          {...field}
+                          dir="rtl"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (English)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter description in English"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="descriptionAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Arabic)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="أدخل الوصف بالعربية"
+                          {...field}
+                          dir="rtl"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="effectiveFrom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Effective From</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        When this price list becomes active
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="effectiveTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Effective To</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        When this price list expires
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Active Status</FormLabel>
+                        <FormDescription>
+                          Enable this price list immediately
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium mb-2">
+                  Current Sub-Activities and Pricing
+                </h4>
+                <div className="border rounded-md p-3 max-h-[300px] overflow-y-auto">
+                  {editingPriceList &&
+                  editingPriceList.subActivityPrices &&
+                  editingPriceList.subActivityPrices.length > 0 ? (
+                    <div className="space-y-2">
+                      {editingPriceList.subActivityPrices.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                        >
+                          <span className="text-sm">
+                            {getSubActivityName(
+                              typeof item.subActivity === "string"
+                                ? item.subActivity
+                                : item.subActivity._id
+                            )}
+                          </span>
+                          <div className="flex gap-4">
+                            <span className="font-medium text-green-600">
+                              Price: ${item.basePrice?.toFixed(2) || "0.00"}
+                            </span>
+                            <span className="font-medium text-blue-600">
+                              Cost: ${item.cost.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">
+                      No sub-activities configured for this price list.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditModalOpen(false)}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="submit"
+                  style={{
+                    backgroundColor: "#1e88e5",
+                    color: "white",
+                    border: "none",
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Price List"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the price list "
+              {deletingPriceList?.name}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleDeletePriceList}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
