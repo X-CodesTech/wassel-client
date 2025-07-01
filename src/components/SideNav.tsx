@@ -41,33 +41,33 @@ export default function SideNav({ collapsed, onToggleCollapse }: SideNavProps) {
       icon: <BarChart3 className="h-5 w-5" />,
       active: location === "/",
     },
-    {
-      name: "Order list",
-      href: "/orders",
-      icon: <List className="h-5 w-5" />,
-      active: location === "/orders",
-    },
-    {
-      name: "Shipments",
-      href: "/shipments",
-      icon: <Package className="h-5 w-5" />,
-      active: location === "/shipments",
-    },
-    {
-      name: "Shipment list",
-      href: "/shipment-list",
-      icon: <List className="h-5 w-5" />,
-      active: location === "/shipment-list",
-    },
+    // {
+    //   name: "Order list",
+    //   href: "/orders",
+    //   icon: <List className="h-5 w-5" />,
+    //   active: location === "/orders",
+    // },
+    // {
+    //   name: "Shipments",
+    //   href: "/shipments",
+    //   icon: <Package className="h-5 w-5" />,
+    //   active: location === "/shipments",
+    // },
+    // {
+    //   name: "Shipment list",
+    //   href: "/shipment-list",
+    //   icon: <List className="h-5 w-5" />,
+    //   active: location === "/shipment-list",
+    // },
   ];
 
   const settingsItems = [
-    {
-      name: "Users",
-      href: "/users",
-      icon: <Users className="h-5 w-5" />,
-      active: location === "/users",
-    },
+    // {
+    //   name: "Users",
+    //   href: "/users",
+    //   icon: <Users className="h-5 w-5" />,
+    //   active: location === "/users",
+    // },
     {
       name: "Pricelists",
       href: "/price-lists",
@@ -98,33 +98,33 @@ export default function SideNav({ collapsed, onToggleCollapse }: SideNavProps) {
       icon: <Activity className="h-5 w-5" />,
       active: location === "/activities",
     },
-    {
-      name: "Type of transaction",
-      href: "/transaction-types",
-      icon: <FileText className="h-5 w-5" />,
-      active: location === "/transaction-types",
-    },
-    {
-      name: "Design System",
-      href: "/design-system",
-      icon: <Palette className="h-5 w-5" />,
-      active: location === "/design-system",
-    },
+    // {
+    //   name: "Type of transaction",
+    //   href: "/transaction-types",
+    //   icon: <FileText className="h-5 w-5" />,
+    //   active: location === "/transaction-types",
+    // },
+    // {
+    //   name: "Design System",
+    //   href: "/design-system",
+    //   icon: <Palette className="h-5 w-5" />,
+    //   active: location === "/design-system",
+    // },
   ];
 
   const paymentItems = [
-    {
-      name: "Payment Requests",
-      href: "/payment-requests",
-      icon: <CreditCard className="h-5 w-5" />,
-      active: location === "/payment-requests",
-    },
-    {
-      name: "Invoices",
-      href: "/invoices",
-      icon: <Receipt className="h-5 w-5" />,
-      active: location === "/invoices",
-    },
+    // {
+    //   name: "Payment Requests",
+    //   href: "/payment-requests",
+    //   icon: <CreditCard className="h-5 w-5" />,
+    //   active: location === "/payment-requests",
+    // },
+    // {
+    //   name: "Invoices",
+    //   href: "/invoices",
+    //   icon: <Receipt className="h-5 w-5" />,
+    //   active: location === "/invoices",
+    // },
   ];
 
   return (
