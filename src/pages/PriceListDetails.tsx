@@ -27,102 +27,118 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DollarSign, Edit, Trash, ArrowLeft } from "lucide-react";
-
-interface PriceListItem {
-  id: number;
-  subActivityId: number;
-  subActivityName: string;
-  price: number;
-}
-
-interface PriceList {
-  id: number;
-  name: string;
-  description: string;
-  items: PriceListItem[];
-  createdAt: Date;
-}
+import { DollarSign, Edit, Trash, ArrowLeft, Loader2 } from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import {
+  actGetPriceListById,
+  actDeletePriceList,
+  clearError,
+  clearSelectedPriceList,
+} from "@/store/priceLists";
+import { useToast } from "@/hooks/use-toast";
+import { PriceList } from "@/services/priceListServices";
 
 export default function PriceListDetails() {
   const [match, params] = useRoute<{ id: string }>("/price-lists/:id");
   const [, setLocation] = useLocation();
-  const [priceList, setPriceList] = useState<PriceList | null>(null);
+  const dispatch = useAppDispatch();
+  const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // In a real application, we would fetch the price list from the server
-  // For now, we'll use localStorage to retrieve our saved price lists
+  const {
+    selectedPriceList: priceList,
+    loading,
+    error,
+  } = useAppSelector((state) => state.priceLists);
+
+  // Fetch price list data when component mounts
   useEffect(() => {
-    if (match && params.id) {
-      const id = parseInt(params.id);
-      const storedPriceLists = localStorage.getItem("priceLists");
-      let redirectToList = false;
+    if (match && params?.id) {
+      dispatch(actGetPriceListById(params.id));
+    }
+  }, [match, params?.id, dispatch]);
 
-      if (storedPriceLists) {
-        try {
-          const priceLists: PriceList[] = JSON.parse(storedPriceLists);
-          const found = priceLists.find((pl) => pl.id === id);
+  // Clear error and selected price list when component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+      dispatch(clearSelectedPriceList());
+    };
+  }, [dispatch]);
 
-          if (found) {
-            setPriceList(found);
-          } else {
-            // Price list not found
-            redirectToList = true;
-          }
-        } catch (e) {
-          // Error parsing data
-          redirectToList = true;
-        }
-      } else {
-        // No price lists in storage
-        redirectToList = true;
-      }
+  // Handle error display
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+      dispatch(clearError());
+    }
+  }, [error, toast, dispatch]);
 
-      if (redirectToList) {
-        // We'll redirect outside the main logic to avoid potential loop
-        const timer = setTimeout(
-          () => setLocation("/price-lists?tab=price-lists"),
-          0
-        );
-        return () => clearTimeout(timer);
+  const handleDelete = async () => {
+    if (priceList?._id) {
+      try {
+        await dispatch(actDeletePriceList(priceList._id)).unwrap();
+        setDeleteDialogOpen(false);
+        toast({
+          title: "Price List Deleted",
+          description: `"${priceList.name}" has been deleted successfully.`,
+        });
+        setLocation("/price-lists");
+      } catch (error) {
+        console.error("Failed to delete price list:", error);
       }
     }
-  }, [match, params && params.id]);
-
-  const handleDelete = () => {
-    if (priceList) {
-      // Get current price lists
-      const storedPriceLists = localStorage.getItem("priceLists");
-
-      if (storedPriceLists) {
-        let priceLists: PriceList[] = JSON.parse(storedPriceLists);
-        // Filter out the current price list
-        priceLists = priceLists.filter((pl) => pl.id !== priceList.id);
-        // Save updated list
-        localStorage.setItem("priceLists", JSON.stringify(priceLists));
-      }
-
-      // Navigate back to price lists with tab preserved
-      setLocation("/price-lists?tab=price-lists");
-    }
-
-    setDeleteDialogOpen(false);
   };
 
   const handleEdit = () => {
-    // Navigate to edit page (we would implement this later)
-    setLocation(`/price-lists/edit/${priceList?.id}`);
+    // For now, we'll just show a toast message
+    // In the future, this could navigate to an edit page
+    toast({
+      title: "Edit Feature",
+      description: "Edit functionality will be implemented soon.",
+    });
   };
 
   const handleBack = () => {
-    // Preserve the tab state by going back to price lists with tab parameter
-    setLocation("/price-lists?tab=price-lists");
+    setLocation("/price-lists");
   };
+
+  // Get sub-activity name by ID
+  const getSubActivityName = (subActivity: any) => {
+    if (typeof subActivity === "string") {
+      return "Unknown Activity";
+    }
+    return subActivity.portalItemNameEn || "Unknown Activity";
+  };
+
+  if (loading && !priceList) {
+    return (
+      <div className="flex items-center justify-center h-[400px]">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading price list details...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!priceList) {
     return (
       <div className="flex items-center justify-center h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+        <div className="text-center">
+          <h3 className="text-lg font-medium mb-2">Price List Not Found</h3>
+          <p className="text-gray-500 mb-4">
+            The price list you're looking for doesn't exist or has been removed.
+          </p>
+          <Button onClick={handleBack} variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Price Lists
+          </Button>
+        </div>
       </div>
     );
   }
@@ -150,7 +166,9 @@ export default function PriceListDetails() {
           <div>
             <h3 className="text-lg font-medium">Price List Details</h3>
             <p className="text-sm text-gray-500">
-              Created on {new Date(priceList.createdAt).toLocaleDateString()}
+              Effective from{" "}
+              {new Date(priceList.effectiveFrom).toLocaleDateString()} to{" "}
+              {new Date(priceList.effectiveTo).toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -182,7 +200,7 @@ export default function PriceListDetails() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {priceList.items.length === 0 ? (
+          {priceList.subActivityPrices.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="rounded-full bg-gray-100 p-3 mb-3">
                 <DollarSign className="h-6 w-6 text-gray-400" />
@@ -198,16 +216,24 @@ export default function PriceListDetails() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Item Name</TableHead>
-                  <TableHead>Price</TableHead>
+                  <TableHead>Pricing Method</TableHead>
+                  <TableHead>Base Price</TableHead>
+                  <TableHead>Cost</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {priceList.items.map((item) => (
-                  <TableRow key={item.id}>
+                {priceList.subActivityPrices.map((item, index) => (
+                  <TableRow key={index}>
                     <TableCell className="font-medium">
-                      {item.subActivityName}
+                      {getSubActivityName(item.subActivity)}
                     </TableCell>
-                    <TableCell>${item.price.toFixed(2)}</TableCell>
+                    <TableCell className="capitalize">
+                      {item.pricingMethod.replace(/([A-Z])/g, " $1").trim()}
+                    </TableCell>
+                    <TableCell>
+                      ${item.basePrice?.toFixed(2) || "0.00"}
+                    </TableCell>
+                    <TableCell>${item.cost.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -231,8 +257,16 @@ export default function PriceListDetails() {
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={handleDelete}
+              disabled={loading}
             >
-              Delete
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

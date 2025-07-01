@@ -5,16 +5,19 @@ import {
   actAddPriceList,
   actUpdatePriceList,
   actDeletePriceList,
+  actGetPriceListById,
 } from "./act";
 
 interface PriceListsState {
   records: PriceList[];
+  selectedPriceList: PriceList | null;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: PriceListsState = {
   records: [],
+  selectedPriceList: null,
   loading: false,
   error: null,
 };
@@ -25,6 +28,9 @@ const priceListsSlice = createSlice({
   reducers: {
     clearError: (state) => {
       state.error = null;
+    },
+    clearSelectedPriceList: (state) => {
+      state.selectedPriceList = null;
     },
   },
   extraReducers: (builder) => {
@@ -39,6 +45,21 @@ const priceListsSlice = createSlice({
         state.records = action.payload.data;
       })
       .addCase(actGetPriceLists.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+
+    // Get Price List By ID
+    builder
+      .addCase(actGetPriceListById.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(actGetPriceListById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.selectedPriceList = action.payload.data;
+      })
+      .addCase(actGetPriceListById.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });
@@ -77,6 +98,10 @@ const priceListsSlice = createSlice({
           if (index !== -1) {
             state.records[index] = action.payload;
           }
+          // Update selected price list if it's the same one
+          if (state.selectedPriceList?._id === action.payload._id) {
+            state.selectedPriceList = action.payload;
+          }
         }
       )
       .addCase(actUpdatePriceList.rejected, (state, action) => {
@@ -97,6 +122,10 @@ const priceListsSlice = createSlice({
           state.records = state.records.filter(
             (priceList) => priceList._id !== action.payload
           );
+          // Clear selected price list if it's the deleted one
+          if (state.selectedPriceList?._id === action.payload) {
+            state.selectedPriceList = null;
+          }
         }
       )
       .addCase(actDeletePriceList.rejected, (state, action) => {
@@ -106,5 +135,5 @@ const priceListsSlice = createSlice({
   },
 });
 
-export const { clearError } = priceListsSlice.actions;
+export const { clearError, clearSelectedPriceList } = priceListsSlice.actions;
 export default priceListsSlice.reducer;

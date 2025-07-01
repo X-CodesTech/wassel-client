@@ -58,12 +58,8 @@ import {
   actDeletePriceList,
   clearError,
 } from "@/store/priceLists";
-import {
-  PriceList,
-  SubActivityPrice,
-  PricingMethod,
-} from "@/services/priceListServices";
-import { subActivityServices } from "@/services";
+import { useLocation } from "wouter";
+import { PriceList, PricingMethod } from "@/services/priceListServices";
 import { SubActivity } from "@/types/types";
 
 // Form schema for price list
@@ -92,7 +88,6 @@ const priceListFormSchema = z.object({
           .optional(),
       })
     )
-    .min(1, "At least one sub-activity must be selected")
     .optional(),
 });
 
@@ -100,6 +95,7 @@ type PriceListFormValues = z.infer<typeof priceListFormSchema>;
 
 export default function PriceLists() {
   const dispatch = useAppDispatch();
+  const [, setLocation] = useLocation();
   const {
     records: priceLists,
     loading,
@@ -172,38 +168,43 @@ export default function PriceLists() {
       const allSubActivities = new Map<string, SubActivity>();
 
       priceLists.forEach((priceList) => {
-        priceList.subActivityPrices.forEach((subActivityPrice) => {
-          const subActivityId =
-            typeof subActivityPrice.subActivity === "string"
-              ? subActivityPrice.subActivity
-              : subActivityPrice.subActivity._id;
+        if (
+          priceList.subActivityPrices &&
+          Array.isArray(priceList.subActivityPrices)
+        ) {
+          priceList.subActivityPrices.forEach((subActivityPrice) => {
+            const subActivityId =
+              typeof subActivityPrice.subActivity === "string"
+                ? subActivityPrice.subActivity
+                : subActivityPrice.subActivity._id;
 
-          if (typeof subActivityPrice.subActivity !== "string") {
-            // Create a SubActivity object from the embedded sub-activity data
-            const embeddedSubActivity = subActivityPrice.subActivity;
-            allSubActivities.set(subActivityId, {
-              _id: embeddedSubActivity._id,
-              activity: embeddedSubActivity.activity?._id || "",
-              transactionType: embeddedSubActivity.transactionType,
-              financeEffect: embeddedSubActivity.financeEffect as
-                | "none"
-                | "positive"
-                | "negative",
-              pricingMethod: embeddedSubActivity.pricingMethod as
-                | "perItem"
-                | "perLocation"
-                | "perTrip",
-              portalItemNameEn: embeddedSubActivity.portalItemNameEn,
-              portalItemNameAr: embeddedSubActivity.portalItemNameAr,
-              isUsedByFinance: embeddedSubActivity.isUsedByFinance,
-              isUsedByOps: embeddedSubActivity.isUsedByOps,
-              isInShippingUnit: embeddedSubActivity.isInShippingUnit,
-              isActive: embeddedSubActivity.isActive,
-              isInSpecialRequirement:
-                embeddedSubActivity.isInSpecialRequirement,
-            });
-          }
-        });
+            if (typeof subActivityPrice.subActivity !== "string") {
+              // Create a SubActivity object from the embedded sub-activity data
+              const embeddedSubActivity = subActivityPrice.subActivity;
+              allSubActivities.set(subActivityId, {
+                _id: embeddedSubActivity._id,
+                activity: embeddedSubActivity.activity?._id || "",
+                transactionType: embeddedSubActivity.transactionType,
+                financeEffect: embeddedSubActivity.financeEffect as
+                  | "none"
+                  | "positive"
+                  | "negative",
+                pricingMethod: embeddedSubActivity.pricingMethod as
+                  | "perItem"
+                  | "perLocation"
+                  | "perTrip",
+                portalItemNameEn: embeddedSubActivity.portalItemNameEn,
+                portalItemNameAr: embeddedSubActivity.portalItemNameAr,
+                isUsedByFinance: embeddedSubActivity.isUsedByFinance,
+                isUsedByOps: embeddedSubActivity.isUsedByOps,
+                isInShippingUnit: embeddedSubActivity.isInShippingUnit,
+                isActive: embeddedSubActivity.isActive,
+                isInSpecialRequirement:
+                  embeddedSubActivity.isInSpecialRequirement,
+              });
+            }
+          });
+        }
       });
 
       setSubActivities(Array.from(allSubActivities.values()));
@@ -230,7 +231,7 @@ export default function PriceLists() {
     if (error) {
       toast({
         title: "Error",
-        description: error,
+        description: typeof error === "string" ? error : JSON.stringify(error),
         variant: "destructive",
       });
       dispatch(clearError());
@@ -280,6 +281,11 @@ export default function PriceLists() {
       });
     } catch (error) {
       console.error("Failed to create price list:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create price list. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -356,6 +362,11 @@ export default function PriceLists() {
       });
     } catch (error) {
       console.error("Failed to delete price list:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete price list. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -394,7 +405,7 @@ export default function PriceLists() {
 
   // Handle form submission with sub-activity data
   const handleFormSubmit = form.handleSubmit(
-    () => {
+    (data) => {
       // Get selected items with their prices for subActivityPrices
       const selectedSubActivityPrices = selectedSubActivities
         .filter((item) => item.selected)
@@ -416,17 +427,26 @@ export default function PriceLists() {
         return;
       }
 
-      // Update the form subActivityPrices
-      form.setValue("subActivityPrices", selectedSubActivityPrices);
+      // Create the final data with selected sub-activities
+      const finalData = {
+        ...data,
+        subActivityPrices: selectedSubActivityPrices,
+      };
 
-      // Submit the form
-      onSubmit(form.getValues());
+      // Submit the form with the complete data
+      onSubmit(finalData);
     },
     (errors) => {
       console.error("Form validation errors:", errors);
+      const errorMessages = Object.values(errors)
+        .map((error: any) => error?.message)
+        .filter(Boolean)
+        .join(", ");
+
       toast({
         title: "Validation Error",
-        description: "Please check the form and fix any errors.",
+        description:
+          errorMessages || "Please check the form and fix any errors.",
         variant: "destructive",
       });
     }
@@ -442,9 +462,15 @@ export default function PriceLists() {
     },
     (errors) => {
       console.error("Form validation errors:", errors);
+      const errorMessages = Object.values(errors)
+        .map((error: any) => error?.message)
+        .filter(Boolean)
+        .join(", ");
+
       toast({
         title: "Validation Error",
-        description: "Please check the form and fix any errors.",
+        description:
+          errorMessages || "Please check the form and fix any errors.",
         variant: "destructive",
       });
     }
@@ -487,6 +513,11 @@ export default function PriceLists() {
   const openDeleteConfirmation = (priceList: PriceList) => {
     setDeletingPriceList(priceList);
     setDeleteConfirmOpen(true);
+  };
+
+  // Handle card click to navigate to details
+  const handleCardClick = (priceList: PriceList) => {
+    setLocation(`/price-lists/${priceList._id}`);
   };
 
   // Format date for display
@@ -559,7 +590,8 @@ export default function PriceLists() {
           {priceLists.map((priceList) => (
             <Card
               key={priceList._id}
-              className="overflow-hidden hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1 flex flex-col h-[380px] sm:h-[360px] lg:h-[340px]"
+              className="overflow-hidden hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1 flex flex-col h-[380px] sm:h-[360px] lg:h-[340px] cursor-pointer"
+              onClick={() => handleCardClick(priceList)}
             >
               <CardHeader className="pb-3 px-4 sm:px-6">
                 <CardTitle className="text-base sm:text-lg line-clamp-1">
@@ -1140,18 +1172,7 @@ export default function PriceLists() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    console.log("Current form values:", editForm.getValues());
-                    console.log("Form state:", editForm.formState);
-                    console.log("Form errors:", editForm.formState.errors);
-                  }}
-                  disabled={loading}
-                >
-                  Debug Form
-                </Button>
+
                 <Button
                   type="submit"
                   style={{
