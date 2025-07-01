@@ -4,6 +4,7 @@ import activities from "./activities/activitiesSlice";
 import transactionTypes from "./transactionTypes/transactionTypesSlice";
 import locations from "./locations/locationsSlice";
 import customers from "./customers/customersSlice";
+import priceLists from "./priceLists/priceListsSlice";
 
 export const rootReducer = combineReducers({
   auth,
@@ -11,4 +12,5 @@ export const rootReducer = combineReducers({
   transactionTypes,
   locations,
   customers,
+  priceLists,
 });
