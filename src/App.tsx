@@ -20,12 +20,14 @@ import ErrorPage from "@/pages/ErrorPage";
 import MainLayout from "@/components/MainLayout";
 import { persistor } from "@/store";
 import { PersistGate } from "redux-persist/integration/react";
+import Overview from "./pages/Overview";
 
 function Router() {
   return (
     <MainLayout>
       <Switch>
-        <Route path="/" component={ActivityManagement} />
+        <Route path="/" component={Overview} />
+        <Route path="/activities" component={ActivityManagement} />
         <Route path="/orders" component={OrdersList} />
         <Route path="/create-order" component={CreateOrder} />
         <Route path="/price-lists" component={PriceLists} />
