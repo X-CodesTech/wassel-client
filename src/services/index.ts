@@ -4,6 +4,7 @@ import activitieServices from "./activitieServices";
 import transactionTypesServices from "./transactionTypesServices";
 import subActivityServices from "./subActivityServices";
 import customerServices from "./customerServices";
+import vendorServices from "./vendorServices";
 
 export {
   http,
@@ -12,4 +13,5 @@ export {
   transactionTypesServices,
   subActivityServices,
   customerServices,
+  vendorServices,
 };

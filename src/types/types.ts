@@ -225,42 +225,51 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
 // Vendor interface and schemas
 export interface Vendor {
-  id: number;
-  name: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
-  address: string;
-  category: string;
-  status: "active" | "inactive";
-  contractStartDate: string;
-  contractEndDate: string;
-  rating: number;
-  totalOrders: number;
-  createdAt: string;
+  _id: string;
+  vendAccount: string;
+  vendName: string;
+  blocked: boolean;
+  vendGroupId: string;
+  createdDate: string;
+  updatedAt: string;
 }
 
 export const vendorSchema = z.object({
-  id: z.number().optional(),
-  name: z.string().min(1, "Vendor name is required"),
-  contactPerson: z.string().min(1, "Contact person is required"),
-  email: z.string().email("Valid email address is required"),
-  phone: z.string().min(1, "Phone number is required"),
-  address: z.string().min(1, "Address is required"),
-  category: z.string().min(1, "Category is required"),
-  status: z.enum(["active", "inactive"]).default("active"),
-  contractStartDate: z.string().min(1, "Contract start date is required"),
-  contractEndDate: z.string().min(1, "Contract end date is required"),
-  rating: z.number().min(0).max(5).default(0),
-  totalOrders: z.number().default(0),
-  createdAt: z.string().optional(),
+  _id: z.string().optional(),
+  vendAccount: z.string().min(1, "Vendor account is required"),
+  vendName: z.string().min(1, "Vendor name is required"),
+  blocked: z.boolean().default(false),
+  vendGroupId: z.string().min(1, "Vendor group ID is required"),
+  createdDate: z.string().optional(),
+  updatedAt: z.string().optional(),
 });
 
 export const insertVendorSchema = vendorSchema.omit({
-  id: true,
-  createdAt: true,
+  _id: true,
+  createdDate: true,
+  updatedAt: true,
 });
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
+
+// Vendor filter interface
+export interface VendorFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: "createdDate" | "vendName" | "vendAccount";
+  sortOrder?: "asc" | "desc";
+}
+
+// Vendor response interface
+export interface VendorResponse {
+  data: Vendor[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
 
 // Customer interfaces and schemas
 export interface Customer {
@@ -282,8 +291,8 @@ export interface CustomerFilters {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: 'createdDate' | 'custName' | 'custAccount';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "createdDate" | "custName" | "custAccount";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface CustomerResponse {

@@ -8,4 +8,5 @@ export const apiUrlConstants = {
   locations: "/api/v1/locations",
   customers: "/api/v1/customers",
   priceLists: "/api/v1/price-lists",
+  vendors: "/api/v1/vendors",
 };
