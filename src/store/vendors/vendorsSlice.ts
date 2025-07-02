@@ -7,6 +7,8 @@ import { VendorSyncResponse } from "@/services/vendorServices";
 
 interface IVendorsState {
   records: Vendor[];
+  activeVendorsCount: number;
+  blockedVendorsCount: number;
   loading: TLoading;
   error: null | string;
   syncLoading: TLoading;
@@ -23,6 +25,8 @@ interface IVendorsState {
 const initialState: IVendorsState = {
   records: [],
   loading: "idle",
+  activeVendorsCount: 0,
+  blockedVendorsCount: 0,
   error: null,
   syncLoading: "idle",
   syncError: null,
@@ -64,6 +68,9 @@ const vendorsSlice = createSlice({
       const response: VendorResponse = action.payload;
       state.records = response.data;
       state.pagination = response.pagination;
+      state.activeVendorsCount = response.activeVendorsCount;
+      state.blockedVendorsCount =
+        response.pagination.total - response.activeVendorsCount;
     });
     builder.addCase(actGetVendors.rejected, (state, action) => {
       state.loading = "rejected";

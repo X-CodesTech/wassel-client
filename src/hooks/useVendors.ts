@@ -15,6 +15,8 @@ export const useVendors = () => {
   const dispatch = useDispatch();
   const {
     records,
+    activeVendorsCount,
+    blockedVendorsCount,
     loading,
     error,
     pagination,
@@ -25,13 +27,13 @@ export const useVendors = () => {
 
   const getVendors = useCallback(
     (filters?: VendorFilters) => {
-      dispatch(actGetVendors(filters || {}));
+      dispatch(actGetVendors(filters || {}) as any);
     },
     [dispatch]
   );
 
   const syncVendors = useCallback(() => {
-    dispatch(actSyncVendors());
+    dispatch(actSyncVendors() as any);
   }, [dispatch]);
 
   const clearError = useCallback(() => {
@@ -52,6 +54,8 @@ export const useVendors = () => {
 
   return {
     records,
+    activeVendorsCount,
+    blockedVendorsCount,
     loading,
     error,
     pagination,

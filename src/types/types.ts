@@ -262,6 +262,7 @@ export interface VendorFilters {
 
 // Vendor response interface
 export interface VendorResponse {
+  activeVendorsCount: number;
   data: Vendor[];
   pagination: {
     total: number;

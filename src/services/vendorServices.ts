@@ -39,7 +39,7 @@ const vendorServices = {
    * Sync vendors from remote API
    */
   syncVendors: async (): Promise<VendorSyncResponse> => {
-    const response = await http.post(`${apiUrlConstants.vendors}/sync`);
+    const response = await http.get(`${apiUrlConstants.vendors}/sync`);
     return response.data;
   },
 };

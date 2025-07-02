@@ -34,10 +34,13 @@ export default function VendorsList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageLimit, setPageLimit] = useState(10);
   const [location, navigate] = useLocation();
   const { toast } = useToast();
   const {
     records: vendors,
+    activeVendorsCount,
+    blockedVendorsCount,
     loading,
     error,
     pagination,
@@ -55,13 +58,13 @@ export default function VendorsList() {
   useEffect(() => {
     const filters: VendorFilters = {
       page: currentPage,
-      limit: 10,
+      limit: pageLimit,
       search: searchTerm || undefined,
       sortBy: "createdDate",
       sortOrder: "desc",
     };
     getVendors(filters);
-  }, [currentPage, searchTerm]); // Removed getVendors from dependencies
+  }, [currentPage, searchTerm, pageLimit]); // Removed getVendors from dependencies
 
   // Clear error when component unmounts
   useEffect(() => {
@@ -79,7 +82,7 @@ export default function VendorsList() {
       // After sync, refresh the vendors list
       const filters: VendorFilters = {
         page: currentPage,
-        limit: 10,
+        limit: pageLimit,
         search: searchTerm || undefined,
         sortBy: "createdDate",
         sortOrder: "desc",
@@ -117,6 +120,45 @@ export default function VendorsList() {
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1); // Reset to first page when searching
+  };
+
+  // Handle page limit change
+  const handlePageLimitChange = (value: string) => {
+    setPageLimit(Number(value));
+    setCurrentPage(1); // Reset to first page when changing limit
+  };
+
+  // Generate page numbers for pagination
+  const generatePageNumbers = () => {
+    const totalPages = pagination.totalPages;
+    const current = pagination.page;
+    const pages = [];
+
+    // Always show first page
+    pages.push(1);
+
+    // Show pages around current page
+    const start = Math.max(2, current - 2);
+    const end = Math.min(totalPages - 1, current + 2);
+
+    if (start > 2) {
+      pages.push("...");
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (end < totalPages - 1) {
+      pages.push("...");
+    }
+
+    // Always show last page if there's more than one page
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+
+    return pages;
   };
 
   const getStatusBadge = (blocked: boolean) => {
@@ -210,9 +252,7 @@ export default function VendorsList() {
             <Badge className="bg-green-100 text-green-800">Active</Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {vendors.filter((v) => !v.blocked).length}
-            </div>
+            <div className="text-2xl font-bold">{activeVendorsCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -223,9 +263,7 @@ export default function VendorsList() {
             <Badge variant="secondary">Blocked</Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {vendors.filter((v) => v.blocked).length}
-            </div>
+            <div className="text-2xl font-bold">{blockedVendorsCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -301,14 +339,36 @@ export default function VendorsList() {
       </div>
 
       {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
-            {pagination.total} results
+      {pagination.totalPages > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-700">
+              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+              of {pagination.total} results
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Show:</span>
+              <Select
+                value={pageLimit.toString()}
+                onValueChange={handlePageLimitChange}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-gray-600">per page</span>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
+
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -317,9 +377,26 @@ export default function VendorsList() {
             >
               Previous
             </Button>
-            <span className="text-sm">
-              Page {pagination.page} of {pagination.totalPages}
-            </span>
+
+            <div className="flex items-center gap-1">
+              {generatePageNumbers().map((page, index) => (
+                <div key={index}>
+                  {page === "..." ? (
+                    <span className="px-3 py-2 text-sm text-gray-500">...</span>
+                  ) : (
+                    <Button
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page as number)}
+                      className="w-10 h-10"
+                    >
+                      {page}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
             <Button
               variant="outline"
               size="sm"
