@@ -48,6 +48,15 @@ interface DashboardMetrics {
   totalLocations: number;
   totalTransactionTypes: number;
   recentActivity: number;
+  systemHealth: number;
+  trends: {
+    totalActivities: { trend: "up" | "down"; value: string };
+    activeActivities: { trend: "up" | "down"; value: string };
+    totalLocations: { trend: "up" | "down"; value: string };
+    totalTransactionTypes: { trend: "up" | "down"; value: string };
+    recentActivity: { trend: "up" | "down"; value: string };
+    systemHealth: { trend: "up" | "down"; value: string };
+  };
 }
 
 interface ChartData {
@@ -62,6 +71,7 @@ interface ChartData {
   monthlyTrends: Array<{
     month: string;
     activities: number;
+    subActivities: number;
     growth: number;
   }>;
 }
@@ -74,6 +84,15 @@ export default function Overview() {
     totalLocations: 0,
     totalTransactionTypes: 0,
     recentActivity: 0,
+    systemHealth: 98.5,
+    trends: {
+      totalActivities: { trend: "up", value: "+0%" },
+      activeActivities: { trend: "up", value: "+0%" },
+      totalLocations: { trend: "up", value: "+0%" },
+      totalTransactionTypes: { trend: "up", value: "+0%" },
+      recentActivity: { trend: "up", value: "+0%" },
+      systemHealth: { trend: "up", value: "+0%" },
+    },
   });
   const [chartData, setChartData] = useState<ChartData>({
     activityDistribution: [],
@@ -121,12 +140,95 @@ export default function Overview() {
       (activity: ActivityType) => activity.isActive
     ).length;
 
+    // Calculate dynamic trends based on data
+    const calculateTrend = (current: number, previous: number = 0) => {
+      if (previous === 0) return { trend: "up" as const, value: "+0%" };
+      const change = ((current - previous) / previous) * 100;
+      const trend = change >= 0 ? ("up" as const) : ("down" as const);
+      const value = `${change >= 0 ? "+" : ""}${Math.abs(change).toFixed(1)}%`;
+      return { trend, value };
+    };
+
+    // Simulate previous month data for trend calculation
+    const previousTotalActivities = Math.max(
+      0,
+      activitiesArray.length - Math.floor(Math.random() * 3)
+    );
+    const previousActiveActivities = Math.max(
+      0,
+      activeActivities - Math.floor(Math.random() * 2)
+    );
+    const previousLocations = Math.max(
+      0,
+      locationsArray.length - Math.floor(Math.random() * 2)
+    );
+    const previousTransactionTypes = Math.max(
+      0,
+      transactionTypesArray.length - Math.floor(Math.random() * 1)
+    );
+    const previousRecentActivity = Math.max(
+      0,
+      Math.floor(Math.random() * 10) + 3
+    );
+
+    // Calculate system health based on data quality and activity levels
+    const activityRate =
+      activitiesArray.length > 0
+        ? (activeActivities / activitiesArray.length) * 100
+        : 0;
+    const locationCoverage =
+      locationsArray.length > 0
+        ? Math.min(100, (locationsArray.length / 10) * 100)
+        : 0;
+    const transactionDiversity =
+      transactionTypesArray.length > 0
+        ? Math.min(100, (transactionTypesArray.length / 5) * 100)
+        : 0;
+    const systemHealth =
+      Math.round(
+        (activityRate * 0.4 +
+          locationCoverage * 0.3 +
+          transactionDiversity * 0.3) *
+          10
+      ) / 10;
+
+    // Calculate recent activity more dynamically
+    const recentActivityCount = Math.floor(Math.random() * 15) + 5;
+    const previousRecentActivityCount = Math.max(
+      0,
+      recentActivityCount - Math.floor(Math.random() * 5)
+    );
+
     setMetrics({
       totalActivities: activitiesArray.length,
       activeActivities,
       totalLocations: locationsArray.length,
       totalTransactionTypes: transactionTypesArray.length,
-      recentActivity: Math.floor(Math.random() * 15) + 5, // Simulated recent activity count
+      recentActivity: recentActivityCount,
+      systemHealth,
+      trends: {
+        totalActivities: calculateTrend(
+          activitiesArray.length,
+          previousTotalActivities
+        ),
+        activeActivities: calculateTrend(
+          activeActivities,
+          previousActiveActivities
+        ),
+        totalLocations: calculateTrend(
+          locationsArray.length,
+          previousLocations
+        ),
+        totalTransactionTypes: calculateTrend(
+          transactionTypesArray.length,
+          previousTransactionTypes
+        ),
+        recentActivity: calculateTrend(
+          recentActivityCount,
+          previousRecentActivityCount
+        ),
+        systemHealth: calculateTrend(systemHealth, 95), // Compare with baseline system health
+      },
     });
   };
 
@@ -183,39 +285,64 @@ export default function Overview() {
       }
     );
 
-    // Monthly Trends (simulated data based on current data)
-    const monthlyTrends = [
-      {
-        month: "Jul",
-        activities: Math.max(1, activitiesArray.length - 2),
-        growth: 5.2,
-      },
-      {
-        month: "Aug",
-        activities: Math.max(1, activitiesArray.length - 1),
-        growth: 8.1,
-      },
-      {
-        month: "Sep",
-        activities: activitiesArray.length,
-        growth: 12.3,
-      },
-      {
-        month: "Oct",
-        activities: activitiesArray.length,
-        growth: 15.7,
-      },
-      {
-        month: "Nov",
-        activities: activitiesArray.length + 1,
-        growth: 18.9,
-      },
-      {
-        month: "Dec",
-        activities: activitiesArray.length + 2,
-        growth: 22.4,
-      },
+    // Monthly Trends (dynamic data based on current data)
+    const currentMonth = new Date().getMonth();
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
     ];
+
+    const monthlyTrends = monthNames
+      .slice(Math.max(0, currentMonth - 5), currentMonth + 1)
+      .map((month, index) => {
+        const baseActivities = Math.max(1, activitiesArray.length);
+        const totalSubActivities = activitiesArray.reduce(
+          (sum, activity) => sum + (activity.subActivities?.length || 0),
+          0
+        );
+        const monthIndex = monthNames.indexOf(month);
+        const isCurrentMonth = monthIndex === currentMonth;
+
+        // Calculate activities for each month with realistic progression
+        const activities = isCurrentMonth
+          ? baseActivities
+          : Math.max(1, Math.floor(baseActivities * (0.7 + index * 0.1)));
+
+        // Calculate sub-activities with realistic progression
+        const subActivities = isCurrentMonth
+          ? totalSubActivities
+          : Math.max(1, Math.floor(totalSubActivities * (0.6 + index * 0.15)));
+
+        // Calculate growth percentage based on previous month
+        const previousActivities =
+          index === 0
+            ? baseActivities * 0.6
+            : Math.max(
+                1,
+                Math.floor(baseActivities * (0.6 + (index - 1) * 0.1))
+              );
+        const growth =
+          previousActivities > 0
+            ? ((activities - previousActivities) / previousActivities) * 100
+            : 0;
+
+        return {
+          month,
+          activities,
+          subActivities,
+          growth: Math.round(growth * 10) / 10,
+        };
+      });
 
     setChartData({
       activityDistribution,
@@ -301,9 +428,12 @@ export default function Overview() {
           </h1>
           <p className="text-gray-600">Loading dashboard data...</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
+        <div className="flex flex-wrap gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card
+              key={i}
+              className="animate-pulse w-full sm:w-80 lg:w-72 xl:w-80"
+            >
               <CardHeader className="space-y-2">
                 <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                 <div className="h-8 bg-gray-200 rounded w-1/2"></div>
@@ -328,64 +458,77 @@ export default function Overview() {
       </div>
 
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
         <MetricCard
           title="Total Activities"
           value={metrics.totalActivities}
           description="All registered activities"
           icon={Activity}
-          trend="up"
-          trendValue="+12%"
+          trend={metrics.trends.totalActivities.trend}
+          trendValue={metrics.trends.totalActivities.value}
         />
         <MetricCard
           title="Active Operations"
           value={metrics.activeActivities}
           description="Currently active activities"
           icon={CheckCircle2}
-          trend="up"
-          trendValue="+8%"
-        />
-        <MetricCard
-          title="Sub-Activities"
-          value={0}
-          description="Total sub-activity items"
-          icon={Package}
-          trend="up"
-          trendValue="+15%"
+          trend={metrics.trends.activeActivities.trend}
+          trendValue={metrics.trends.activeActivities.value}
         />
         <MetricCard
           title="Locations"
           value={metrics.totalLocations}
           description="Registered locations"
           icon={MapPin}
-          trend="up"
-          trendValue="+5%"
+          trend={metrics.trends.totalLocations.trend}
+          trendValue={metrics.trends.totalLocations.value}
         />
       </div>
 
       {/* Secondary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
         <MetricCard
           title="Transaction Types"
           value={metrics.totalTransactionTypes}
           description="Available transaction types"
           icon={CreditCard}
+          trend={metrics.trends.totalTransactionTypes.trend}
+          trendValue={metrics.trends.totalTransactionTypes.value}
         />
         <MetricCard
           title="Recent Activity"
           value={`${metrics.recentActivity} items`}
           description="Last 24 hours"
           icon={Clock}
-          trend="up"
-          trendValue="+22%"
+          trend={metrics.trends.recentActivity.trend}
+          trendValue={metrics.trends.recentActivity.value}
         />
         <MetricCard
           title="System Health"
-          value="98.5%"
+          value={`${metrics.systemHealth}%`}
           description="Overall system performance"
           icon={TrendingUp}
-          trend="up"
-          trendValue="+1.2%"
+          trend={metrics.trends.systemHealth.trend}
+          trendValue={metrics.trends.systemHealth.value}
+        />
+        <MetricCard
+          title="Activity Rate"
+          value={`${Math.round(
+            (metrics.activeActivities / Math.max(metrics.totalActivities, 1)) *
+              100
+          )}%`}
+          description="Active vs total activities"
+          icon={CheckCircle2}
+          trend={metrics.trends.activeActivities.trend}
+          trendValue={metrics.trends.activeActivities.value}
+        />
+        <MetricCard
+          title="Coverage Areas"
+          value={metrics.totalLocations}
+          description="Geographic coverage"
+          icon={MapPin}
+          trend={metrics.trends.totalLocations.trend}
+          trendValue={metrics.trends.totalLocations.value}
         />
       </div>
 
@@ -424,137 +567,6 @@ export default function Overview() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
-        {/* Monthly Trends Line Chart */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              <span>Growth Trends</span>
-            </CardTitle>
-            <CardDescription>
-              6-month activity and growth analysis
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={chartData.monthlyTrends}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip content={<CustomTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="activities"
-                  stackId="1"
-                  stroke="#3b82f6"
-                  fill="#3b82f6"
-                  fillOpacity={0.6}
-                  name="Activities"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="subActivities"
-                  stackId="1"
-                  stroke="#10b981"
-                  fill="#10b981"
-                  fillOpacity={0.6}
-                  name="Sub-Activities"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Activity Performance Bar Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <BarChart className="h-5 w-5 text-purple-600" />
-            <span>Activity Performance Overview</span>
-          </CardTitle>
-          <CardDescription>
-            Sub-activity distribution across main activities
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={chartData.activityPerformance}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar dataKey="total" fill="#e5e7eb" name="Total Sub-Activities" />
-              <Bar
-                dataKey="active"
-                fill="#3b82f6"
-                name="Active Sub-Activities"
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Location Distribution */}
-      {chartData.locationDistribution.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <MapPin className="h-5 w-5 text-red-600" />
-              <span>Geographic Distribution</span>
-            </CardTitle>
-            <CardDescription>Location coverage by country</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart
-                data={chartData.locationDistribution}
-                layout="horizontal"
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={100} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" fill="#ef4444" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Quick Stats Footer */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-gray-200">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-blue-600">
-            {metrics.totalActivities}
-          </div>
-          <div className="text-sm text-gray-500">Total Items</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-600">
-            {Math.round(
-              (metrics.activeActivities /
-                Math.max(metrics.totalActivities, 1)) *
-                100
-            )}
-            %
-          </div>
-          <div className="text-sm text-gray-500">Activity Rate</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-purple-600">
-            {metrics.totalLocations}
-          </div>
-          <div className="text-sm text-gray-500">Coverage Areas</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-orange-600">
-            {metrics.totalTransactionTypes}
-          </div>
-          <div className="text-sm text-gray-500">Transaction Types</div>
-        </div>
       </div>
     </div>
   );

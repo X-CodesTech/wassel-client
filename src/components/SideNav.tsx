@@ -157,7 +157,8 @@ export default function SideNav({ collapsed, onToggleCollapse }: SideNavProps) {
         </div>
 
         {/* Create New Order Button */}
-        <div className="p-4 flex-shrink-0">
+
+        {/* <div className="p-4 flex-shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -175,7 +176,7 @@ export default function SideNav({ collapsed, onToggleCollapse }: SideNavProps) {
               <TooltipContent side="right">Create new order</TooltipContent>
             )}
           </Tooltip>
-        </div>
+        </div> */}
 
         {/* Scrollable Navigation */}
         <nav className="flex-1 min-h-0">
