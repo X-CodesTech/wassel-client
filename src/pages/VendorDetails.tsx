@@ -14,104 +14,35 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useVendors } from "@/hooks/useVendors";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import {
+  actGetVendorPriceLists,
+  actCreateVendorPriceList,
+  actUpdateVendorPriceList,
+  actDeleteVendorPriceList,
+  clearPriceLists,
+} from "@/store/vendors";
+import VendorPriceListModal from "@/components/VendorPriceListModal";
+import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
 import {
   ArrowLeft,
   Building2,
-  Mail,
-  Phone,
-  MapPin,
   Calendar,
   Star,
   Package,
-  DollarSign,
   TrendingUp,
   Edit,
   FileText,
   Clock,
+  Plus,
+  Trash2,
 } from "lucide-react";
-
-// Sample vendor data - in a real app this would come from props or API
-const sampleVendor: Vendor = {
-  id: 1,
-  name: "Abo Khalaf",
-  contactPerson: "Mohammed Abo Khalaf",
-  email: "Mohammed@AB.PS",
-  phone: "059964001",
-  address: "Palestine, Ramallah, Almasyoun",
-  category: "Transportation",
-  status: "active",
-  contractStartDate: "2024-01-15",
-  contractEndDate: "2025-01-15",
-  rating: 4.5,
-  totalOrders: 145,
-  createdAt: "2024-01-10T10:00:00Z",
-};
-
-// Extended vendor details matching the image
-const vendorDetails = {
-  vendorStatus: "Activated",
-  vendorAPI: "JsonA",
-  location: "Ramallah",
-  creationDate: "13/5/2025",
-  vendorID: "VN.0044",
-  contactPerson: "Mohammed Abo Khalaf",
-  vatNumber: "PS.VAT.50",
-  mobileNo: "059964001",
-  phoneNo: "0000000000",
-  financeEmail: "Mohammed@AB.PS",
-  lastUpdate: "13/5/2025 11:56:56 AM",
-};
-
-// Sample order history
-const orderHistory = [
-  {
-    id: 1,
-    orderNumber: "ORD-2024-156",
-    date: "2024-05-20",
-    amount: 2850.0,
-    status: "completed",
-    service: "Express Delivery",
-  },
-  {
-    id: 2,
-    orderNumber: "ORD-2024-143",
-    date: "2024-05-15",
-    amount: 1920.0,
-    status: "completed",
-    service: "Standard Shipping",
-  },
-  {
-    id: 3,
-    orderNumber: "ORD-2024-128",
-    date: "2024-05-10",
-    amount: 3200.0,
-    status: "in-progress",
-    service: "Freight Transport",
-  },
-  {
-    id: 4,
-    orderNumber: "ORD-2024-102",
-    date: "2024-05-05",
-    amount: 1650.0,
-    status: "completed",
-    service: "Local Delivery",
-  },
-];
-
-// Sample performance metrics
-const performanceMetrics = {
-  onTimeDelivery: 94.5,
-  customerSatisfaction: 4.2,
-  averageResponseTime: 2.3,
-  totalRevenue: 45670.0,
-  monthlyOrders: [
-    { month: "Jan", orders: 12, revenue: 8450 },
-    { month: "Feb", orders: 15, revenue: 9200 },
-    { month: "Mar", orders: 18, revenue: 11300 },
-    { month: "Apr", orders: 22, revenue: 13800 },
-    { month: "May", orders: 25, revenue: 15650 },
-  ],
-};
+import {
+  CreateVendorPriceListRequest,
+  UpdateVendorPriceListRequest,
+  VendorPriceList,
+} from "@/services/vendorServices";
 
 interface VendorDetailsProps {
   params?: {
@@ -120,20 +51,188 @@ interface VendorDetailsProps {
 }
 
 export default function VendorDetails({ params }: VendorDetailsProps) {
-  const [vendor, setVendor] = useState<Vendor>(sampleVendor);
+  const [vendor, setVendor] = useState<Vendor | null>(null);
   const [location, navigate] = useLocation();
   const { toast } = useToast();
+  const { records, loading, getVendors } = useVendors();
+  const dispatch = useAppDispatch();
+
+  // Modal states
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedPriceList, setSelectedPriceList] =
+    useState<VendorPriceList | null>(null);
+
+  // Get vendor price lists state from Redux
+  const {
+    priceLists,
+    getPriceListsLoading,
+    getPriceListsError,
+    createPriceListLoading,
+    updatePriceListLoading,
+    deletePriceListLoading,
+  } = useAppSelector((state) => state.vendors);
 
   useEffect(() => {
-    // In a real app, fetch vendor data based on params?.id
-    // For now, we're using sample data
-  }, [params?.id]);
+    // Fetch all vendors if not already loaded
+    if (records.length === 0) {
+      getVendors();
+    }
+  }, [getVendors, records.length]);
 
-  const getStatusBadge = (status: Vendor["status"]) => {
-    return status === "active" ? (
-      <Badge className="bg-green-100 text-green-800">Active</Badge>
+  useEffect(() => {
+    // Find the specific vendor by vendAccount
+    if (params?.id && records.length > 0) {
+      const foundVendor = records.find((v) => v.vendAccount === params.id);
+      if (foundVendor) {
+        setVendor(foundVendor);
+        // Fetch vendor price lists
+        dispatch(actGetVendorPriceLists(foundVendor._id));
+      } else {
+        toast({
+          title: "Vendor not found",
+          description: `Vendor with account ${params.id} was not found.`,
+          variant: "destructive",
+        });
+        navigate("/vendors");
+      }
+    }
+  }, [params?.id, records, toast, navigate, dispatch]);
+
+  // Cleanup price lists when component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(clearPriceLists());
+    };
+  }, [dispatch]);
+
+  // Show error toast if price lists fetch fails
+  useEffect(() => {
+    if (getPriceListsError) {
+      toast({
+        title: "Error loading price lists",
+        description: getPriceListsError,
+        variant: "destructive",
+      });
+    }
+  }, [getPriceListsError, toast]);
+
+  // CRUD Operation Handlers
+  const handleCreatePriceList = async (data: CreateVendorPriceListRequest) => {
+    try {
+      const result = await dispatch(actCreateVendorPriceList(data));
+      if (actCreateVendorPriceList.fulfilled.match(result)) {
+        toast({
+          title: "Success",
+          description: "Price list created successfully",
+        });
+        // Refresh the price lists
+        if (vendor) {
+          dispatch(actGetVendorPriceLists(vendor._id));
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create price list",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdatePriceList = async (
+    data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest
+  ) => {
+    try {
+      const result = await dispatch(
+        actUpdateVendorPriceList(data as UpdateVendorPriceListRequest)
+      );
+      if (actUpdateVendorPriceList.fulfilled.match(result)) {
+        toast({
+          title: "Success",
+          description: "Price list updated successfully",
+        });
+        // Refresh the price lists
+        if (vendor) {
+          dispatch(actGetVendorPriceLists(vendor._id));
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update price list",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeletePriceList = async () => {
+    if (!selectedPriceList) return;
+
+    try {
+      const result = await dispatch(
+        actDeleteVendorPriceList(selectedPriceList._id)
+      );
+      if (actDeleteVendorPriceList.fulfilled.match(result)) {
+        toast({
+          title: "Success",
+          description: "Price list deleted successfully",
+        });
+        setIsDeleteDialogOpen(false);
+        setSelectedPriceList(null);
+        // Refresh the price lists
+        if (vendor) {
+          dispatch(actGetVendorPriceLists(vendor._id));
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete price list",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Modal handlers
+  const handleAddPriceList = () => {
+    setIsAddModalOpen(true);
+  };
+
+  const handleEditPriceList = (priceList: VendorPriceList) => {
+    setSelectedPriceList(priceList);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeletePriceListClick = (priceList: VendorPriceList) => {
+    setSelectedPriceList(priceList);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const getStatusBadge = (blocked: boolean) => {
+    return blocked ? (
+      <Badge variant="destructive">Blocked</Badge>
     ) : (
-      <Badge variant="secondary">Inactive</Badge>
+      <Badge className="bg-green-100 text-green-800">Active</Badge>
     );
   };
 
@@ -165,10 +264,83 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     ));
   };
 
-  const contractDaysRemaining = Math.ceil(
-    (new Date(vendor.contractEndDate).getTime() - new Date().getTime()) /
-      (1000 * 3600 * 24)
-  );
+  // Sample data for demonstration - in a real app this would come from API
+  const orderHistory = [
+    {
+      id: 1,
+      orderNumber: "ORD-2024-156",
+      date: "2024-05-20",
+      amount: 2850.0,
+      status: "completed",
+      service: "Express Delivery",
+    },
+    {
+      id: 2,
+      orderNumber: "ORD-2024-143",
+      date: "2024-05-15",
+      amount: 1920.0,
+      status: "completed",
+      service: "Standard Shipping",
+    },
+    {
+      id: 3,
+      orderNumber: "ORD-2024-128",
+      date: "2024-05-10",
+      amount: 3200.0,
+      status: "in-progress",
+      service: "Freight Transport",
+    },
+    {
+      id: 4,
+      orderNumber: "ORD-2024-102",
+      date: "2024-05-05",
+      amount: 1650.0,
+      status: "completed",
+      service: "Local Delivery",
+    },
+  ];
+
+  const performanceMetrics = {
+    onTimeDelivery: 94.5,
+    customerSatisfaction: 4.2,
+    averageResponseTime: 2.3,
+    totalRevenue: 45670.0,
+    monthlyOrders: [
+      { month: "Jan", orders: 12, revenue: 8450 },
+      { month: "Feb", orders: 15, revenue: 9200 },
+      { month: "Mar", orders: 18, revenue: 11300 },
+      { month: "Apr", orders: 22, revenue: 13800 },
+      { month: "May", orders: 25, revenue: 15650 },
+    ],
+  };
+
+  if (loading === "pending") {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading vendor details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!vendor) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-gray-600">Vendor not found</p>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/vendors")}
+            className="mt-4"
+          >
+            Back to Vendors
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -185,22 +357,13 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             Back to Vendors
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{vendor.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {vendor.vendName}
+            </h1>
             <p className="text-muted-foreground">
               Vendor Details & Performance
             </p>
           </div>
-        </div>
-
-        <div className="flex space-x-2">
-          <Button variant="outline">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Vendor
-          </Button>
-          <Button>
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
         </div>
       </div>
 
@@ -208,57 +371,55 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Vendor Account
+            </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vendor.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              +12% from last month
-            </p>
+            <div className="text-2xl font-bold">{vendor.vendAccount}</div>
+            <p className="text-xs text-muted-foreground">Account ID</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${performanceMetrics.totalRevenue.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">+8% from last month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              On-Time Delivery
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Status</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {performanceMetrics.onTimeDelivery}%
+              {getStatusBadge(vendor.blocked)}
             </div>
             <p className="text-xs text-muted-foreground">
-              +2.1% from last month
+              {vendor.blocked ? "Blocked" : "Active"}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rating</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Created Date</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vendor.rating}</div>
-            <div className="flex items-center mt-1">
-              {getRatingStars(vendor.rating)}
+            <div className="text-2xl font-bold">
+              {new Date(vendor.createdDate).toLocaleDateString()}
             </div>
+            <p className="text-xs text-muted-foreground">Registration date</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Date(vendor.updatedAt).toLocaleDateString()}
+            </div>
+            <p className="text-xs text-muted-foreground">Last modification</p>
           </CardContent>
         </Card>
       </div>
@@ -277,35 +438,29 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-600">
-                  Vendor Status:
+                  Vendor Name:
                 </span>
-                <span className="text-sm font-semibold">
-                  {vendorDetails.vendorStatus}
-                </span>
+                <span className="text-sm font-semibold">{vendor.vendName}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-600">
-                  Vendor API:
+                  Vendor Account:
                 </span>
-                <span className="text-sm">{vendorDetails.vendorAPI}</span>
+                <span className="text-sm">{vendor.vendAccount}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-600">
-                  Location:
+                  Vendor Group ID:
                 </span>
-                <span className="text-sm">{vendorDetails.location}</span>
+                <span className="text-sm">{vendor.vendGroupId}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-600">
-                  Creation date:
+                  Status:
                 </span>
-                <span className="text-sm">{vendorDetails.creationDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Vendor ID:
+                <span className="text-sm">
+                  {vendor.blocked ? "Blocked" : "Active"}
                 </span>
-                <span className="text-sm">{vendorDetails.vendorID}</span>
               </div>
             </div>
 
@@ -313,33 +468,19 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-600">
-                  Contact person:
+                  Created Date:
                 </span>
-                <span className="text-sm">{vendorDetails.contactPerson}</span>
+                <span className="text-sm">
+                  {new Date(vendor.createdDate).toLocaleDateString()}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-600">
-                  VAT Number:
+                  Last Updated:
                 </span>
-                <span className="text-sm">{vendorDetails.vatNumber}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Mobile No:
+                <span className="text-sm">
+                  {new Date(vendor.updatedAt).toLocaleDateString()}
                 </span>
-                <span className="text-sm">{vendorDetails.mobileNo}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Phone No:
-                </span>
-                <span className="text-sm">{vendorDetails.phoneNo}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Finance Email:
-                </span>
-                <span className="text-sm">{vendorDetails.financeEmail}</span>
               </div>
             </div>
 
@@ -347,9 +488,9 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-600">
-                  Last update:
+                  Vendor ID:
                 </span>
-                <span className="text-sm">{vendorDetails.lastUpdate}</span>
+                <span className="text-sm">{vendor._id}</span>
               </div>
             </div>
           </div>
@@ -358,60 +499,150 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
 
       {/* Cost List Section */}
       <Card className="mb-6">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Cost list</CardTitle>
+          <Button size="sm" variant="outline" onClick={handleAddPriceList}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Price List
+          </Button>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Transportation</TableHead>
-                <TableHead>From</TableHead>
-                <TableHead>To</TableHead>
-                <TableHead>Maximum</TableHead>
-                <TableHead>Minimum</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell>Palestine</TableCell>
-                <TableCell>Ramallah</TableCell>
-                <TableCell>Mayson</TableCell>
-                <TableCell>Mayson</TableCell>
-                <TableCell>
-                  <Button size="sm" variant="outline">
-                    Edit
-                  </Button>
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>1350</TableCell>
-                <TableCell>8.5</TableCell>
-                <TableCell>Active</TableCell>
-                <TableCell>15/5/2025</TableCell>
-                <TableCell>15/5/2025</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+          {getPriceListsLoading === "pending" ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Loading price lists...</p>
+              </div>
+            </div>
+          ) : priceLists && priceLists.length > 0 ? (
+            <div className="space-y-4">
+              {priceLists.map((priceList) => (
+                <div key={priceList._id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        {priceList.name}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {priceList.description}
+                      </p>
+                      <div className="flex items-center gap-4 mt-2">
+                        <Badge
+                          variant={priceList.isActive ? "default" : "secondary"}
+                        >
+                          {priceList.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                        <span className="text-xs text-gray-500">
+                          {new Date(
+                            priceList.effectiveFrom
+                          ).toLocaleDateString()}{" "}
+                          -{" "}
+                          {new Date(priceList.effectiveTo).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditPriceList(priceList)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDeletePriceListClick(priceList)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
 
-      {/* Vendor Attachments */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-pink-600">Vendor attachments</CardTitle>
-          <p className="text-sm text-gray-600">
-            Upload, download, insert data and select type of attachment
-          </p>
-        </CardHeader>
-        <CardContent className="min-h-[100px] border-2 border-dashed border-pink-300 rounded-lg flex items-center justify-center">
-          <p className="text-gray-500">No attachments uploaded</p>
+                  {priceList.subActivityPrices &&
+                    priceList.subActivityPrices.length > 0 && (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Sub Activity</TableHead>
+                            <TableHead>Pricing Method</TableHead>
+                            <TableHead>Base Cost</TableHead>
+                            <TableHead>Location Prices</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {priceList.subActivityPrices.map(
+                            (subActivity, index) => (
+                              <TableRow key={index}>
+                                <TableCell className="font-medium">
+                                  {subActivity.subActivity}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className="capitalize"
+                                  >
+                                    {subActivity.pricingMethod}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>${subActivity.cost}</TableCell>
+                                <TableCell>
+                                  {subActivity.locationPrices &&
+                                  subActivity.locationPrices.length > 0 ? (
+                                    <div className="space-y-1">
+                                      {subActivity.locationPrices.map(
+                                        (locationPrice, locIndex) => (
+                                          <div
+                                            key={locIndex}
+                                            className="text-xs"
+                                          >
+                                            <span className="font-medium">
+                                              {locationPrice.fromLocation} →{" "}
+                                              {locationPrice.toLocation}:
+                                            </span>{" "}
+                                            ${locationPrice.cost}
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-500 text-sm">
+                                      No location prices
+                                    </span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          )}
+                        </TableBody>
+                      </Table>
+                    )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No price lists found
+              </h3>
+              <p className="text-gray-500 mb-4">
+                This vendor doesn't have any price lists configured yet.
+              </p>
+              <Button size="sm" variant="outline" onClick={handleAddPriceList}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create First Price List
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Payment Requests */}
-      <Card className="mb-6">
+      {/* <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-pink-600">
             Payment requests per vendor
@@ -451,10 +682,10 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             </Table>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
-      {/* Sub vendor */}
-      <Card className="mb-6">
+      {/* Sub vendor - Commented out for future use */}
+      {/* <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-pink-600">Sub vendor</CardTitle>
           <p className="text-sm text-gray-600">
@@ -464,194 +695,80 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         <CardContent className="min-h-[100px] border-2 border-dashed border-pink-300 rounded-lg flex items-center justify-center">
           <p className="text-gray-500">No sub vendors defined</p>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Main Content */}
       <div className="grid grid-cols-1 gap-6">
-        {/* Tabs Section */}
+        {/* Order History Section */}
         <div className="lg:col-span-2">
-          <Tabs defaultValue="orders" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="orders">Order History</TabsTrigger>
-              <TabsTrigger value="performance">Performance</TabsTrigger>
-              <TabsTrigger value="documents">Documents</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="orders">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Orders</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Order Number</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Service</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {orderHistory.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-medium">
-                            {order.orderNumber}
-                          </TableCell>
-                          <TableCell>
-                            {new Date(order.date).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>{order.service}</TableCell>
-                          <TableCell>${order.amount.toFixed(2)}</TableCell>
-                          <TableCell>
-                            {getOrderStatusBadge(order.status)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="performance">
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Performance Metrics</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm font-medium">
-                          On-Time Delivery Rate
-                        </div>
-                        <div className="text-2xl font-bold text-green-600">
-                          {performanceMetrics.onTimeDelivery}%
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium">
-                          Customer Satisfaction
-                        </div>
-                        <div className="text-2xl font-bold text-blue-600">
-                          {performanceMetrics.customerSatisfaction}/5
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium">
-                          Avg Response Time
-                        </div>
-                        <div className="text-2xl font-bold">
-                          {performanceMetrics.averageResponseTime}h
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium">Total Revenue</div>
-                        <div className="text-2xl font-bold text-green-600">
-                          ${performanceMetrics.totalRevenue.toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Monthly Performance</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Month</TableHead>
-                          <TableHead>Orders</TableHead>
-                          <TableHead>Revenue</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {performanceMetrics.monthlyOrders.map(
-                          (month, index) => (
-                            <TableRow key={index}>
-                              <TableCell>{month.month}</TableCell>
-                              <TableCell>{month.orders}</TableCell>
-                              <TableCell>
-                                ${month.revenue.toLocaleString()}
-                              </TableCell>
-                            </TableRow>
-                          )
-                        )}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="documents">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contract Documents</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <p className="font-medium">
-                            Service Agreement 2024-2025
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Signed on{" "}
-                            {new Date(
-                              vendor.contractStartDate
-                            ).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Download
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-5 w-5 text-green-600" />
-                        <div>
-                          <p className="font-medium">Insurance Certificate</p>
-                          <p className="text-sm text-muted-foreground">
-                            Valid until Dec 2024
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Download
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-5 w-5 text-purple-600" />
-                        <div>
-                          <p className="font-medium">Compliance Certificate</p>
-                          <p className="text-sm text-muted-foreground">
-                            Updated monthly
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Download
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          <Card>
+            <CardHeader>
+              <CardTitle>Order History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order Number</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Service</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orderHistory.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">
+                        {order.orderNumber}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(order.date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>{order.service}</TableCell>
+                      <TableCell>${order.amount.toFixed(2)}</TableCell>
+                      <TableCell>{getOrderStatusBadge(order.status)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Modals */}
+      <VendorPriceListModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        vendorId={vendor?._id || ""}
+        onSubmit={handleCreatePriceList}
+        isLoading={createPriceListLoading === "pending"}
+      />
+
+      <VendorPriceListModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedPriceList(null);
+        }}
+        vendorId={vendor?._id || ""}
+        initialData={selectedPriceList || undefined}
+        onSubmit={handleUpdatePriceList}
+        isLoading={updatePriceListLoading === "pending"}
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setSelectedPriceList(null);
+        }}
+        onConfirm={handleDeletePriceList}
+        title="Delete Price List"
+        description={`Are you sure you want to delete "${selectedPriceList?.name}"? This action cannot be undone.`}
+        isLoading={deletePriceListLoading === "pending"}
+      />
     </div>
   );
 }

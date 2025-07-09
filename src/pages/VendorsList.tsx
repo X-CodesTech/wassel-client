@@ -78,7 +78,7 @@ export default function VendorsList() {
   // Handle refresh vendors
   const handleRefreshVendors = async () => {
     try {
-      await syncVendors();
+      syncVendors();
       // After sync, refresh the vendors list
       const filters: VendorFilters = {
         page: currentPage,
@@ -308,7 +308,7 @@ export default function VendorsList() {
                 <TableRow
                   key={vendor._id}
                   className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate(`/vendors/${vendor._id}`)}
+                  onClick={() => navigate(`/vendors/${vendor.vendAccount}`)}
                 >
                   <TableCell>
                     <div className="font-medium">{vendor.vendAccount}</div>
