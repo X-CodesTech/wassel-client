@@ -145,7 +145,7 @@ export default function Overview() {
       if (previous === 0) return { trend: "up" as const, value: "+0%" };
       const change = ((current - previous) / previous) * 100;
       const trend = change >= 0 ? ("up" as const) : ("down" as const);
-      const value = `${change >= 0 ? "+" : ""}${Math.abs(change).toFixed(1)}%`;
+      const value = `${change >= 0 ? "+" : ""}${Math.abs(change)?.toFixed(1)}%`;
       return { trend, value };
     };
 

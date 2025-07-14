@@ -233,7 +233,7 @@ export default function PriceListDetails() {
                     <TableCell>
                       ${item.basePrice?.toFixed(2) || "0.00"}
                     </TableCell>
-                    <TableCell>${item.cost.toFixed(2)}</TableCell>
+                    <TableCell>${item.cost?.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

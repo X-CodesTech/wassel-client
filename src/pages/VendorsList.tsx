@@ -29,6 +29,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import Pagination from "@/components/Pagination";
 
 export default function VendorsList() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -123,8 +124,8 @@ export default function VendorsList() {
   };
 
   // Handle page limit change
-  const handlePageLimitChange = (value: string) => {
-    setPageLimit(Number(value));
+  const handlePageLimitChange = (limit: number) => {
+    setPageLimit(limit);
     setCurrentPage(1); // Reset to first page when changing limit
   };
 
@@ -339,75 +340,14 @@ export default function VendorsList() {
       </div>
 
       {/* Pagination */}
-      {pagination.totalPages > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-700">
-              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-              of {pagination.total} results
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Show:</span>
-              <Select
-                value={pageLimit.toString()}
-                onValueChange={handlePageLimitChange}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-              <span className="text-sm text-gray-600">per page</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </Button>
-
-            <div className="flex items-center gap-1">
-              {generatePageNumbers().map((page, index) => (
-                <div key={index}>
-                  {page === "..." ? (
-                    <span className="px-3 py-2 text-sm text-gray-500">...</span>
-                  ) : (
-                    <Button
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page as number)}
-                      className="w-10 h-10"
-                    >
-                      {page}
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === pagination.totalPages}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={pagination.totalPages}
+        pageLimit={pageLimit}
+        totalResults={pagination.total}
+        onPageChange={setCurrentPage}
+        onLimitChange={handlePageLimitChange}
+      />
     </div>
   );
 }

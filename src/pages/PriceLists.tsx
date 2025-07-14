@@ -639,7 +639,7 @@ export default function PriceLists() {
                                 <span className="font-medium text-green-600 whitespace-nowrap">
                                   $
                                   {item.basePrice?.toFixed(2) ||
-                                    item.cost.toFixed(2)}
+                                    item.cost?.toFixed(2)}
                                 </span>
                               </li>
                             ))}
@@ -1149,7 +1149,7 @@ export default function PriceLists() {
                               Price: ${item.basePrice?.toFixed(2) || "0.00"}
                             </span>
                             <span className="font-medium text-blue-600">
-                              Cost: ${item.cost.toFixed(2)}
+                              Cost: ${item.cost?.toFixed(2)}
                             </span>
                           </div>
                         </div>

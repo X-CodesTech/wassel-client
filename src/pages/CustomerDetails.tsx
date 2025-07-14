@@ -230,7 +230,7 @@ export default function CustomerDetails() {
                       {item.subActivityName}
                     </TableCell>
                     <TableCell className="text-right">
-                      ${item.price.toFixed(2)}
+                      ${item.price?.toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -277,7 +277,7 @@ export default function CustomerDetails() {
                   <div>
                     <p className="text-sm font-medium">{selectedFile.name}</p>
                     <p className="text-xs text-gray-500">
-                      {(selectedFile.size / 1024).toFixed(1)} KB
+                      {(selectedFile.size / 1024)?.toFixed(1)} KB
                     </p>
                   </div>
                 </div>
