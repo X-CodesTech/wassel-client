@@ -33,7 +33,7 @@ interface IVendorsState {
   deletePriceListResponse: DeleteVendorPriceListResponse | null;
   getPriceListsLoading: TLoading;
   getPriceListsError: null | string;
-  priceLists: VendorPriceListResponse["priceList"] | null;
+  priceLists: VendorPriceListResponse["data"] | null;
   pagination: {
     total: number;
     page: number;
@@ -211,7 +211,7 @@ const vendorsSlice = createSlice({
     builder.addCase(actGetVendorPriceLists.fulfilled, (state, action) => {
       state.getPriceListsLoading = "fulfilled";
       const response: VendorPriceListResponse = action.payload;
-      state.priceLists = response.priceList;
+      state.priceLists = response.data;
     });
     builder.addCase(actGetVendorPriceLists.rejected, (state, action) => {
       state.getPriceListsLoading = "rejected";

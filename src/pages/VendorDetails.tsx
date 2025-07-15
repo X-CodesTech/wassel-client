@@ -43,6 +43,7 @@ import {
   UpdateVendorPriceListRequest,
   VendorPriceList,
 } from "@/services/vendorServices";
+import { PriceList } from "@/services/priceListServices";
 
 interface VendorDetailsProps {
   params?: {
@@ -264,56 +265,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     ));
   };
 
-  // Sample data for demonstration - in a real app this would come from API
-  const orderHistory = [
-    {
-      id: 1,
-      orderNumber: "ORD-2024-156",
-      date: "2024-05-20",
-      amount: 2850.0,
-      status: "completed",
-      service: "Express Delivery",
-    },
-    {
-      id: 2,
-      orderNumber: "ORD-2024-143",
-      date: "2024-05-15",
-      amount: 1920.0,
-      status: "completed",
-      service: "Standard Shipping",
-    },
-    {
-      id: 3,
-      orderNumber: "ORD-2024-128",
-      date: "2024-05-10",
-      amount: 3200.0,
-      status: "in-progress",
-      service: "Freight Transport",
-    },
-    {
-      id: 4,
-      orderNumber: "ORD-2024-102",
-      date: "2024-05-05",
-      amount: 1650.0,
-      status: "completed",
-      service: "Local Delivery",
-    },
-  ];
-
-  const performanceMetrics = {
-    onTimeDelivery: 94.5,
-    customerSatisfaction: 4.2,
-    averageResponseTime: 2.3,
-    totalRevenue: 45670.0,
-    monthlyOrders: [
-      { month: "Jan", orders: 12, revenue: 8450 },
-      { month: "Feb", orders: 15, revenue: 9200 },
-      { month: "Mar", orders: 18, revenue: 11300 },
-      { month: "Apr", orders: 22, revenue: 13800 },
-      { month: "May", orders: 25, revenue: 15650 },
-    ],
-  };
-
   if (loading === "pending") {
     return (
       <div className="flex items-center justify-center h-64">
@@ -521,7 +472,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="font-semibold text-lg">
-                        {priceList.name}
+                        {priceList.name || priceList.nameAr}
                       </h3>
                       <p className="text-sm text-gray-600">
                         {priceList.description}
@@ -578,7 +529,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
                             (subActivity, index) => (
                               <TableRow key={index}>
                                 <TableCell className="font-medium">
-                                  {subActivity.subActivity}
+                                  {subActivity._id}
                                 </TableCell>
                                 <TableCell>
                                   <Badge
@@ -594,14 +545,49 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
                                   subActivity.locationPrices.length > 0 ? (
                                     <div className="space-y-1">
                                       {subActivity.locationPrices.map(
-                                        (locationPrice, locIndex) => (
+                                        (locationPrice, locationIndex) => (
                                           <div
-                                            key={locIndex}
+                                            key={locationIndex}
                                             className="text-xs"
                                           >
+                                            {locationPrice.toLocation?.country}
                                             <span className="font-medium">
-                                              {locationPrice.fromLocation} →{" "}
-                                              {locationPrice.toLocation}:
+                                              {
+                                                locationPrice.fromLocation
+                                                  ?.country
+                                              }{" "}
+                                              →{" "}
+                                              {
+                                                locationPrice.toLocation
+                                                  ?.country
+                                              }
+                                              :
+                                            </span>{" "}
+                                            ${locationPrice.cost}
+                                          </div>
+                                        )
+                                      )}
+                                      {subActivity.locationPrices.map(
+                                        (locationPrice, locationIndex) => (
+                                          <div
+                                            key={locationIndex}
+                                            className="text-xs"
+                                          >
+                                            {
+                                              locationPrice.toLocation
+                                                ?.countryAr
+                                            }
+                                            <span className="font-medium">
+                                              {
+                                                locationPrice.fromLocation
+                                                  ?.countryAr
+                                              }{" "}
+                                              →{" "}
+                                              {
+                                                locationPrice.toLocation
+                                                  ?.countryAr
+                                              }
+                                              :
                                             </span>{" "}
                                             ${locationPrice.cost}
                                           </div>

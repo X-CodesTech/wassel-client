@@ -1,6 +1,11 @@
 import http from "./http";
 import { apiUrlConstants } from "./apiUrlConstants";
-import { VendorFilters, VendorResponse } from "@/types/types";
+import {
+  SubActivity,
+  Vendor,
+  VendorFilters,
+  VendorResponse,
+} from "@/types/types";
 
 export interface VendorSyncResponse {
   message: string;
@@ -14,39 +19,59 @@ export interface VendorSyncResponse {
 }
 
 export interface VendorPriceListResponse {
-  message: string;
-  priceList: VendorPriceList[];
+  data: VendorPriceList[];
 }
 
 export interface VendorPriceList {
   _id: string;
-  vendorId: string;
   name: string;
   nameAr: string;
   description: string;
   descriptionAr: string;
-  effectiveFrom: string;
-  effectiveTo: string;
+  vendor: Vendor;
   isActive: boolean;
+  effectiveFrom: Date;
+  effectiveTo: Date;
   subActivityPrices: SubActivityPrice[];
-  createdAt?: string;
-  updatedAt?: string;
+  __v: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Location {
+  _id: string;
+  country: string;
+  countryAr: string;
+  area: string;
+  areaAr: string;
+  city: string;
+  cityAr: string;
+  village: string;
+  villageAr: string;
+  isActive: boolean;
+  __v: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // New interfaces for vendor price list creation
 export interface LocationPrice {
-  location: string;
-  fromLocation: string;
-  toLocation: string;
+  location?: Location;
   cost: number;
-  pricingMethod: "perLocation" | "perItem" | "perTrip";
+  pricingMethod: PricingMethod;
+  _id: string;
+  fromLocation?: Location;
+  toLocation?: Location;
 }
 
+export type PricingMethod = "perLocation" | "perTrip" | "perItem";
+
 export interface SubActivityPrice {
-  subActivity: string;
-  pricingMethod: "perLocation" | "perItem" | "perTrip";
-  cost: number;
+  subActivity: SubActivity;
   locationPrices: LocationPrice[];
+  pricingMethod: PricingMethod;
+  _id: string;
+  cost?: number;
 }
 
 export interface CreateVendorPriceListRequest {

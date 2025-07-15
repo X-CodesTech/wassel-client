@@ -1,3 +1,4 @@
+import { SubActivity } from "@/types/types";
 import { apiUrlConstants } from "./apiUrlConstants";
 import http from "./http";
 export interface LocationPrice {
@@ -27,6 +28,12 @@ export interface SubActivityPrice {
         updatedAt: string;
         __v: number;
         id: string;
+      }
+    | {
+        subActivity: SubActivity;
+        locationPrices: LocationPrice[];
+        pricingMethod: string;
+        _id: string;
       };
   pricingMethod: PricingMethod;
   basePrice?: number; // only for 'perItem'
