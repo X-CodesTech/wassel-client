@@ -6,6 +6,7 @@ import locations from "./locations/locationsSlice";
 import customers from "./customers/customersSlice";
 import priceLists from "./priceLists/priceListsSlice";
 import vendors from "./vendors/vendorsSlice";
+import { ordersReducer } from "./orders";
 
 export const rootReducer = combineReducers({
   auth,
@@ -15,4 +16,5 @@ export const rootReducer = combineReducers({
   customers,
   priceLists,
   vendors,
+  orders: ordersReducer,
 });

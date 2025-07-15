@@ -330,3 +330,330 @@ export const insertCustomerSchema = customerSchema.omit({
 });
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
+
+// Order interfaces and schemas for 3-step creation process
+export interface CreateOrderStep1Request {
+  service: string;
+  typesOfGoods: string;
+  goodsDescription: string;
+  billingAccount: string;
+  requesterName: string;
+  requesterMobile1: string;
+  requesterMobile2?: string;
+  emailAddress: string;
+}
+
+export interface CreateOrderStep1Response {
+  success: boolean;
+  data: {
+    _id: string;
+    orderNumber: string;
+    service: string;
+    typesOfGoods: string;
+    goodsDescription: string;
+    billingAccount: string;
+    requesterName: string;
+    requesterMobile1: string;
+    requesterMobile2?: string;
+    emailAddress: string;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  message: string;
+}
+
+export interface PickupSpecialRequirement {
+  subActivity: string;
+  quantity: number;
+  note?: string;
+}
+
+export interface DeliverySpecialRequirement {
+  subActivity: string;
+  quantity: number;
+  note?: string;
+}
+
+export interface Coordinator {
+  requesterName: string;
+  requesterMobile1: string;
+  requesterMobile2?: string;
+  emailAddress: string;
+}
+
+export interface PickupInfo {
+  pickupLocation: string;
+  pickupDetailedAddress: string;
+  fromTime: string;
+  toTime: string;
+  pickupSpecialRequirements: PickupSpecialRequirement[];
+  otherRequirements?: string;
+  pickupNotes?: string;
+  pickupCoordinator: Coordinator;
+}
+
+export interface DeliveryInfo {
+  deliveryLocation: string;
+  deliveryDetailedAddress: string;
+  fromTime: string;
+  toTime: string;
+  deliverySpecialRequirements: DeliverySpecialRequirement[];
+  otherRequirements?: string;
+  deliveryNotes?: string;
+  deliveryCoordinator: Coordinator;
+}
+
+export interface CreateOrderStep2Request {
+  pickupInfo: PickupInfo[];
+  deliveryInfo: DeliveryInfo[];
+}
+
+export interface CreateOrderStep2Response {
+  success: boolean;
+  data: {
+    _id: string;
+    orderNumber: string;
+    pickupInfo: PickupInfo[];
+    deliveryInfo: DeliveryInfo[];
+    status: string;
+    updatedAt: string;
+  };
+  message: string;
+}
+
+export interface CreateOrderStep3Request {
+  shippingUnits: string;
+  typeOfTruck: string;
+  qty: number;
+  dimM: number;
+  length: number;
+  width: number;
+  height: number;
+  totalWeight: number;
+  note?: string;
+}
+
+export interface CreateOrderStep3Response {
+  success: boolean;
+  data: {
+    _id: string;
+    orderNumber: string;
+    shippingUnits: string;
+    typeOfTruck: string;
+    qty: number;
+    dimM: number;
+    length: number;
+    width: number;
+    height: number;
+    totalWeight: number;
+    note?: string;
+    status: string;
+    updatedAt: string;
+  };
+  message: string;
+}
+
+export interface GetOrderResponse {
+  success: boolean;
+  data: {
+    _id: string;
+    orderNumber: string;
+    service: string;
+    typesOfGoods: string;
+    goodsDescription: string;
+    billingAccount: string;
+    requesterName: string;
+    requesterMobile1: string;
+    requesterMobile2?: string;
+    emailAddress: string;
+    pickupInfo?: PickupInfo[];
+    deliveryInfo?: DeliveryInfo[];
+    shippingUnits?: string;
+    typeOfTruck?: string;
+    qty?: number;
+    dimM?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    totalWeight?: number;
+    note?: string;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  message: string;
+}
+
+export interface AddItemRequest {
+  itemId: string;
+  quantity: number;
+  notes?: string;
+}
+
+export interface AddItemResponse {
+  success: boolean;
+  data: {
+    _id: string;
+    orderNumber: string;
+    items: Array<{
+      itemId: string;
+      quantity: number;
+      notes?: string;
+    }>;
+    updatedAt: string;
+  };
+  message: string;
+}
+
+export interface DeleteItemRequest {
+  itemId: string;
+}
+
+export interface DeleteItemResponse {
+  success: boolean;
+  data: {
+    _id: string;
+    orderNumber: string;
+    items: Array<{
+      itemId: string;
+      quantity: number;
+      notes?: string;
+    }>;
+    updatedAt: string;
+  };
+  message: string;
+}
+
+export interface CalculatePriceRequest {
+  // Add any specific parameters needed for price calculation
+  includeTax?: boolean;
+  currency?: string;
+}
+
+export interface CalculatePriceResponse {
+  success: boolean;
+  data: {
+    orderId: string;
+    totalPrice: number;
+    currency: string;
+    breakdown: {
+      basePrice: number;
+      specialRequirements: number;
+      taxes: number;
+      fees: number;
+    };
+  };
+  message: string;
+}
+
+export interface GetPriceBreakdownResponse {
+  success: boolean;
+  data: {
+    orderId: string;
+    totalPrice: number;
+    currency: string;
+    breakdown: {
+      basePrice: number;
+      specialRequirements: number;
+      taxes: number;
+      fees: number;
+      items: Array<{
+        itemId: string;
+        itemName: string;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+      }>;
+    };
+  };
+  message: string;
+}
+
+// Zod schemas for validation
+export const createOrderStep1Schema = z.object({
+  service: z.string().min(1, "Service is required"),
+  typesOfGoods: z.string().min(1, "Types of goods is required"),
+  goodsDescription: z.string().min(1, "Goods description is required"),
+  billingAccount: z.string().min(1, "Billing account is required"),
+  requesterName: z.string().min(1, "Requester name is required"),
+  requesterMobile1: z.string().min(1, "Primary mobile is required"),
+  requesterMobile2: z.string().optional(),
+  emailAddress: z.string().email("Valid email address is required"),
+});
+
+export const pickupSpecialRequirementSchema = z.object({
+  subActivity: z.string().min(1, "Sub activity is required"),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  note: z.string().optional(),
+});
+
+export const deliverySpecialRequirementSchema = z.object({
+  subActivity: z.string().min(1, "Sub activity is required"),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  note: z.string().optional(),
+});
+
+export const coordinatorSchema = z.object({
+  requesterName: z.string().min(1, "Coordinator name is required"),
+  requesterMobile1: z.string().min(1, "Primary mobile is required"),
+  requesterMobile2: z.string().optional(),
+  emailAddress: z.string().email("Valid email address is required"),
+});
+
+export const pickupInfoSchema = z.object({
+  pickupLocation: z.string().min(1, "Pickup location is required"),
+  pickupDetailedAddress: z.string().min(1, "Pickup address is required"),
+  fromTime: z.string().min(1, "From time is required"),
+  toTime: z.string().min(1, "To time is required"),
+  pickupSpecialRequirements: z.array(pickupSpecialRequirementSchema),
+  otherRequirements: z.string().optional(),
+  pickupNotes: z.string().optional(),
+  pickupCoordinator: coordinatorSchema,
+});
+
+export const deliveryInfoSchema = z.object({
+  deliveryLocation: z.string().min(1, "Delivery location is required"),
+  deliveryDetailedAddress: z.string().min(1, "Delivery address is required"),
+  fromTime: z.string().min(1, "From time is required"),
+  toTime: z.string().min(1, "To time is required"),
+  deliverySpecialRequirements: z.array(deliverySpecialRequirementSchema),
+  otherRequirements: z.string().optional(),
+  deliveryNotes: z.string().optional(),
+  deliveryCoordinator: coordinatorSchema,
+});
+
+export const createOrderStep2Schema = z.object({
+  pickupInfo: z
+    .array(pickupInfoSchema)
+    .min(1, "At least one pickup info is required"),
+  deliveryInfo: z
+    .array(deliveryInfoSchema)
+    .min(1, "At least one delivery info is required"),
+});
+
+export const createOrderStep3Schema = z.object({
+  shippingUnits: z.string().min(1, "Shipping units is required"),
+  typeOfTruck: z.string().min(1, "Type of truck is required"),
+  qty: z.number().min(1, "Quantity must be at least 1"),
+  dimM: z.number().min(1, "Dimensions must be at least 1"),
+  length: z.number().min(1, "Length must be at least 1"),
+  width: z.number().min(1, "Width must be at least 1"),
+  height: z.number().min(1, "Height must be at least 1"),
+  totalWeight: z.number().min(1, "Total weight must be at least 1"),
+  note: z.string().optional(),
+});
+
+// Type exports
+export type CreateOrderStep1Data = z.infer<typeof createOrderStep1Schema>;
+export type CreateOrderStep2Data = z.infer<typeof createOrderStep2Schema>;
+export type CreateOrderStep3Data = z.infer<typeof createOrderStep3Schema>;
+export type PickupSpecialRequirementData = z.infer<
+  typeof pickupSpecialRequirementSchema
+>;
+export type DeliverySpecialRequirementData = z.infer<
+  typeof deliverySpecialRequirementSchema
+>;
+export type CoordinatorData = z.infer<typeof coordinatorSchema>;
+export type PickupInfoData = z.infer<typeof pickupInfoSchema>;
+export type DeliveryInfoData = z.infer<typeof deliveryInfoSchema>;

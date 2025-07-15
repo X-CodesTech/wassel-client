@@ -1,7 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+
+// Helper function to generate a valid MongoDB ObjectId string format
+const generateObjectId = () => {
+  // Generate a 24-character hex string (12 bytes)
+  const hexChars = "0123456789abcdef";
+  let result = "";
+  for (let i = 0; i < 24; i++) {
+    result += hexChars[Math.floor(Math.random() * hexChars.length)];
+  }
+  return result;
+};
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,312 +34,535 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useOrders } from "@/hooks/useOrders";
+import { useLocation } from "wouter";
 import {
-  ArrowRight,
   Package,
   MapPin,
   User,
   Calendar,
-  Printer,
-  Save,
   Send,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
-import { useLocation } from "wouter";
+import {
+  createOrderStep1Schema,
+  createOrderStep2Schema,
+  createOrderStep3Schema,
+  CreateOrderStep1Data,
+  CreateOrderStep2Data,
+  CreateOrderStep3Data,
+  PickupSpecialRequirementData,
+  DeliverySpecialRequirementData,
+  CoordinatorData,
+} from "@/types/types";
 
-const serviceRequestSchema = z.object({
-  // Service info
-  freightService: z.string().min(1, "Please select a freight service"),
-  operationPoint: z.string().min(1, "Operation point is required"),
-  billingAmount: z.string().min(1, "Billing amount is required"),
-
-  // Requester info
-  requesterName: z.string().min(1, "Requester name is required"),
-  requesterContact1: z.string().min(1, "Primary contact is required"),
-  requesterContact2: z.string().optional(),
-  emailAddress: z.string().email("Valid email address is required"),
-
-  // Pickup info
-  pickupLocation: z.string().min(1, "Pickup location is required"),
-  pickupAddress: z.string().min(1, "Pickup address is required"),
-  pickupDateTime: z.string().min(1, "Pickup date and time is required"),
-  pickupNotes: z.string().optional(),
-
-  // Pickup coordinator info
-  coordinatorName: z.string().min(1, "Coordinator name is required"),
-  coordinatorContact1: z.string().min(1, "Coordinator contact is required"),
-  coordinatorContact2: z.string().optional(),
-  coordinatorEmail: z.string().email("Valid coordinator email is required"),
-
-  // Labor requirements
-  laborRequired: z.enum(["yes", "no"]),
-  laborDetails: z.string().optional(),
-  pickupNotes2: z.string().optional(),
-
-  // Delivery info
-  deliveryLocation: z.string().min(1, "Delivery location is required"),
-  deliveryAddress: z.string().min(1, "Delivery address is required"),
-  deliveryDateTime: z.string().min(1, "Delivery date and time is required"),
-  deliveryNotes: z.string().optional(),
-
-  // Delivery coordinator info
-  deliveryCoordinatorName: z
-    .string()
-    .min(1, "Delivery coordinator name is required"),
-  deliveryCoordinatorContact1: z
-    .string()
-    .min(1, "Delivery coordinator contact is required"),
-  deliveryCoordinatorContact2: z.string().optional(),
-  deliveryCoordinatorEmail: z
-    .string()
-    .email("Valid delivery coordinator email is required"),
-
-  // Delivery labor requirements
-  deliveryLaborRequired: z.enum(["yes", "no"]),
-  deliveryLaborDetails: z.string().optional(),
-  deliveryNotes2: z.string().optional(),
-
-  // Shipping details
-  serviceType: z.string().min(1, "Service type is required"),
-  dimensions: z.string().optional(),
-  weight: z.string().optional(),
-  quantity: z.string().optional(),
-  specialInstructions: z.string().optional(),
-  assignedTo: z.string().optional(),
-});
-
-type ServiceRequestFormData = z.infer<typeof serviceRequestSchema>;
+type Step = 1 | 2 | 3;
 
 export default function CreateOrder() {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState<Step>(1);
+  const [orderId, setOrderId] = useState<string | null>(null);
 
-  const form = useForm<ServiceRequestFormData>({
-    resolver: zodResolver(serviceRequestSchema),
+  const {
+    loading,
+    error,
+    success,
+    createBasicOrder,
+    addPickupDeliveryInfo,
+    addShippingDetails,
+    clearOrderData,
+    clearOrderError,
+  } = useOrders();
+
+  // Step 1 Form
+  const step1Form = useForm<CreateOrderStep1Data>({
+    resolver: zodResolver(createOrderStep1Schema),
     defaultValues: {
-      laborRequired: "no",
-      deliveryLaborRequired: "no",
+      service: "",
+      typesOfGoods: "",
+      goodsDescription: "",
+      billingAccount: generateObjectId(), // Generate a valid ObjectId
+      requesterName: "",
+      requesterMobile1: "",
+      requesterMobile2: "",
+      emailAddress: "",
     },
   });
 
-  const onSubmit = (data: ServiceRequestFormData) => {
-    console.log("Service request data:", data);
+  // Step 2 Form
+  const step2Form = useForm<CreateOrderStep2Data>({
+    resolver: zodResolver(createOrderStep2Schema),
+    defaultValues: {
+      pickupInfo: [
+        {
+          pickupLocation: "",
+          pickupDetailedAddress: "",
+          fromTime: "",
+          toTime: "",
+          pickupSpecialRequirements: [],
+          otherRequirements: "",
+          pickupNotes: "",
+          pickupCoordinator: {
+            requesterName: "",
+            requesterMobile1: "",
+            requesterMobile2: "",
+            emailAddress: "",
+          },
+        },
+      ],
+      deliveryInfo: [
+        {
+          deliveryLocation: "",
+          deliveryDetailedAddress: "",
+          fromTime: "",
+          toTime: "",
+          deliverySpecialRequirements: [],
+          otherRequirements: "",
+          deliveryNotes: "",
+          deliveryCoordinator: {
+            requesterName: "",
+            requesterMobile1: "",
+            requesterMobile2: "",
+            emailAddress: "",
+          },
+        },
+      ],
+    },
+  });
 
-    toast({
-      title: "Service Request Submitted",
-      description:
-        "Your service request has been submitted successfully and is being processed.",
-    });
+  // Step 3 Form
+  const step3Form = useForm<CreateOrderStep3Data>({
+    resolver: zodResolver(createOrderStep3Schema),
+    defaultValues: {
+      shippingUnits: "",
+      typeOfTruck: "",
+      qty: 1,
+      dimM: 1, // Changed from 0 to 1 to meet minimum requirement
+      length: 1, // Changed from 0 to 1 to meet minimum requirement
+      width: 1, // Changed from 0 to 1 to meet minimum requirement
+      height: 1, // Changed from 0 to 1 to meet minimum requirement
+      totalWeight: 1, // Changed from 0 to 1 to meet minimum requirement
+      note: "",
+    },
+  });
 
-    // Navigate back to orders list
-    navigate("/orders");
+  // Handle Step 1 submission
+  const onStep1Submit = async (data: CreateOrderStep1Data) => {
+    try {
+      clearOrderError();
+      const response = await createBasicOrder(data);
+      setOrderId(response.data._id);
+      setCurrentStep(2);
+      toast({
+        title: "Step 1 Completed",
+        description: "Basic order information saved successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create basic order",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle Step 2 submission
+  const onStep2Submit = async (data: CreateOrderStep2Data) => {
+    if (!orderId) {
+      toast({
+        title: "Error",
+        description: "Order ID not found. Please start from step 1.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      clearOrderError();
+      await addPickupDeliveryInfo(orderId, data);
+      setCurrentStep(3);
+      toast({
+        title: "Step 2 Completed",
+        description: "Pickup and delivery information saved successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add pickup and delivery info",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle Step 3 submission
+  const onStep3Submit = async (data: CreateOrderStep3Data) => {
+    if (!orderId) {
+      toast({
+        title: "Error",
+        description: "Order ID not found. Please start from step 1.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      clearOrderError();
+
+      // Ensure all numeric values are properly converted to numbers and meet minimum requirements
+      const processedData = {
+        ...data,
+        qty: Math.max(1, Number(data.qty) || 1),
+        dimM: Math.max(1, Number(data.dimM) || 1),
+        length: Math.max(1, Number(data.length) || 1),
+        width: Math.max(1, Number(data.width) || 1),
+        height: Math.max(1, Number(data.height) || 1),
+        totalWeight: Math.max(1, Number(data.totalWeight) || 1),
+      };
+
+      console.log("Step 3 data being sent:", processedData);
+
+      await addShippingDetails(orderId, processedData);
+      toast({
+        title: "Order Created Successfully",
+        description: "Your order has been created and is being processed.",
+      });
+      clearOrderData();
+      navigate("/orders");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add shipping details",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle going back to previous step
+  const goToPreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => (prev - 1) as Step);
+    }
+  };
+
+  // Handle going to next step
+  const goToNextStep = () => {
+    if (currentStep < 3) {
+      setCurrentStep((prev) => (prev + 1) as Step);
+    }
+  };
+
+  // Clear order data when component unmounts
+  useEffect(() => {
+    return () => {
+      clearOrderData();
+    };
+  }, []); // Empty dependency array to run only on unmount
+
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center mb-8">
+      <div className="flex items-center space-x-4">
+        {[1, 2, 3].map((step) => (
+          <div key={step} className="flex items-center">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                currentStep >= step
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-gray-100 text-gray-400 border-gray-300"
+              }`}
+            >
+              {currentStep > step ? (
+                <CheckCircle className="w-6 h-6" />
+              ) : (
+                <span className="font-semibold">{step}</span>
+              )}
+            </div>
+            {step < 3 && (
+              <div
+                className={`w-16 h-1 mx-2 ${
+                  currentStep > step ? "bg-blue-600" : "bg-gray-300"
+                }`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderStepTitle = () => {
+    const titles = {
+      1: "Basic Order Information",
+      2: "Pickup & Delivery Details",
+      3: "Shipping Information",
+    };
+    return titles[currentStep];
   };
 
   return (
     <div className="w-full space-y-6 p-6">
       <title>Create Order | Wassel</title>
-      <div className="flex items-center space-x-4 mb-8 relative">
+
+      {/* Header */}
+      <div className="flex items-center space-x-4 mb-8">
         <div className="bg-blue-600 text-white p-3 rounded-lg">
           <Package className="h-6 w-6" />
         </div>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Request a service
+            Create New Order
           </h1>
           <p className="text-muted-foreground">
-            Fill out the form below to request a new service
+            Complete the form below to create a new order
           </p>
-        </div>
-
-        {/* Absolute positioned button */}
-        <div className="absolute top-0 right-0">
-          <Button
-            type="submit"
-            form="service-request-form"
-            className="bg-green-600 hover:bg-green-700 px-8 py-3 text-white font-medium rounded-lg"
-          >
-            <Send className="mr-2 h-5 w-5" />
-            Send order
-          </Button>
         </div>
       </div>
 
-      <Form {...form}>
-        <form
-          id="service-request-form"
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-8"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Service Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Package className="mr-2 h-5 w-5" />
-                  Service info
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="freightService"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Freight service</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Type of service" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="express">
-                            Express Delivery
-                          </SelectItem>
-                          <SelectItem value="standard">
-                            Standard Shipping
-                          </SelectItem>
-                          <SelectItem value="freight">
-                            Freight Service
-                          </SelectItem>
-                          <SelectItem value="international">
-                            International
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      {/* Step Indicator */}
+      {renderStepIndicator()}
 
-                <FormField
-                  control={form.control}
-                  name="operationPoint"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Operation point</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Operation point" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      {/* Step Title */}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">
+          {renderStepTitle()}
+        </h2>
+      </div>
 
-                <FormField
-                  control={form.control}
-                  name="billingAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Billing Amount</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Billing Amount" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Requester Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <User className="mr-2 h-5 w-5" />
-                  Requester info
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="requesterName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Requester Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Requester Name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="requesterContact1"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Requester contact 1</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Requester contact 1" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="requesterContact2"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Requester contact 2</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Requester contact 2" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="emailAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email address</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="Email address"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
+            <span className="text-red-800">{error}</span>
           </div>
+        </div>
+      )}
 
-          {/* Pickup Info Section */}
-          <div className="bg-blue-50 p-1 rounded-lg">
-            <div className="bg-blue-600 text-white p-3 rounded-lg mb-6">
-              <h3 className="font-medium">
-                Trip schedule for pickup operation
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-              {/* Pickup Info */}
+      {/* Step 1: Basic Order Information */}
+      {currentStep === 1 && (
+        <Form {...step1Form}>
+          <form
+            onSubmit={step1Form.handleSubmit(onStep1Submit)}
+            className="space-y-6"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Service Information */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
-                    <MapPin className="mr-2 h-5 w-5" />
-                    Pickup info
+                    <Package className="mr-2 h-5 w-5" />
+                    Service Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <FormField
-                    control={form.control}
-                    name="pickupLocation"
+                    control={step1Form.control}
+                    name="service"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Pickup location</FormLabel>
+                        <FormLabel>Service Type</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select service type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Freight Service">
+                              Freight Service
+                            </SelectItem>
+                            <SelectItem value="Express Delivery">
+                              Express Delivery
+                            </SelectItem>
+                            <SelectItem value="Standard Shipping">
+                              Standard Shipping
+                            </SelectItem>
+                            <SelectItem value="International">
+                              International
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step1Form.control}
+                    name="typesOfGoods"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Types of Goods</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Electronics, Furniture, etc."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step1Form.control}
+                    name="goodsDescription"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Goods Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Detailed description of the goods"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step1Form.control}
+                    name="billingAccount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Billing Account</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Billing account ID"
+                            {...field}
+                            readOnly
+                            className="bg-gray-50"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Requester Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <User className="mr-2 h-5 w-5" />
+                    Requester Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={step1Form.control}
+                    name="requesterName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Requester Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Full name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step1Form.control}
+                    name="requesterMobile1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Primary Mobile</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+1234567890" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step1Form.control}
+                    name="requesterMobile2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Secondary Mobile (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+0987654321" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step1Form.control}
+                    name="emailAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="email@example.com"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {loading ? (
+                  "Creating..."
+                ) : (
+                  <>
+                    Next Step <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      )}
+
+      {/* Step 2: Pickup & Delivery Details */}
+      {currentStep === 2 && (
+        <Form {...step2Form}>
+          <form
+            onSubmit={step2Form.handleSubmit(onStep2Submit)}
+            className="space-y-6"
+          >
+            {/* Pickup Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <MapPin className="mr-2 h-5 w-5" />
+                  Pickup Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={step2Form.control}
+                    name="pickupInfo.0.pickupLocation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pickup Location</FormLabel>
                         <FormControl>
                           <Input placeholder="Pickup location" {...field} />
                         </FormControl>
@@ -338,25 +572,30 @@ export default function CreateOrder() {
                   />
 
                   <FormField
-                    control={form.control}
-                    name="pickupAddress"
+                    control={step2Form.control}
+                    name="pickupInfo.0.pickupDetailedAddress"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Pickup address</FormLabel>
+                        <FormLabel>Detailed Address</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Pickup address" {...field} />
+                          <Textarea
+                            placeholder="Full pickup address"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
-                    control={form.control}
-                    name="pickupDateTime"
+                    control={step2Form.control}
+                    name="pickupInfo.0.fromTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Pickup date and time</FormLabel>
+                        <FormLabel>From Time</FormLabel>
                         <FormControl>
                           <Input type="datetime-local" {...field} />
                         </FormControl>
@@ -366,79 +605,66 @@ export default function CreateOrder() {
                   />
 
                   <FormField
-                    control={form.control}
-                    name="pickupNotes"
+                    control={step2Form.control}
+                    name="pickupInfo.0.toTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Billing Amount</FormLabel>
+                        <FormLabel>To Time</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Additional notes" {...field} />
+                          <Input type="datetime-local" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">
-                        Pickup special requirements
-                      </Label>
-                      <div className="flex space-x-2">
-                        <Button type="button" variant="outline" size="sm">
-                          Equipment
-                        </Button>
-                        <Button type="button" variant="outline" size="sm">
-                          Teflon
-                        </Button>
-                        <Button type="button" variant="outline" size="sm">
-                          Crane
-                        </Button>
-                        <Button type="button" variant="outline" size="sm">
-                          Electric unit
-                        </Button>
-                      </div>
-                    </div>
+                <FormField
+                  control={step2Form.control}
+                  name="pickupInfo.0.otherRequirements"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Other Requirements</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Additional requirements"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
+                <FormField
+                  control={step2Form.control}
+                  name="pickupInfo.0.pickupNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pickup Notes</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Special instructions for pickup"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Pickup Coordinator */}
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-4">Pickup Coordinator</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
-                      control={form.control}
-                      name="laborRequired"
+                      control={step2Form.control}
+                      name="pickupInfo.0.pickupCoordinator.requesterName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Labor</FormLabel>
-                          <div className="flex space-x-4">
-                            <label className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                value="yes"
-                                checked={field.value === "yes"}
-                                onChange={() => field.onChange("yes")}
-                              />
-                              <span>Yes</span>
-                            </label>
-                            <label className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                value="no"
-                                checked={field.value === "no"}
-                                onChange={() => field.onChange("no")}
-                              />
-                              <span>No</span>
-                            </label>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="laborDetails"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>How many men?</FormLabel>
+                          <FormLabel>Coordinator Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Number of workers" {...field} />
+                            <Input placeholder="Coordinator name" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -446,14 +672,43 @@ export default function CreateOrder() {
                     />
 
                     <FormField
-                      control={form.control}
-                      name="pickupNotes2"
+                      control={step2Form.control}
+                      name="pickupInfo.0.pickupCoordinator.requesterMobile1"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Pickup notes</FormLabel>
+                          <FormLabel>Primary Mobile</FormLabel>
                           <FormControl>
-                            <Textarea
-                              placeholder="Additional pickup notes"
+                            <Input placeholder="+1234567890" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={step2Form.control}
+                      name="pickupInfo.0.pickupCoordinator.requesterMobile2"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Secondary Mobile</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+0987654321" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={step2Form.control}
+                      name="pickupInfo.0.pickupCoordinator.emailAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="coordinator@example.com"
                               {...field}
                             />
                           </FormControl>
@@ -462,112 +717,26 @@ export default function CreateOrder() {
                       )}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Pickup Coordinator Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <User className="mr-2 h-5 w-5" />
-                    Pickup coordinator info
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+            {/* Delivery Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <MapPin className="mr-2 h-5 w-5" />
+                  Delivery Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
-                    control={form.control}
-                    name="coordinatorName"
+                    control={step2Form.control}
+                    name="deliveryInfo.0.deliveryLocation"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Requester Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Coordinator name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="coordinatorContact1"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Requester contact 1</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Coordinator contact 1"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="coordinatorContact2"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Requester contact 2</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Coordinator contact 2"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="coordinatorEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email address</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="Coordinator email"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Delivery Info Section */}
-          <div className="bg-blue-50 p-1 rounded-lg">
-            <div className="bg-blue-600 text-white p-3 rounded-lg mb-6">
-              <h3 className="font-medium">
-                Trip schedule for delivery operation
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-              {/* Delivery Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <MapPin className="mr-2 h-5 w-5" />
-                    Delivery info
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="deliveryLocation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Delivery location</FormLabel>
+                        <FormLabel>Delivery Location</FormLabel>
                         <FormControl>
                           <Input placeholder="Delivery location" {...field} />
                         </FormControl>
@@ -577,25 +746,30 @@ export default function CreateOrder() {
                   />
 
                   <FormField
-                    control={form.control}
-                    name="deliveryAddress"
+                    control={step2Form.control}
+                    name="deliveryInfo.0.deliveryDetailedAddress"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Delivery address</FormLabel>
+                        <FormLabel>Detailed Address</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Delivery address" {...field} />
+                          <Textarea
+                            placeholder="Full delivery address"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
-                    control={form.control}
-                    name="deliveryDateTime"
+                    control={step2Form.control}
+                    name="deliveryInfo.0.fromTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Delivery date and time</FormLabel>
+                        <FormLabel>From Time</FormLabel>
                         <FormControl>
                           <Input type="datetime-local" {...field} />
                         </FormControl>
@@ -605,280 +779,13 @@ export default function CreateOrder() {
                   />
 
                   <FormField
-                    control={form.control}
-                    name="deliveryNotes"
+                    control={step2Form.control}
+                    name="deliveryInfo.0.toTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Billing Amount</FormLabel>
+                        <FormLabel>To Time</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Additional notes" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">
-                        Delivery special requirements
-                      </Label>
-                      <div className="flex space-x-2">
-                        <Button type="button" variant="outline" size="sm">
-                          Equipment
-                        </Button>
-                        <Button type="button" variant="outline" size="sm">
-                          Teflon
-                        </Button>
-                        <Button type="button" variant="outline" size="sm">
-                          Crane
-                        </Button>
-                        <Button type="button" variant="outline" size="sm">
-                          Electric unit
-                        </Button>
-                      </div>
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="deliveryLaborRequired"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Labor</FormLabel>
-                          <div className="flex space-x-4">
-                            <label className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                value="yes"
-                                checked={field.value === "yes"}
-                                onChange={() => field.onChange("yes")}
-                              />
-                              <span>Yes</span>
-                            </label>
-                            <label className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                value="no"
-                                checked={field.value === "no"}
-                                onChange={() => field.onChange("no")}
-                              />
-                              <span>No</span>
-                            </label>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="deliveryLaborDetails"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Other requirement</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Additional requirements"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="deliveryNotes2"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pickup notes</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Additional delivery notes"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Delivery Coordinator Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <User className="mr-2 h-5 w-5" />
-                    Delivery coordinator info
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="deliveryCoordinatorName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Requester Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Delivery coordinator name"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="deliveryCoordinatorContact1"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Requester contact 1</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Delivery coordinator contact 1"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="deliveryCoordinatorContact2"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Requester contact 2</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Delivery coordinator contact 2"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="deliveryCoordinatorEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email address</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="Delivery coordinator email"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Shipping Details */}
-          <div className="bg-blue-50 p-1 rounded-lg">
-            <div className="bg-blue-600 text-white p-3 rounded-lg mb-6">
-              <h3 className="font-medium">
-                Trip schedule for shipping operation
-              </h3>
-            </div>
-
-            <Card className="m-6">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Package className="mr-2 h-5 w-5" />
-                  Shipping details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">
-                      Service Type
-                    </Label>
-                    <div className="flex space-x-1">
-                      <Button type="button" variant="outline" size="sm">
-                        FCL
-                      </Button>
-                      <Button type="button" variant="outline" size="sm">
-                        LCL
-                      </Button>
-                      <Button type="button" variant="outline" size="sm">
-                        FTL
-                      </Button>
-                      <Button type="button" variant="outline" size="sm">
-                        LTL
-                      </Button>
-                      <Button type="button" variant="outline" size="sm">
-                        Express
-                      </Button>
-                    </div>
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="dimensions"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>H*W*L (m)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Dimensions" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="weight"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Weight</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Weight (kg)" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="quantity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Total amount of items</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Quantity" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="specialInstructions"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Any description of items</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Item description" {...field} />
+                          <Input type="datetime-local" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -887,14 +794,351 @@ export default function CreateOrder() {
                 </div>
 
                 <FormField
-                  control={form.control}
-                  name="assignedTo"
+                  control={step2Form.control}
+                  name="deliveryInfo.0.otherRequirements"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Assigned to</FormLabel>
+                      <FormLabel>Other Requirements</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Personnel assigned to this shipment for tracking"
+                        <Textarea
+                          placeholder="Additional requirements"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={step2Form.control}
+                  name="deliveryInfo.0.deliveryNotes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Delivery Notes</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Special instructions for delivery"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Delivery Coordinator */}
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-4">Delivery Coordinator</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={step2Form.control}
+                      name="deliveryInfo.0.deliveryCoordinator.requesterName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Coordinator Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Coordinator name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={step2Form.control}
+                      name="deliveryInfo.0.deliveryCoordinator.requesterMobile1"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Primary Mobile</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+1234567890" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={step2Form.control}
+                      name="deliveryInfo.0.deliveryCoordinator.requesterMobile2"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Secondary Mobile</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+0987654321" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={step2Form.control}
+                      name="deliveryInfo.0.deliveryCoordinator.emailAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="coordinator@example.com"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Navigation */}
+            <div className="flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={goToPreviousStep}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Previous Step
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {loading ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    Next Step <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      )}
+
+      {/* Step 3: Shipping Information */}
+      {currentStep === 3 && (
+        <Form {...step3Form}>
+          <form
+            onSubmit={step3Form.handleSubmit(onStep3Submit)}
+            className="space-y-6"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Package className="mr-2 h-5 w-5" />
+                  Shipping Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={step3Form.control}
+                    name="shippingUnits"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Shipping Units</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select shipping units" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Pallets">Pallets</SelectItem>
+                            <SelectItem value="Boxes">Boxes</SelectItem>
+                            <SelectItem value="Crates">Crates</SelectItem>
+                            <SelectItem value="Containers">
+                              Containers
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step3Form.control}
+                    name="typeOfTruck"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Type of Truck</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Truck type ID" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <FormField
+                    control={step3Form.control}
+                    name="qty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quantity</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            placeholder="1"
+                            {...field}
+                            onChange={(e) => {
+                              const value = Number(e.target.value);
+                              field.onChange(value > 0 ? value : 1);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step3Form.control}
+                    name="dimM"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dimensions (m³)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="0.1"
+                            placeholder="1.0"
+                            {...field}
+                            onChange={(e) => {
+                              const value = Number(e.target.value);
+                              field.onChange(value > 0 ? value : 1);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step3Form.control}
+                    name="length"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Length (m)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="0.1"
+                            placeholder="1.0"
+                            {...field}
+                            onChange={(e) => {
+                              const value = Number(e.target.value);
+                              field.onChange(value > 0 ? value : 1);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step3Form.control}
+                    name="width"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Width (m)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="0.1"
+                            placeholder="1.0"
+                            {...field}
+                            onChange={(e) => {
+                              const value = Number(e.target.value);
+                              field.onChange(value > 0 ? value : 1);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={step3Form.control}
+                    name="height"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Height (m)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="0.1"
+                            placeholder="1.0"
+                            {...field}
+                            onChange={(e) => {
+                              const value = Number(e.target.value);
+                              field.onChange(value > 0 ? value : 1);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={step3Form.control}
+                    name="totalWeight"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Total Weight (kg)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="0.1"
+                            placeholder="1.0"
+                            {...field}
+                            onChange={(e) => {
+                              const value = Number(e.target.value);
+                              field.onChange(value > 0 ? value : 1);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={step3Form.control}
+                  name="note"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Additional shipping notes"
                           {...field}
                         />
                       </FormControl>
@@ -904,9 +1148,35 @@ export default function CreateOrder() {
                 />
               </CardContent>
             </Card>
-          </div>
-        </form>
-      </Form>
+
+            {/* Navigation */}
+            <div className="flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={goToPreviousStep}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Previous Step
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {loading ? (
+                  "Creating Order..."
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Create Order
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      )}
     </div>
   );
 }
