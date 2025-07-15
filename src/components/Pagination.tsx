@@ -83,7 +83,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   const pageNumbers = generatePageNumbers(currentPage, totalPages);
 
   return (
-    <div className={`flex flex-col gap-4 ${className}`}>
+    <div className={`flex gap-4 ${className}`}>
       <div className="flex items-center justify-between gap-4">
         <div className="text-sm text-gray-700">
           Showing {startResult} to {endResult} of {totalResults} results

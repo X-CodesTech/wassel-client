@@ -21,6 +21,7 @@ import { Users, DollarSign, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCustomers } from "@/hooks/useCustomers";
 import { CustomerFilters } from "@/types/types";
+import Pagination from "@/components/Pagination";
 
 export default function Customers() {
   const [, setLocation] = useLocation();
@@ -413,55 +414,16 @@ export default function Customers() {
       {loading === "fulfilled" &&
         customers.length > 0 &&
         pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <div className="text-sm text-gray-500">
-              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-              of {pagination.total} customers
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={pagination.page <= 1}
-              >
-                Previous
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from(
-                  { length: Math.min(5, pagination.totalPages) },
-                  (_, i) => {
-                    const page = i + 1;
-                    return (
-                      <Button
-                        key={page}
-                        variant={
-                          page === pagination.page ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() => handlePageChange(page)}
-                        className="w-8 h-8 p-0"
-                      >
-                        {page}
-                      </Button>
-                    );
-                  }
-                )}
-                {pagination.totalPages > 5 && (
-                  <span className="text-gray-500 px-2">...</span>
-                )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={pagination.page >= pagination.totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            pageLimit={pagination.limit}
+            totalResults={pagination.total}
+            onPageChange={handlePageChange}
+            onLimitChange={(limit) =>
+              setFilters((prev) => ({ ...prev, limit, page: 1 }))
+            }
+          />
         )}
     </div>
   );
