@@ -27,7 +27,7 @@ export interface Activity {
 
 export interface SubActivity {
   _id?: string;
-  activity: string;
+  activity: string | Activity;
   transactionType: TransactionType;
   financeEffect: "none" | "positive" | "negative";
   pricingMethod: "perLocation" | "perItem" | "perTrip";

@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 import ActivityTable from "@/components/ActivityTable";
 import AddActivityForm from "@/components/AddActivityForm";
 import EditActivityForm from "@/components/EditActivityForm";
+import { ErrorComponent } from "@/components/ErrorComponents";
+import { ActivitiesPageSkeleton } from "@/components/LoadingComponents";
 import SearchFilter from "@/components/SearchFilter";
-import { Activity } from "@/types/types";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,123 +14,42 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import {
-  actGetActivities,
-  actRemoveActivity,
-} from "@/store/activities/activitiesSlice";
-import { ActivitiesPageSkeleton } from "@/components/LoadingComponents";
-import { ErrorComponent } from "@/components/ErrorComponents";
-import { actGetTransactionTypes } from "@/store/transactionTypes/transactionTypesSlice";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { LOADING_STATES } from "@/constants/appConstants";
+import { useActivityManagement } from "@/hooks/useActivityManagement";
 
 export default function ActivityManagement() {
-  const dispatch = useAppDispatch();
-  const { records, loading, error } = useAppSelector(
-    (state) => state.activities
-  );
+  const {
+    activities,
+    loading,
+    error,
+    searchTerm,
+    filterType,
+    expandedActivityId,
+    selectedActivity,
+    isAddActivityOpen,
+    isEditActivityOpen,
+    isAddSubActivityOpen,
+    isDeleteConfirmOpen,
+    setSearchTerm,
+    setFilterType,
+    setIsAddActivityOpen,
+    setIsEditActivityOpen,
+    setIsAddSubActivityOpen,
+    setIsDeleteConfirmOpen,
+    handleToggleExpand,
+    handleEditActivity,
+    handleDeleteActivity,
+    handleAddSubActivity,
+    confirmDeleteActivity,
+    closeModals,
+  } = useActivityManagement();
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<string | null>(null);
-  const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
-    null
-  );
-
-  // Modal states
-  const [addActivityOpen, setAddActivityOpen] = useState(false);
-  const [editActivityOpen, setEditActivityOpen] = useState(false);
-  const [addSubActivityOpen, setAddSubActivityOpen] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-
-  const { toast } = useToast();
-
-  // Delete activity function
-  const deleteActivity = (id: string) => {
-    dispatch(actRemoveActivity(id))
-      .unwrap()
-      .then(() => {
-        toast({
-          title: "Success",
-          description: "Sub-activity deleted successfully",
-        });
-        dispatch(actGetActivities());
-      })
-      .catch(() => {
-        toast({
-          title: "Failed",
-          description: "An Erorr Occurred while deleting the Activity",
-        });
-      });
-    setDeleteConfirmOpen(false);
-  };
-
-  // Filter activities based on search term and filter type
-  const filteredActivities = records?.filter((activity: Activity) => {
-    const matchesSearch =
-      activity.actSrl.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.activityCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.activityNameEn
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      activity.activityNameAr
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      activity.activityTransactionType
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-
-    if (!filterType) return matchesSearch;
-
-    switch (filterType) {
-      case "activityType":
-        return matchesSearch && activity.activityTransactionType === "X-work";
-      case "activeStatus":
-        return matchesSearch && activity.isActive;
-      default:
-        return matchesSearch;
-    }
-  });
-
-  // Toggle expanded activity
-  const handleToggleExpand = (actSrl: string) => {
-    setExpandedActivity(expandedActivity === actSrl ? null : actSrl);
-  };
-
-  // Handle edit activity
-  const handleEditActivity = (activity: Activity) => {
-    setSelectedActivity(activity);
-    setEditActivityOpen(true);
-  };
-
-  // Handle delete activity
-  const handleDeleteActivity = (activity: Activity) => {
-    setSelectedActivity(activity);
-    setDeleteConfirmOpen(true);
-  };
-
-  // Confirm delete activity
-  const confirmDeleteActivity = () => {
-    if (selectedActivity) {
-      deleteActivity(selectedActivity._id!);
-    }
-  };
-
-  // Handle add sub-activity
-  const handleAddSubActivity = (activity: Activity) => {
-    setSelectedActivity(activity);
-    setAddSubActivityOpen(true);
-  };
-
-  useEffect(() => {
-    dispatch(actGetActivities());
-    dispatch(actGetTransactionTypes());
-  }, [dispatch]);
-
-  if (loading === "pending" && !records.length) {
+  if (loading === LOADING_STATES.PENDING && !activities.length) {
     return <ActivitiesPageSkeleton />;
   }
 
-  if (loading === "rejected" && error) {
+  if (loading === LOADING_STATES.REJECTED && error) {
     return (
       <div className="w-full h-full grid place-items-center">
         <ErrorComponent
@@ -166,44 +83,47 @@ export default function ActivityManagement() {
                 onSearchChange={setSearchTerm}
                 filterType={filterType}
                 onFilterChange={setFilterType}
-                onAddActivity={() => setAddActivityOpen(true)}
+                onAddActivity={() => setIsAddActivityOpen(true)}
               />
             </div>
           </div>
 
           <ActivityTable
-            activities={filteredActivities}
-            expandedActivity={expandedActivity}
+            activities={activities}
+            expandedActivity={expandedActivityId}
             onToggleExpand={handleToggleExpand}
             onEditActivity={handleEditActivity}
             onDeleteActivity={handleDeleteActivity}
             onAddSubActivity={handleAddSubActivity}
-            handleAddSubActivityOpen={() => setAddSubActivityOpen(true)}
+            handleAddSubActivityOpen={() => setIsAddSubActivityOpen(true)}
           />
         </div>
       </div>
 
       {/* Add Activity Dialog */}
-      <Dialog open={addActivityOpen} onOpenChange={setAddActivityOpen}>
+      <Dialog open={isAddActivityOpen} onOpenChange={setIsAddActivityOpen}>
         <DialogContent className="max-w-[974px] w-full">
-          <AddActivityForm onClose={() => setAddActivityOpen(false)} />
+          <AddActivityForm onClose={() => setIsAddActivityOpen(false)} />
         </DialogContent>
       </Dialog>
 
       {/* Edit Activity Dialog */}
-      <Dialog open={editActivityOpen} onOpenChange={setEditActivityOpen}>
+      <Dialog open={isEditActivityOpen} onOpenChange={setIsEditActivityOpen}>
         <DialogContent className="max-w-[974px] w-full">
           {selectedActivity && (
             <EditActivityForm
               activity={selectedActivity}
-              onClose={() => setEditActivityOpen(false)}
+              onClose={() => setIsEditActivityOpen(false)}
             />
           )}
         </DialogContent>
       </Dialog>
 
       {/* Delete Activity Confirmation */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={setIsDeleteConfirmOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>

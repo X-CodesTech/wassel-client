@@ -1,49 +1,38 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { Vendor } from "@/types/types";
+import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
-import { useVendors } from "@/hooks/useVendors";
-import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import {
-  actGetVendorPriceLists,
-  actCreateVendorPriceList,
-  actUpdateVendorPriceList,
-  actDeleteVendorPriceList,
-  clearPriceLists,
-} from "@/store/vendors";
+import VendorCostListTable from "@/components/VendorCostListTable";
+import VendorInfoTable from "@/components/VendorInfoTable";
 import VendorPriceListModal from "@/components/VendorPriceListModal";
-import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
-import {
-  ArrowLeft,
-  Building2,
-  Calendar,
-  Star,
-  Package,
-  TrendingUp,
-  Edit,
-  FileText,
-  Clock,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { useVendors } from "@/hooks/useVendors";
 import {
   CreateVendorPriceListRequest,
   UpdateVendorPriceListRequest,
   VendorPriceList,
 } from "@/services/vendorServices";
-import { PriceList } from "@/services/priceListServices";
+import {
+  actCreateVendorPriceList,
+  actDeleteVendorPriceList,
+  actGetVendorPriceLists,
+  actUpdateVendorPriceList,
+  clearPriceLists,
+} from "@/store/vendors";
+import { Vendor } from "@/types/types";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  FileText,
+  Package,
+  Plus,
+  Star,
+  TrendingUp,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 
 interface VendorDetailsProps {
   params?: {
@@ -75,6 +64,8 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     deletePriceListLoading,
   } = useAppSelector((state) => state.vendors);
 
+  const vendorDetails = priceLists?.[0];
+
   useEffect(() => {
     // Fetch all vendors if not already loaded
     if (records.length === 0) {
@@ -87,7 +78,10 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     if (params?.id && records.length > 0) {
       const foundVendor = records.find((v) => v.vendAccount === params.id);
       if (foundVendor) {
-        setVendor(foundVendor);
+        setVendor({
+          ...foundVendor,
+          updatedAt: foundVendor.updatedAt ?? foundVendor.createdDate,
+        });
         // Fetch vendor price lists
         dispatch(actGetVendorPriceLists(foundVendor._id));
       } else {
@@ -229,14 +223,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     setIsDeleteDialogOpen(true);
   };
 
-  const getStatusBadge = (blocked: boolean) => {
-    return blocked ? (
-      <Badge variant="destructive">Blocked</Badge>
-    ) : (
-      <Badge className="bg-green-100 text-green-800">Active</Badge>
-    );
-  };
-
   const getOrderStatusBadge = (status: string) => {
     const variants = {
       completed: "outline",
@@ -340,11 +326,12 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {getStatusBadge(vendor.blocked)}
+              {vendor.blocked ? (
+                <Badge variant="destructive">Blocked</Badge>
+              ) : (
+                <Badge className="bg-green-100 text-green-800">Active</Badge>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {vendor.blocked ? "Blocked" : "Active"}
-            </p>
           </CardContent>
         </Card>
 
@@ -376,77 +363,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       </div>
 
       {/* Vendor Information Table */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Building2 className="h-5 w-5 mr-2" />
-            Vendor Info
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Left Column */}
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Vendor Name:
-                </span>
-                <span className="text-sm font-semibold">{vendor.vendName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Vendor Account:
-                </span>
-                <span className="text-sm">{vendor.vendAccount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Vendor Group ID:
-                </span>
-                <span className="text-sm">{vendor.vendGroupId}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Status:
-                </span>
-                <span className="text-sm">
-                  {vendor.blocked ? "Blocked" : "Active"}
-                </span>
-              </div>
-            </div>
-
-            {/* Middle Column */}
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Created Date:
-                </span>
-                <span className="text-sm">
-                  {new Date(vendor.createdDate).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Last Updated:
-                </span>
-                <span className="text-sm">
-                  {new Date(vendor.updatedAt).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-600">
-                  Vendor ID:
-                </span>
-                <span className="text-sm">{vendor._id}</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <VendorInfoTable vendor={vendor} vendorDetails={vendorDetails} />
 
       {/* Cost List Section */}
       <Card className="mb-6">
@@ -467,147 +384,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             </div>
           ) : priceLists && priceLists.length > 0 ? (
             <div className="space-y-4">
-              {priceLists.map((priceList) => (
-                <div key={priceList._id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-semibold text-lg">
-                        {priceList.name || priceList.nameAr}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {priceList.description}
-                      </p>
-                      <div className="flex items-center gap-4 mt-2">
-                        <Badge
-                          variant={priceList.isActive ? "default" : "secondary"}
-                        >
-                          {priceList.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                          {new Date(
-                            priceList.effectiveFrom
-                          ).toLocaleDateString()}{" "}
-                          -{" "}
-                          {new Date(priceList.effectiveTo).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditPriceList(priceList)}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => handleDeletePriceListClick(priceList)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-
-                  {priceList.subActivityPrices &&
-                    priceList.subActivityPrices.length > 0 && (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Sub Activity</TableHead>
-                            <TableHead>Pricing Method</TableHead>
-                            <TableHead>Base Cost</TableHead>
-                            <TableHead>Location Prices</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {priceList.subActivityPrices.map(
-                            (subActivity, index) => (
-                              <TableRow key={index}>
-                                <TableCell className="font-medium">
-                                  {subActivity._id}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant="outline"
-                                    className="capitalize"
-                                  >
-                                    {subActivity.pricingMethod}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>${subActivity.cost}</TableCell>
-                                <TableCell>
-                                  {subActivity.locationPrices &&
-                                  subActivity.locationPrices.length > 0 ? (
-                                    <div className="space-y-1">
-                                      {subActivity.locationPrices.map(
-                                        (locationPrice, locationIndex) => (
-                                          <div
-                                            key={locationIndex}
-                                            className="text-xs"
-                                          >
-                                            {locationPrice.toLocation?.country}
-                                            <span className="font-medium">
-                                              {
-                                                locationPrice.fromLocation
-                                                  ?.country
-                                              }{" "}
-                                              →{" "}
-                                              {
-                                                locationPrice.toLocation
-                                                  ?.country
-                                              }
-                                              :
-                                            </span>{" "}
-                                            ${locationPrice.cost}
-                                          </div>
-                                        )
-                                      )}
-                                      {subActivity.locationPrices.map(
-                                        (locationPrice, locationIndex) => (
-                                          <div
-                                            key={locationIndex}
-                                            className="text-xs"
-                                          >
-                                            {
-                                              locationPrice.toLocation
-                                                ?.countryAr
-                                            }
-                                            <span className="font-medium">
-                                              {
-                                                locationPrice.fromLocation
-                                                  ?.countryAr
-                                              }{" "}
-                                              →{" "}
-                                              {
-                                                locationPrice.toLocation
-                                                  ?.countryAr
-                                              }
-                                              :
-                                            </span>{" "}
-                                            ${locationPrice.cost}
-                                          </div>
-                                        )
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="text-gray-500 text-sm">
-                                      No location prices
-                                    </span>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            )
-                          )}
-                        </TableBody>
-                      </Table>
-                    )}
-                </div>
-              ))}
+              <VendorCostListTable />
             </div>
           ) : (
             <div className="text-center py-8">

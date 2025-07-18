@@ -4,11 +4,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import VendorPriceListForm from "./VendorPriceListForm";
 import {
   CreateVendorPriceListRequest,
   UpdateVendorPriceListRequest,
 } from "@/services/vendorServices";
+import VendorPriceListForm from "./VendorPriceListForm";
 
 interface VendorPriceListModalProps {
   isOpen: boolean;
