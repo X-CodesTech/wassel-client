@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import VendorCostListTable from "@/components/VendorCostListTable";
 import VendorInfoTable from "@/components/VendorInfoTable";
+import VendorPriceListActions from "@/components/VendorPriceListActions";
 import VendorPriceListModal from "@/components/VendorPriceListModal";
 import { useToast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
@@ -31,7 +32,7 @@ import {
   Star,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
 interface VendorDetailsProps {
@@ -209,9 +210,9 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
   };
 
   // Modal handlers
-  const handleAddPriceList = () => {
+  const handleAddPriceList = useCallback(() => {
     setIsAddModalOpen(true);
-  };
+  }, []);
 
   const handleEditPriceList = (priceList: VendorPriceList) => {
     setSelectedPriceList(priceList);
@@ -369,10 +370,11 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Cost list</CardTitle>
-          <Button size="sm" variant="outline" onClick={handleAddPriceList}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Price List
-          </Button>
+          <VendorPriceListActions
+            id={vendor._id}
+            vendorName={vendor.vendName}
+            handleAddPriceList={handleAddPriceList}
+          />
         </CardHeader>
         <CardContent>
           {getPriceListsLoading === "pending" ? (

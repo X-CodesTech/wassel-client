@@ -1,17 +1,18 @@
+import {
+  DeleteVendorPriceListResponse,
+  VendorPriceListResponse,
+  VendorSyncResponse,
+} from "@/services/vendorServices";
 import { isString, TLoading } from "@/types";
-import { createSlice } from "@reduxjs/toolkit";
 import { Vendor, VendorResponse } from "@/types/types";
+import { createSlice } from "@reduxjs/toolkit";
+import { actCreateVendorPriceList } from "./act/actCreateVendorPriceList";
+import { actDeleteVendorPriceList } from "./act/actDeleteVendorPriceList";
+import { actExportVendorPriceListAsExcel } from "./act/actExportVendorPriceListFromExcel";
+import { actGetVendorPriceLists } from "./act/actGetVendorPriceLists";
 import { actGetVendors } from "./act/actGetVendors";
 import { actSyncVendors } from "./act/actSyncVendors";
-import { actCreateVendorPriceList } from "./act/actCreateVendorPriceList";
 import { actUpdateVendorPriceList } from "./act/actUpdateVendorPriceList";
-import { actDeleteVendorPriceList } from "./act/actDeleteVendorPriceList";
-import { actGetVendorPriceLists } from "./act/actGetVendorPriceLists";
-import {
-  VendorSyncResponse,
-  VendorPriceListResponse,
-  DeleteVendorPriceListResponse,
-} from "@/services/vendorServices";
 
 interface IVendorsState {
   records: Vendor[];
@@ -19,6 +20,9 @@ interface IVendorsState {
   blockedVendorsCount: number;
   loading: TLoading;
   error: null | string;
+  exportPriceListLoading: TLoading;
+  exportPriceListError: null | string;
+  exportPriceListResponse: VendorPriceListResponse | null;
   syncLoading: TLoading;
   syncError: null | string;
   syncStats: VendorSyncResponse["stats"] | null;
@@ -45,6 +49,9 @@ interface IVendorsState {
 const initialState: IVendorsState = {
   records: [],
   loading: "idle",
+  exportPriceListLoading: "idle",
+  exportPriceListError: null,
+  exportPriceListResponse: null,
   activeVendorsCount: 0,
   blockedVendorsCount: 0,
   error: null,
@@ -219,6 +226,29 @@ const vendorsSlice = createSlice({
         state.getPriceListsError = action.payload;
       }
     });
+
+    // Export Vendor Price List From Excel
+    builder.addCase(actExportVendorPriceListAsExcel.pending, (state) => {
+      state.exportPriceListLoading = "pending";
+      state.exportPriceListError = null;
+    });
+    builder.addCase(
+      actExportVendorPriceListAsExcel.fulfilled,
+      (state, action) => {
+        state.exportPriceListLoading = "fulfilled";
+        const response: VendorPriceListResponse = action.payload;
+        state.exportPriceListResponse = response;
+      }
+    );
+    builder.addCase(
+      actExportVendorPriceListAsExcel.rejected,
+      (state, action) => {
+        state.exportPriceListLoading = "rejected";
+        if (isString(action.payload)) {
+          state.exportPriceListError = action.payload;
+        }
+      }
+    );
   },
 });
 
@@ -238,12 +268,13 @@ export const {
 } = vendorsSlice.actions;
 
 export {
+  actCreateVendorPriceList,
+  actDeleteVendorPriceList,
+  actExportVendorPriceListAsExcel,
+  actGetVendorPriceLists,
   actGetVendors,
   actSyncVendors,
-  actCreateVendorPriceList,
   actUpdateVendorPriceList,
-  actDeleteVendorPriceList,
-  actGetVendorPriceLists,
 };
 
 export default vendorsSlice.reducer;

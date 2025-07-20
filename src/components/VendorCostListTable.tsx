@@ -1,15 +1,25 @@
-import { useAppSelector } from "@/hooks/useAppSelector";
+import { toast } from "@/hooks/use-toast";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import {
   Location,
   LocationPrice,
   SubActivityPrice,
 } from "@/services/vendorServices";
+import { actDeleteVendorPriceList } from "@/store/vendors";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import {
   Table,
   TableBody,
@@ -95,9 +105,12 @@ const getPricingMethodColor = (method: string) => {
 };
 
 export default function VendorCostListTable() {
+  const dispatch = useAppDispatch();
   const { priceLists } = useAppSelector((state) => state.vendors);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-
+  const [open, setOpen] = useState(false);
+  const [selectedPriceList, setSelectedPriceList] =
+    useState<SubActivityPrice | null>(null);
   const loopItems = priceLists?.[0]?.subActivityPrices;
 
   const EXPANDABLE_ROWS = ["perLocation", "perTrip"];
@@ -127,6 +140,10 @@ export default function VendorCostListTable() {
       label: "Cost Range",
       key: "subActivity.cost",
     },
+    {
+      label: "Actions",
+      key: "action",
+    },
   ];
 
   const toggleExpanded = (key: string) => {
@@ -143,40 +160,6 @@ export default function VendorCostListTable() {
     if (!expandedRows.has(item.subActivity.portalItemNameEn)) {
       return null;
     }
-
-    const formatOptimalAddress = (
-      location: Location | undefined,
-      isArabic: boolean = false
-    ) => {
-      if (!location) return "N/A";
-
-      if (isArabic) {
-        return (
-          `${location.villageAr || ""} ${location.cityAr || ""} ${
-            location.areaAr || ""
-          } ${location.countryAr || ""}`.trim() || "غير متوفر"
-        );
-      }
-
-      return (
-        `${location.village || ""} ${location.city || ""} ${
-          location.area || ""
-        } ${location.country || ""}`.trim() || "N/A"
-      );
-    };
-
-    const getLocationName = (location: Location, isArabic: boolean = false) => {
-      if (isArabic) {
-        return (
-          location.cityAr ||
-          location.areaAr ||
-          location.countryAr ||
-          "غير متوفر"
-        );
-      }
-
-      return location.city || location.area || location.country || "N/A";
-    };
 
     const formatFromToAddress = (locationPrice: LocationPrice) => {
       const formatFullAddress = (
@@ -388,33 +371,83 @@ export default function VendorCostListTable() {
           <TableCell className="font-medium text-center">
             {renderCostRange(item.cost, item.locationPrices)}
           </TableCell>
+          <TableCell className="font-medium text-center">
+            <div className="flex gap-2">
+              <Button variant="outline" size="icon" className="text-blue-500">
+                <Edit className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="text-red-500 hover:text-red-600"
+                onClick={() => {
+                  setSelectedPriceList(item);
+                  setOpen(true);
+                }}
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </div>
+          </TableCell>
         </TableRow>
         {isExpandable && renderExpandableContent(item)}
       </>
     );
   };
 
+  const handleDeletePriceList = () => {
+    if (selectedPriceList?._id) {
+      dispatch(actDeleteVendorPriceList(selectedPriceList?._id));
+      setOpen(false);
+    } else {
+      toast({
+        title: "Error",
+        description: "There is an error while deleting the price list",
+      });
+    }
+  };
+
   return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-center w-12" />
-                {MAIN_TABLE_HEADERS.map((header) => (
-                  <TableHead key={header.key} className="text-center">
-                    {header.label}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loopItems?.map((item, index) => renderTableRow(item, index))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-center w-12" />
+                  {MAIN_TABLE_HEADERS.map((header) => (
+                    <TableHead key={header.key} className="text-center">
+                      {header.label}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loopItems?.map((item, index) => renderTableRow(item, index))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Price List Confirmation</DialogTitle>
+          </DialogHeader>
+          <DialogDescription>
+            Are you sure you want to delete this price list?
+          </DialogDescription>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeletePriceList}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -1,6 +1,4 @@
-import vendorServices, {
-  DeleteVendorPriceListResponse,
-} from "@/services/vendorServices";
+import vendorServices from "@/services/vendorServices";
 import { axiosErrorHandler } from "@/utils";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 

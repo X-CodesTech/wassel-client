@@ -1,11 +1,11 @@
-import http from "./http";
-import { apiUrlConstants } from "./apiUrlConstants";
 import {
   SubActivity,
   Vendor,
   VendorFilters,
   VendorResponse,
 } from "@/types/types";
+import { apiUrlConstants } from "./apiUrlConstants";
+import http from "./http";
 
 export interface VendorSyncResponse {
   message: string;
@@ -171,6 +171,24 @@ const vendorServices = {
       `${apiUrlConstants.vendorPriceLists}/vendor/${vendorId}`
     );
     return response.data;
+  },
+
+  exportVendorPriceListAsExcel: async ({
+    id,
+    isActive,
+  }: {
+    id: string;
+    isActive: boolean;
+  }) => {
+    return await http.get(
+      `${apiUrlConstants.vendorPriceLists}/vendor/${id}/export`,
+      {
+        responseType: "blob",
+        params: {
+          isActive,
+        },
+      }
+    );
   },
 };
 
