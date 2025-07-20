@@ -1,4 +1,9 @@
-import { Location, LocationFilters, InsertLocation } from "@/types/types";
+import {
+  Location,
+  LocationFilters,
+  InsertLocation,
+  LocationsResponse,
+} from "@/types/types";
 import { apiUrlConstants } from "./apiUrlConstants";
 import http from "./http";
 
@@ -18,11 +23,13 @@ class LocationServices {
       ? `${apiUrlConstants.locations}?${queryString}`
       : apiUrlConstants.locations;
 
-    return await http.get<Location[]>(url);
+    return await http.get<LocationsResponse>(url);
   }
 
   async getLocationById(id: string) {
-    return await http.get<Location>(`${apiUrlConstants.locations}/${id}`);
+    return await http.get<LocationsResponse>(
+      `${apiUrlConstants.locations}/${id}`
+    );
   }
 
   async addLocation(location: InsertLocation) {

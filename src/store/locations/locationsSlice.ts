@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Location } from "@/types/types";
+import { Location, LocationsResponse } from "@/types/types";
 import {
   actGetLocations,
   actAddLocation,
@@ -36,9 +36,9 @@ const locationsSlice = createSlice({
       })
       .addCase(
         actGetLocations.fulfilled,
-        (state, action: PayloadAction<Location[]>) => {
+        (state, action: PayloadAction<LocationsResponse>) => {
           state.loading = false;
-          state.records = action.payload;
+          state.records = action.payload.locations;
         }
       )
       .addCase(actGetLocations.rejected, (state, action) => {

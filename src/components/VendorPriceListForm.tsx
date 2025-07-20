@@ -22,13 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, X } from "lucide-react";
 import {
   CreateVendorPriceListRequest,
   UpdateVendorPriceListRequest,
 } from "@/services/vendorServices";
+import { useAppSelector, useAppDispatch } from "@/hooks/useAppSelector";
+import { actGetLocations } from "@/store/locations/act";
 
 // Validation schemas
 const locationPriceSchema = z.object({
@@ -79,19 +79,20 @@ export default function VendorPriceListForm({
   onCancel,
   isLoading = false,
 }: VendorPriceListFormProps) {
+  const dispatch = useAppDispatch();
+  const { records: locations, loading: locationsLoading } = useAppSelector(
+    (state) => state.locations
+  );
+
+  useEffect(() => {
+    dispatch(actGetLocations());
+  }, [dispatch]);
+
   const [subActivities] = useState([
     { id: "1", name: "Express Delivery" },
     { id: "2", name: "Standard Shipping" },
     { id: "3", name: "Freight Transport" },
     { id: "4", name: "Local Delivery" },
-  ]);
-
-  const [locations] = useState([
-    { id: "1", name: "Ramallah" },
-    { id: "2", name: "Jerusalem" },
-    { id: "3", name: "Bethlehem" },
-    { id: "4", name: "Nablus" },
-    { id: "5", name: "Hebron" },
   ]);
 
   const form = useForm<VendorPriceListFormData>({
@@ -109,12 +110,27 @@ export default function VendorPriceListForm({
         ? new Date(initialData.effectiveTo).toISOString().split("T")[0]
         : "",
       isActive: initialData?.isActive ?? true,
-      subActivityPrices: initialData?.subActivityPrices || [
+      subActivityPrices: [
         {
-          subActivity: "",
+          subActivity: "507f1f77bcf86cd799439011",
           pricingMethod: "perLocation",
-          cost: 0,
-          locationPrices: [],
+          cost: 70,
+          locationPrices: [
+            {
+              location: "60d21b4667d0d8992e610c85",
+              fromLocation: "60d21b4667d0d8992e610c86",
+              toLocation: "60d21b4667d0d8992e610c87",
+              cost: 200,
+              pricingMethod: "perLocation",
+            },
+            {
+              location: "60d21b4667d0d8992e610c85",
+              fromLocation: "60d21b4667d0d8992e610c86",
+              toLocation: "60d21b4667d0d8992e610c87",
+              cost: 200,
+              pricingMethod: "perLocation",
+            },
+          ],
         },
       ],
     },

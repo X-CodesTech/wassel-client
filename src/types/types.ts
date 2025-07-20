@@ -141,6 +141,14 @@ export type InsertArea = z.infer<typeof insertAreaSchema>;
 export type InsertCity = z.infer<typeof insertCitySchema>;
 export type InsertVillage = z.infer<typeof insertVillageSchema>;
 
+export type LocationsResponse = {
+  locations: Location[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+};
+
 // Location interface and schema
 export interface Location {
   _id: string;
@@ -153,8 +161,9 @@ export interface Location {
   village: string;
   villageAr: string;
   isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  __v: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const locationSchema = z.object({
