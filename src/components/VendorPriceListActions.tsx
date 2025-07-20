@@ -5,6 +5,9 @@ import {
   Loader2,
   LucideDownloadCloud,
   Plus,
+  Upload,
+  FileSpreadsheet,
+  X,
 } from "lucide-react";
 import { useReducer, useState } from "react";
 import { Button } from "./ui/button";
@@ -12,6 +15,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
@@ -23,6 +27,21 @@ import {
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
 import { toast } from "@/hooks/use-toast";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "./ui/form";
+import { useForm } from "react-hook-form";
+import { Textarea } from "./ui/textarea";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  vendorPriceListUploadSchema,
+  VendorPriceListUploadData,
+} from "@/utils/validationSchemas";
 
 type TLoading = "idle" | "pending" | "fulfilled" | "rejected";
 
@@ -34,7 +53,6 @@ const initialState = {
     response: null,
   },
   exporting: {
-    modalOpen: false,
     loading: "idle" as TLoading,
     error: null,
     response: null,
@@ -98,10 +116,141 @@ export default function VendorPriceListActions({
   vendorName: string;
 }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [importFileDialogOpen, setImportFileDialogOpen] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState<string>("");
+
+  const form = useForm({
+    defaultValues: {
+      file: undefined,
+      name: "",
+      nameAr: "",
+      description: "",
+      descriptionAr: "",
+      effectiveFrom: "",
+      effectiveTo: "",
+    },
+    resolver: zodResolver(vendorPriceListUploadSchema),
+  });
+
+  // Helper function to convert DD/MM/YYYY to YYYY-MM-DD for HTML date input
+  const formatDateForInput = (dateString: string): string => {
+    if (!dateString) return "";
+    const parts = dateString.split("/");
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    return dateString;
+  };
+
+  // Helper function to convert YYYY-MM-DD to DD/MM/YYYY for API
+  const formatDateForAPI = (dateString: string): string => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB"); // DD/MM/YYYY format
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (
+        file.type ===
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        file.type === "application/vnd.ms-excel" ||
+        file.name.endsWith(".xlsx") ||
+        file.name.endsWith(".xls")
+      ) {
+        form.setValue("file", e.dataTransfer.files as any);
+        setSelectedFileName(file.name);
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an Excel file (.xlsx or .xls)",
+        });
+      }
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFileName(file.name);
+    }
+  };
+
+  const clearFile = () => {
+    form.setValue("file", undefined);
+    setSelectedFileName("");
+  };
+
+  const onSubmit = async (data: VendorPriceListUploadData) => {
+    dispatch({ type: "importing/loading", payload: "pending" });
+    try {
+      const formData = new FormData();
+
+      // Append the file
+      if (data.file && data.file[0]) {
+        formData.append("file", data.file[0]);
+      }
+
+      // Append required fields
+      formData.append("name", data.name);
+      formData.append("nameAr", data.nameAr);
+
+      // Append optional fields if provided
+      if (data.description) {
+        formData.append("description", data.description);
+      }
+      if (data.descriptionAr) {
+        formData.append("descriptionAr", data.descriptionAr);
+      }
+
+      // Append required date fields
+      formData.append("effectiveFrom", data.effectiveFrom);
+      if (data.effectiveTo) {
+        formData.append("effectiveTo", data.effectiveTo);
+      }
+
+      const response = await vendorServices.uploadVendorPriceListFromExcel(
+        id,
+        formData
+      );
+      console.log(response);
+      dispatch({ type: "importing/loading", payload: "fulfilled" });
+      dispatch({ type: "importing/modalOpen", payload: false });
+      toast({
+        title: "Success",
+        description: "Price list imported successfully",
+      });
+      // Reset form
+      form.reset();
+      setSelectedFileName("");
+    } catch (error) {
+      dispatch({ type: "importing/loading", payload: "rejected" });
+      dispatch({ type: "importing/error", payload: error });
+      toast({
+        title: "Error",
+        description: "Failed to import price list",
+      });
+    }
+  };
 
   const handleImportPriceList = () => {
-    console.log("Import Price List");
+    dispatch({ type: "importing/modalOpen", payload: true });
   };
 
   const handleExportPriceList = async (isActive: boolean) => {
@@ -175,18 +324,228 @@ export default function VendorPriceListActions({
         </DropdownMenu>
       </div>
       <Dialog
-        open={importFileDialogOpen}
-        onOpenChange={setImportFileDialogOpen}
+        open={state.importing.modalOpen}
+        onOpenChange={(open) =>
+          dispatch({ type: "importing/modalOpen", payload: open })
+        }
       >
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Import Price List</DialogTitle>
           </DialogHeader>
           <DialogDescription>
-            Import a price list from a file.
+            Import a price list from an Excel file. The file must contain a
+            sheet named "Upload" with pricing data starting from row 9.
           </DialogDescription>
-          <Input type="file" />
-          <Button type="submit">Import</Button>
+          <Form {...form}>
+            <div className="space-y-4">
+              {/* Enhanced Excel File Upload */}
+              <FormField
+                control={form.control}
+                name="file"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <FileSpreadsheet className="h-4 w-4" />
+                      Excel File *
+                    </FormLabel>
+                    <FormControl>
+                      <div
+                        className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                          dragActive
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-300 hover:border-gray-400"
+                        } ${
+                          selectedFileName ? "bg-green-50 border-green-300" : ""
+                        }`}
+                        onDragEnter={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDragOver={handleDrag}
+                        onDrop={handleDrop}
+                      >
+                        {selectedFileName ? (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                              <span className="text-sm font-medium text-green-700">
+                                {selectedFileName}
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={clearFile}
+                              className="h-6 w-6 p-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <FileSpreadsheet className="mx-auto h-8 w-8 text-gray-400" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-700">
+                                Drop your Excel file here, or{" "}
+                                <label className="text-blue-600 hover:text-blue-500 cursor-pointer">
+                                  browse
+                                  <Input
+                                    type="file"
+                                    accept=".xlsx,.xls"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      field.onChange(e.target.files);
+                                      handleFileChange(e);
+                                    }}
+                                  />
+                                </label>
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Supports .xlsx and .xls files
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Name and Arabic Name in one row */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter price list name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="nameAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Arabic Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Arabic name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Description and Arabic Description in one row */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="descriptionAr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Arabic Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter Arabic description"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Effective From and To in one row */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="effectiveFrom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Effective From *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          value={formatDateForInput(field.value)}
+                          onChange={(e) => {
+                            const formattedDate = formatDateForAPI(
+                              e.target.value
+                            );
+                            field.onChange(formattedDate);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="effectiveTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Effective To</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          value={formatDateForInput(field.value)}
+                          onChange={(e) => {
+                            const formattedDate = formatDateForAPI(
+                              e.target.value
+                            );
+                            field.onChange(formattedDate);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={
+                  state.importing.loading === "pending" ||
+                  !form.formState.isValid
+                }
+                onClick={form.handleSubmit(onSubmit)}
+              >
+                {state.importing.loading === "pending" ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                Import
+              </Button>
+            </DialogFooter>
+          </Form>
         </DialogContent>
       </Dialog>
     </>

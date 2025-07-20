@@ -190,6 +190,27 @@ const vendorServices = {
       }
     );
   },
+  /**
+   * Upload vendor price list from Excel
+   * @param vendorId - Vendor ID to upload price list for
+   * @param payload - FormData containing the Excel file and metadata
+   * @returns Promise<any>
+   */
+  uploadVendorPriceListFromExcel: async (
+    vendorId: string,
+    payload: FormData
+  ): Promise<any> => {
+    const response = await http.post(
+      `${apiUrlConstants.vendorPriceLists}/vendor/${vendorId}/upload`,
+      payload,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  },
 };
 
 export default vendorServices;

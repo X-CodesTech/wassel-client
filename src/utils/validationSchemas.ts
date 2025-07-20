@@ -71,9 +71,25 @@ export const orderValidationSchema = z.object({
   totalAmount: z.number().optional(),
 });
 
+// Vendor price list upload validation schema
+export const vendorPriceListUploadSchema = z.object({
+  file: z
+    .any()
+    .refine((files) => files && files.length > 0, "File is required"),
+  name: commonValidation.requiredString,
+  nameAr: commonValidation.requiredString,
+  description: commonValidation.optionalString,
+  descriptionAr: commonValidation.optionalString,
+  effectiveFrom: commonValidation.requiredString,
+  effectiveTo: commonValidation.optionalString,
+});
+
 // Export types
 export type ActivityFormData = z.infer<typeof activityValidationSchema>;
 export type SubActivityFormData = z.infer<typeof subActivityValidationSchema>;
 export type CustomerFormData = z.infer<typeof customerValidationSchema>;
 export type VendorFormData = z.infer<typeof vendorValidationSchema>;
 export type OrderFormData = z.infer<typeof orderValidationSchema>;
+export type VendorPriceListUploadData = z.infer<
+  typeof vendorPriceListUploadSchema
+>;
