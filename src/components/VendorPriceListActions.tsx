@@ -121,7 +121,7 @@ export default function VendorPriceListActions({
 
   const form = useForm({
     defaultValues: {
-      file: undefined,
+      priceListFile: undefined,
       name: "",
       nameAr: "",
       description: "",
@@ -174,7 +174,7 @@ export default function VendorPriceListActions({
         file.name.endsWith(".xlsx") ||
         file.name.endsWith(".xls")
       ) {
-        form.setValue("file", e.dataTransfer.files as any);
+        form.setValue("priceListFile", e.dataTransfer.files as any);
         setSelectedFileName(file.name);
       } else {
         toast({
@@ -193,7 +193,7 @@ export default function VendorPriceListActions({
   };
 
   const clearFile = () => {
-    form.setValue("file", undefined);
+    form.setValue("priceListFile", undefined);
     setSelectedFileName("");
   };
 
@@ -203,8 +203,8 @@ export default function VendorPriceListActions({
       const formData = new FormData();
 
       // Append the file
-      if (data.file && data.file[0]) {
-        formData.append("file", data.file[0]);
+      if (data.priceListFile && data.priceListFile[0]) {
+        formData.append("file", data.priceListFile[0]);
       }
 
       // Append required fields
@@ -325,7 +325,7 @@ export default function VendorPriceListActions({
       </div>
       <Dialog
         open={state.importing.modalOpen}
-        onOpenChange={(open) =>
+        onOpenChange={(open: boolean) =>
           dispatch({ type: "importing/modalOpen", payload: open })
         }
       >
@@ -342,7 +342,7 @@ export default function VendorPriceListActions({
               {/* Enhanced Excel File Upload */}
               <FormField
                 control={form.control}
-                name="file"
+                name="priceListFile"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">

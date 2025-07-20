@@ -73,7 +73,7 @@ export const orderValidationSchema = z.object({
 
 // Vendor price list upload validation schema
 export const vendorPriceListUploadSchema = z.object({
-  file: z
+  priceListFile: z
     .any()
     .refine((files) => files && files.length > 0, "File is required"),
   name: commonValidation.requiredString,
