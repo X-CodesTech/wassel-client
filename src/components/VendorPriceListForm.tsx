@@ -80,12 +80,9 @@ export default function VendorPriceListForm({
   isLoading = false,
 }: VendorPriceListFormProps) {
   const dispatch = useAppDispatch();
-  const { records: locations, loading: locationsLoading } = useAppSelector(
-    (state) => state.locations
-  );
 
   useEffect(() => {
-    dispatch(actGetLocations());
+    dispatch(actGetLocations({ filters: {}, page: 1, limit: 999999 }));
   }, [dispatch]);
 
   const [subActivities] = useState([
@@ -415,7 +412,6 @@ export default function VendorPriceListForm({
                 <SubActivityLocationPrices
                   form={form}
                   subActivityIndex={index}
-                  locations={locations}
                 />
               </div>
             ))}
@@ -444,14 +440,16 @@ export default function VendorPriceListForm({
 interface SubActivityLocationPricesProps {
   form: any;
   subActivityIndex: number;
-  locations: Array<{ id: string; name: string }>;
 }
 
 function SubActivityLocationPrices({
   form,
   subActivityIndex,
-  locations,
 }: SubActivityLocationPricesProps) {
+  const { records: locations, loading: locationsLoading } = useAppSelector(
+    (state) => state.locations
+  );
+
   const {
     fields: locationFields,
     append: appendLocation,
@@ -522,8 +520,8 @@ function SubActivityLocationPrices({
                         </FormControl>
                         <SelectContent>
                           {locations.map((location) => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.name}
+                            <SelectItem key={location._id} value={location._id}>
+                              {location.area} - {location.city}
                             </SelectItem>
                           ))}
                         </SelectContent>
