@@ -10,7 +10,7 @@ import http from "./http";
 class LocationServices {
   constructor() {}
 
-  async getLocations(filters?: LocationFilters) {
+  async getLocations(filters?: LocationFilters, page: number, limit: number) {
     const params = new URLSearchParams();
     if (filters?.country) params.append("country", filters.country);
     if (filters?.area) params.append("area", filters.area);
@@ -19,11 +19,16 @@ class LocationServices {
       params.append("isActive", filters.isActive.toString());
 
     const queryString = params.toString();
-    const url = queryString
-      ? `${apiUrlConstants.locations}?${queryString}`
+    const url = `${queryString}`
+      ? `${apiUrlConstants.locations}`
       : apiUrlConstants.locations;
 
-    return await http.get<LocationsResponse>(url);
+    return await http.get<LocationsResponse>(url, {
+      params: {
+        page,
+        limit,
+      },
+    });
   }
 
   async getLocationById(id: string) {

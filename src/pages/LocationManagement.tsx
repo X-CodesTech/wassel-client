@@ -17,7 +17,7 @@ import { Location } from "@/types/types";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -69,6 +69,7 @@ import {
   Filter,
   ChevronDown,
 } from "lucide-react";
+import Pagination from "@/components/Pagination";
 
 // Form schema matching the bilingual JSON structure
 const locationFormSchema = z.object({
@@ -284,6 +285,7 @@ export default function LocationManagement() {
     records: locations,
     loading,
     error,
+    pagination,
   } = useAppSelector((state) => state.locations);
 
   // State for dialogs and filters
@@ -299,8 +301,8 @@ export default function LocationManagement() {
 
   // Load locations on component mount
   useEffect(() => {
-    dispatch(actGetLocations());
-  }, [dispatch]);
+    dispatch(actGetLocations({ filters, page: 1, limit: 10 }));
+  }, [dispatch, filters]);
 
   // Clear error when component unmounts or error changes
   useEffect(() => {
@@ -720,6 +722,20 @@ export default function LocationManagement() {
             </TableBody>
           </Table>
         </CardContent>
+        <CardFooter className="flex flex-1">
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            pageLimit={pagination.limit}
+            totalResults={pagination.total}
+            onLimitChange={(limit) => {
+              dispatch(actGetLocations({ filters, limit }));
+            }}
+            onPageChange={(page) => {
+              dispatch(actGetLocations({ filters, page }));
+            }}
+          />
+        </CardFooter>
       </Card>
 
       {/* Edit Dialog */}

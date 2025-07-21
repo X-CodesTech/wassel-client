@@ -8,15 +8,27 @@ import {
 } from "./act";
 
 interface LocationsState {
-  records: Location[];
+  records: LocationsResponse["locations"];
   loading: boolean;
   error: string | null;
+  pagination: {
+    limit: LocationsResponse["limit"];
+    page: LocationsResponse["page"];
+    total: LocationsResponse["total"];
+    totalPages: LocationsResponse["totalPages"];
+  };
 }
 
 const initialState: LocationsState = {
   records: [],
   loading: false,
   error: null,
+  pagination: {
+    limit: 10,
+    page: 1,
+    total: 0,
+    totalPages: 0,
+  },
 };
 
 const locationsSlice = createSlice({
@@ -39,6 +51,10 @@ const locationsSlice = createSlice({
         (state, action: PayloadAction<LocationsResponse>) => {
           state.loading = false;
           state.records = action.payload.locations;
+          state.pagination.limit = action.payload.limit;
+          state.pagination.page = action.payload.page;
+          state.pagination.total = action.payload.total;
+          state.pagination.totalPages = action.payload.totalPages;
         }
       )
       .addCase(actGetLocations.rejected, (state, action) => {
