@@ -132,10 +132,10 @@ export default function VendorCostListTable() {
       label: "Pricing Method",
       key: "subActivity.pricingMethod",
     },
-    {
-      label: "Status",
-      key: "subActivity.isActive",
-    },
+    // {
+    //   label: "Status",
+    //   key: "subActivity.isActive",
+    // },
     {
       label: "Cost Range",
       key: "subActivity.cost",
@@ -321,7 +321,7 @@ export default function VendorCostListTable() {
                 )}
               </Button>
             )}
-            {!isExpandable && item.subActivity.pricingMethod === "perItem" && (
+            {/* {!isExpandable && item.subActivity.pricingMethod === "perItem" && (
               <div className="text-xs space-y-1 text-left">
                 <div>
                   {typeof item.subActivity.activity === "string"
@@ -334,7 +334,7 @@ export default function VendorCostListTable() {
                     : item.subActivity.activity.activityNameAr}
                 </div>
               </div>
-            )}
+            )} */}
           </TableCell>
           <TableCell className="font-medium text-center">
             {item.subActivity.portalItemNameEn}
@@ -365,14 +365,14 @@ export default function VendorCostListTable() {
               }
             </Badge>
           </TableCell>
-          <TableCell className="font-medium text-center">
+          {/* <TableCell className="font-medium text-center">
             {getStatusBadge(item.subActivity.isActive)}
-          </TableCell>
+          </TableCell> */}
           <TableCell className="font-medium text-center">
             {renderCostRange(item.cost, item.locationPrices)}
           </TableCell>
           <TableCell className="font-medium text-center">
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-center">
               <Button variant="outline" size="icon" className="text-blue-500">
                 <Edit className="w-3 h-3" />
               </Button>
