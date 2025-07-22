@@ -127,7 +127,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       const result = await dispatch(
         actAddVendorSubActivityPrice({
           ...toSend,
-          id: vendor?._id || "",
+          id: vendorDetails?._id || "",
         })
       );
       if (actAddVendorSubActivityPrice.fulfilled.match(result)) {
