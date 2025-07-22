@@ -1,4 +1,4 @@
-import { SubActivity } from "@/types/types";
+import { SubActivity, SubActivityResponse } from "@/types/types";
 import { apiUrlConstants } from "./apiUrlConstants";
 import http from "./http";
 
@@ -31,8 +31,10 @@ class SubActivityServices {
     return await http.delete(`${apiUrlConstants.subActivities}/${id}`);
   }
 
-  async getSubActivityByPricingMethod(pricingMethods: string) {
-    return await http.get(
+  async getSubActivityByPricingMethod(
+    pricingMethods: "perLocation" | "perTrip" | "perItem"
+  ) {
+    return await http.get<SubActivityResponse>(
       `${apiUrlConstants.subActivities}/by-pricing-method`,
       {
         params: {

@@ -64,7 +64,53 @@ export interface LocationPrice {
   toLocation?: Location;
 }
 
-export type PricingMethod = "perLocation" | "perTrip" | "perItem";
+export type PricingMethod = "perItem" | "perLocation" | "perTrip";
+
+// Base interface for common properties
+interface BaseSubActivityPriceRequest {
+  subActivity: string;
+  cost: number;
+}
+
+// Specific interfaces for each pricing method
+export interface PerItemSubActivityPriceRequest
+  extends BaseSubActivityPriceRequest {
+  pricingMethod: "perItem";
+}
+
+export interface PerLocationSubActivityPriceRequest
+  extends BaseSubActivityPriceRequest {
+  pricingMethod: "perLocation";
+  locationPrices: LocationPrice[];
+}
+
+export interface PerTripSubActivityPriceRequest
+  extends BaseSubActivityPriceRequest {
+  pricingMethod: "perTrip";
+  locationPrices: LocationPrice[];
+}
+
+// Mapped type that creates the interface name based on pricing method
+export type AddSubActivityPriceRequest<T extends PricingMethod> =
+  T extends "perItem"
+    ? PerItemSubActivityPriceRequest
+    : T extends "perLocation"
+    ? PerLocationSubActivityPriceRequest
+    : T extends "perTrip"
+    ? PerTripSubActivityPriceRequest
+    : never;
+
+// Helper type to get the interface name dynamically
+export type AddPricingMethodSubActivityPriceRequest<T extends PricingMethod> =
+  `Add${Capitalize<T>}SubActivityPriceRequest`;
+
+// Legacy interfaces for backward compatibility (you can remove these if not needed)
+export interface AddPerItemSubActivityPriceRequest
+  extends PerItemSubActivityPriceRequest {}
+export interface AddPerLocationSubActivityPriceRequest
+  extends PerLocationSubActivityPriceRequest {}
+export interface AddPerTripSubActivityPriceRequest
+  extends PerTripSubActivityPriceRequest {}
 
 export interface SubActivityPrice {
   subActivity: SubActivity;
@@ -207,6 +253,26 @@ const vendorServices = {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+      }
+    );
+    return response.data;
+  },
+
+  addSubActivityPrice: async <T extends PricingMethod>({
+    id,
+    subActivity,
+    pricingMethod,
+    cost,
+    ...rest
+  }: AddSubActivityPriceRequest<T> & {
+    id: string;
+  }): Promise<any> => {
+    const response = await http.post(
+      `${apiUrlConstants.vendorPriceLists}/${id}/sub-activity`,
+      {
+        subActivity,
+        pricingMethod,
+        cost,
       }
     );
     return response.data;

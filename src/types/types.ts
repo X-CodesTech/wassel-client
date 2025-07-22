@@ -666,3 +666,24 @@ export type DeliverySpecialRequirementData = z.infer<
 export type CoordinatorData = z.infer<typeof coordinatorSchema>;
 export type PickupInfoData = z.infer<typeof pickupInfoSchema>;
 export type DeliveryInfoData = z.infer<typeof deliveryInfoSchema>;
+
+// SubActivity Response Types for Pricing Method API
+export interface SubActivityResponse {
+  success: boolean;
+  data: SubActivityDatum[];
+}
+
+export interface SubActivityDatum {
+  _id: string;
+  transactionType: TransactionType;
+  activity: Activity;
+  financeEffect: string;
+  pricingMethod: string;
+  portalItemNameEn: string;
+  portalItemNameAr: string;
+  isUsedByFinance: boolean;
+  isUsedByOps: boolean;
+  isInShippingUnit: boolean;
+  isActive: boolean;
+  isInSpecialRequirement: boolean;
+}

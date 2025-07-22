@@ -15,6 +15,7 @@ import {
   VendorPriceList,
 } from "@/services/vendorServices";
 import {
+  actAddVendorSubActivityPrice,
   actCreateVendorPriceList,
   actDeleteVendorPriceList,
   actGetVendorPriceLists,
@@ -116,9 +117,20 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
 
   // CRUD Operation Handlers
   const handleCreatePriceList = async (data: CreateVendorPriceListRequest) => {
+    const { subActivityPrices } = data;
+    const toSend = {
+      subActivity: subActivityPrices[0].subActivity,
+      pricingMethod: subActivityPrices[0].pricingMethod,
+      cost: subActivityPrices[0].cost,
+    };
     try {
-      const result = await dispatch(actCreateVendorPriceList(data));
-      if (actCreateVendorPriceList.fulfilled.match(result)) {
+      const result = await dispatch(
+        actAddVendorSubActivityPrice({
+          ...toSend,
+          id: vendor?._id || "",
+        })
+      );
+      if (actAddVendorSubActivityPrice.fulfilled.match(result)) {
         toast({
           title: "Success",
           description: "Price list created successfully",

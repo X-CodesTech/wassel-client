@@ -284,7 +284,7 @@ export default function VendorPriceListActions({
       <div className="flex gap-2 flex-wrap">
         <Button size="sm" variant="outline" onClick={handleAddPriceList}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Price List
+          Add
         </Button>
         <Button size="sm" variant="outline" onClick={handleImportPriceList}>
           <Import className="h-4 w-4 mr-2" />

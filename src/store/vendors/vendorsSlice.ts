@@ -13,6 +13,7 @@ import { actGetVendorPriceLists } from "./act/actGetVendorPriceLists";
 import { actGetVendors } from "./act/actGetVendors";
 import { actSyncVendors } from "./act/actSyncVendors";
 import { actUpdateVendorPriceList } from "./act/actUpdateVendorPriceList";
+import { actAddVendorSubActivityPrice } from "./act/actAddVendorSubActivityPrice";
 
 interface IVendorsState {
   records: Vendor[];
@@ -44,6 +45,9 @@ interface IVendorsState {
     limit: number;
     totalPages: number;
   };
+  addSubActivityPriceLoading: TLoading;
+  addSubActivityPriceError: null | string;
+  addSubActivityPriceResponse: VendorPriceListResponse | null;
 }
 
 const initialState: IVendorsState = {
@@ -76,6 +80,9 @@ const initialState: IVendorsState = {
     limit: 10,
     totalPages: 0,
   },
+  addSubActivityPriceLoading: "idle",
+  addSubActivityPriceError: null,
+  addSubActivityPriceResponse: null,
 };
 
 const vendorsSlice = createSlice({
@@ -118,6 +125,12 @@ const vendorsSlice = createSlice({
     },
     clearPriceLists: (state) => {
       state.priceLists = null;
+    },
+    clearAddSubActivityPriceError: (state) => {
+      state.addSubActivityPriceError = null;
+    },
+    clearAddSubActivityPriceResponse: (state) => {
+      state.addSubActivityPriceResponse = null;
     },
   },
   extraReducers: (builder) => {
@@ -249,6 +262,23 @@ const vendorsSlice = createSlice({
         }
       }
     );
+
+    // Add Vendor Sub Activity Price
+    builder.addCase(actAddVendorSubActivityPrice.pending, (state) => {
+      state.addSubActivityPriceLoading = "pending";
+      state.addSubActivityPriceError = null;
+    });
+    builder.addCase(actAddVendorSubActivityPrice.fulfilled, (state, action) => {
+      state.addSubActivityPriceLoading = "fulfilled";
+      const response: VendorPriceListResponse = action.payload;
+      state.addSubActivityPriceResponse = response;
+    });
+    builder.addCase(actAddVendorSubActivityPrice.rejected, (state, action) => {
+      state.addSubActivityPriceLoading = "rejected";
+      if (isString(action.payload)) {
+        state.addSubActivityPriceError = action.payload;
+      }
+    });
   },
 });
 
@@ -265,6 +295,8 @@ export const {
   clearDeletePriceListResponse,
   clearGetPriceListsError,
   clearPriceLists,
+  clearAddSubActivityPriceError,
+  clearAddSubActivityPriceResponse,
 } = vendorsSlice.actions;
 
 export {
@@ -275,6 +307,7 @@ export {
   actGetVendors,
   actSyncVendors,
   actUpdateVendorPriceList,
+  actAddVendorSubActivityPrice,
 };
 
 export default vendorsSlice.reducer;
