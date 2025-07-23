@@ -19,9 +19,9 @@ export const actGetLocations = createAsyncThunk(
   ) => {
     try {
       const { data } = await locationServices.getLocations(
-        filters,
         page,
-        limit
+        limit,
+        filters
       );
       return data;
     } catch (error) {
