@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import {
   FormControl,
   FormField,
@@ -14,36 +13,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/utils";
 import { SubActivityFormProps } from "@/types/vendorPriceListTypes";
 
 export const SubActivityForm = ({
   form,
-  index,
   subActivities,
-  onRemove,
-  canRemove,
 }: SubActivityFormProps) => {
-  const pricingMethod = form.watch(`subActivityPrices.${index}.pricingMethod`);
+  const pricingMethod = form.watch("pricingMethod");
 
   return (
     <div className="border rounded-lg p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="font-medium">Sub Activity {index + 1}</h4>
-        {canRemove && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onRemove(index)}
-            className="text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Remove
-          </Button>
-        )}
+      <div className="mb-4">
+        <h4 className="font-medium">Sub Activity Details</h4>
       </div>
 
       <div
@@ -54,7 +36,7 @@ export const SubActivityForm = ({
       >
         <FormField
           control={form.control}
-          name={`subActivityPrices.${index}.pricingMethod`}
+          name="pricingMethod"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Pricing Method</FormLabel>
@@ -77,7 +59,7 @@ export const SubActivityForm = ({
 
         <FormField
           control={form.control}
-          name={`subActivityPrices.${index}.subActivity`}
+          name="subActivity"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Sub Activity</FormLabel>
@@ -108,7 +90,7 @@ export const SubActivityForm = ({
         {pricingMethod === "perItem" ? (
           <FormField
             control={form.control}
-            name={`subActivityPrices.${index}.cost`}
+            name="cost"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Base Cost</FormLabel>

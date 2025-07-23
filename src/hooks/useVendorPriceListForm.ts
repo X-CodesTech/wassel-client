@@ -9,8 +9,6 @@ import {
   VendorPriceListFormData,
   vendorPriceListSchema,
   VendorPriceListFormProps,
-  PricingMethod,
-  getDefaultSubActivityPrice,
   getDefaultLocationPrice,
 } from "@/types/vendorPriceListTypes";
 import {
@@ -35,23 +33,24 @@ export const useVendorPriceListForm = ({
     resolver: zodResolver(vendorPriceListSchema),
     defaultValues: {
       vendorId,
-      subActivityPrices: [getDefaultSubActivityPrice()],
+      subActivity: "",
+      pricingMethod: "perItem",
+      cost: 0,
+      locationPrices: [],
     },
   });
 
-  // Watch pricing method for the first sub activity
-  const subActivityPricingMethod = form.watch(
-    "subActivityPrices.0.pricingMethod"
-  );
+  // Watch pricing method
+  const pricingMethod = form.watch("pricingMethod");
 
-  // Field arrays for dynamic form management
+  // Field array for location prices
   const {
-    fields: subActivityFields,
-    append: appendSubActivity,
-    remove: removeSubActivity,
+    fields: locationPriceFields,
+    append: appendLocationPrice,
+    remove: removeLocationPrice,
   } = useFieldArray({
     control: form.control,
-    name: "subActivityPrices",
+    name: "locationPrices",
   });
 
   // Load locations on mount
@@ -64,35 +63,31 @@ export const useVendorPriceListForm = ({
     setSubActivities([]);
     try {
       const { data } = await subActivityServices.getSubActivityByPricingMethod(
-        subActivityPricingMethod
+        pricingMethod
       );
       setSubActivities(data.data);
     } catch (error) {
       console.log(error);
     }
-  }, [subActivityPricingMethod]);
+  }, [pricingMethod]);
 
   // Update sub activities when pricing method changes
   useEffect(() => {
-    if (subActivityPricingMethod) {
-      form.setValue("subActivityPrices.0.subActivity", "");
+    if (pricingMethod) {
+      form.setValue("subActivity", "");
       getSubActivities();
     }
-  }, [getSubActivities, subActivityPricingMethod, form]);
+  }, [getSubActivities, pricingMethod, form]);
 
-  // Auto-add location for perTrip pricing method
-  useEffect(() => {
-    if (subActivityPricingMethod === "perTrip") {
-      const currentLocationPrices = form.getValues(
-        "subActivityPrices.0.locationPrices"
-      );
-      if (!currentLocationPrices || currentLocationPrices.length === 0) {
-        form.setValue("subActivityPrices.0.locationPrices", [
-          getDefaultLocationPrice("perTrip"),
-        ]);
-      }
-    }
-  }, [subActivityPricingMethod, form]);
+  // Add location price
+  const addLocationPrice = () => {
+    appendLocationPrice(getDefaultLocationPrice());
+  };
+
+  // Remove location price
+  const removeLocationPriceHandler = (index: number) => {
+    removeLocationPrice(index);
+  };
 
   // Form submission handler
   const handleSubmit = (data: VendorPriceListFormData) => {
@@ -108,22 +103,15 @@ export const useVendorPriceListForm = ({
         effectiveFrom: initialData.effectiveFrom,
         effectiveTo: initialData.effectiveTo,
         isActive: initialData.isActive,
-        subActivityPrices: data.subActivityPrices.map((subActivityPrice) => ({
-          _id: "",
-          subActivity: subActivityPrice.subActivity as any,
-          pricingMethod: subActivityPrice.pricingMethod,
-          cost: subActivityPrice.cost,
-          locationPrices: subActivityPrice.locationPrices.map(
-            (locationPrice) => ({
-              _id: "",
-              location: locationPrice.location as any,
-              fromLocation: locationPrice.fromLocation as any,
-              toLocation: locationPrice.toLocation as any,
-              cost: locationPrice.cost,
-              pricingMethod: locationPrice.pricingMethod,
-            })
-          ),
-        })) as any,
+        subActivityPrices: [
+          {
+            _id: "",
+            subActivity: data.subActivity as any,
+            pricingMethod: data.pricingMethod,
+            cost: data.cost,
+            locationPrices: data.locationPrices || [],
+          },
+        ] as any,
       };
       onSubmit(updateData);
     } else {
@@ -137,55 +125,32 @@ export const useVendorPriceListForm = ({
         effectiveFrom: "",
         effectiveTo: "",
         isActive: true,
-        subActivityPrices: data.subActivityPrices.map((subActivityPrice) => ({
-          _id: "",
-          subActivity: subActivityPrice.subActivity as any,
-          pricingMethod: subActivityPrice.pricingMethod,
-          cost: subActivityPrice.cost,
-          locationPrices: subActivityPrice.locationPrices.map(
-            (locationPrice) => ({
-              _id: "",
-              location: locationPrice.location as any,
-              fromLocation: locationPrice.fromLocation as any,
-              toLocation: locationPrice.toLocation as any,
-              cost: locationPrice.cost,
-              pricingMethod: locationPrice.pricingMethod,
-            })
-          ),
-        })) as any,
+        subActivityPrices: [
+          {
+            _id: "",
+            subActivity: data.subActivity as any,
+            pricingMethod: data.pricingMethod,
+            cost: data.cost,
+            locationPrices: data.locationPrices || [],
+          },
+        ] as any,
       };
       onSubmit(createData);
     }
   };
 
-  // Add new sub activity
-  const addSubActivity = () => {
-    appendSubActivity(getDefaultSubActivityPrice());
-  };
-
-  // Remove sub activity
-  const handleRemoveSubActivity = (index: number) => {
-    if (subActivityFields.length > 1) {
-      removeSubActivity(index);
-    }
-  };
-
-  // Check if sub activity can be removed
-  const canRemoveSubActivity = subActivityFields.length > 1;
-
   return {
     // Form state
     form,
-    subActivityFields,
     subActivities,
-    subActivityPricingMethod,
+    locationPriceFields,
+    pricingMethod,
     isLoading,
 
     // Actions
     handleSubmit: form.handleSubmit(handleSubmit),
-    addSubActivity,
-    removeSubActivity: handleRemoveSubActivity,
-    canRemoveSubActivity,
+    addLocationPrice,
+    removeLocationPrice: removeLocationPriceHandler,
     onCancel,
 
     // Form submission state

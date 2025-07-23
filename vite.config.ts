@@ -11,7 +11,7 @@ export default defineConfig({
     process.env.REPL_ID !== undefined
       ? [
           await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
+            m.cartographer()
           ),
         ]
       : []),
@@ -28,7 +28,7 @@ export default defineConfig({
   },
   // In development, we'll run the Vite dev server directly
   server: {
-    port: 3000,
+    port: 5173,
     strictPort: true,
     open: true,
     // You can configure proxy here if needed to forward API requests
@@ -38,5 +38,5 @@ export default defineConfig({
     //     changeOrigin: true,
     //   }
     // }
-  }
+  },
 });

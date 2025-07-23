@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SubActivity, SubActivityResponse } from "./types";
+import { SubActivityResponse } from "./types";
 import {
   CreateVendorPriceListRequest,
   UpdateVendorPriceListRequest,
@@ -8,30 +8,27 @@ import {
 // Validation schemas
 export const locationPriceSchema = z.object({
   location: z.string().min(1, "Location is required"),
-  fromLocation: z.string().min(1, "From location is required"),
-  toLocation: z.string().min(1, "To location is required"),
   cost: z.number().min(0, "Cost must be positive"),
-  pricingMethod: z.enum(["perLocation", "perItem", "perTrip"]),
 });
 
 export const subActivityPriceSchema = z.object({
   subActivity: z.string().min(1, "Sub activity is required"),
   pricingMethod: z.enum(["perLocation", "perItem", "perTrip"]),
   cost: z.number().min(0, "Cost must be positive"),
-  locationPrices: z.array(locationPriceSchema),
 });
 
 export const vendorPriceListSchema = z.object({
   vendorId: z.string().min(1, "Vendor ID is required"),
-  subActivityPrices: z
-    .array(subActivityPriceSchema)
-    .min(1, "At least one sub activity price is required"),
+  subActivity: z.string().min(1, "Sub activity is required"),
+  pricingMethod: z.enum(["perLocation", "perItem", "perTrip"]),
+  cost: z.number().min(0, "Cost must be positive"),
+  locationPrices: z.array(locationPriceSchema).optional(),
 });
 
 // Type definitions
 export type VendorPriceListFormData = z.infer<typeof vendorPriceListSchema>;
-export type LocationPriceFormData = z.infer<typeof locationPriceSchema>;
 export type SubActivityPriceFormData = z.infer<typeof subActivityPriceSchema>;
+export type LocationPriceFormData = z.infer<typeof locationPriceSchema>;
 
 // Interface for form props
 export interface VendorPriceListFormProps {
@@ -44,20 +41,15 @@ export interface VendorPriceListFormProps {
   isLoading?: boolean;
 }
 
-// Interface for location prices component props
-export interface SubActivityLocationPricesProps {
-  form: any;
-  subActivityIndex: number;
-  pricingMethod: "perLocation" | "perTrip";
-}
-
 // Interface for sub activity component props
 export interface SubActivityFormProps {
   form: any;
-  index: number;
   subActivities: SubActivityResponse["data"];
-  onRemove: (index: number) => void;
-  canRemove: boolean;
+}
+
+// Interface for location prices component props
+export interface LocationPricesFormProps {
+  form: any;
 }
 
 // Pricing method types
@@ -68,15 +60,9 @@ export const getDefaultSubActivityPrice = (): SubActivityPriceFormData => ({
   subActivity: "",
   pricingMethod: "perItem",
   cost: 0,
-  locationPrices: [],
 });
 
-export const getDefaultLocationPrice = (
-  pricingMethod: PricingMethod
-): LocationPriceFormData => ({
+export const getDefaultLocationPrice = (): LocationPriceFormData => ({
   location: "",
-  fromLocation: "",
-  toLocation: "",
   cost: 0,
-  pricingMethod,
 });

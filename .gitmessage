@@ -1,0 +1,29 @@
+# <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+
+# Types:
+# 🚀 feat: New feature
+# 🐛 fix: Bug fix
+# 📚 docs: Documentation changes
+# 💄 style: Code style changes
+# ♻️ refactor: Code refactoring
+# 🧪 test: Adding or updating tests
+# 🔧 chore: Maintenance tasks
+
+# Scopes:
+# 🎨 ui: UI/component changes
+# 🔌 api: API-related changes
+# 🔐 auth: Authentication changes
+# 🗄️ store: Redux store changes
+# 🪝 hooks: Custom hooks
+# 📝 types: TypeScript type definitions
+# ⚙️ services: Service layer changes
+
+# Examples:
+# 🚀 feat(ui): add customer management module
+# 🐛 fix(api): resolve authentication token refresh issue
+# 📚 docs(readme): update installation instructions
+# ♻️ refactor(store): simplify customer state management

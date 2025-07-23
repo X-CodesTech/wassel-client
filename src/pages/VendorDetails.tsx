@@ -117,19 +117,40 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
 
   // CRUD Operation Handlers
   const handleCreatePriceList = async (data: CreateVendorPriceListRequest) => {
-    const { subActivityPrices } = data;
-    const toSend = {
-      subActivity: subActivityPrices[0].subActivity,
-      pricingMethod: subActivityPrices[0].pricingMethod,
-      cost: subActivityPrices[0].cost,
-    };
     try {
-      const result = await dispatch(
-        actAddVendorSubActivityPrice({
-          ...toSend,
-          id: vendorDetails?._id || "",
-        })
-      );
+      // Handle both old and new form structures
+      let subActivityPrice;
+      if (data.subActivityPrices && data.subActivityPrices.length > 0) {
+        // Old structure with array
+        subActivityPrice = data.subActivityPrices[0];
+      } else {
+        // New simplified structure - create a mock subActivityPrice from the form data
+        subActivityPrice = {
+          subActivity: (data as any).subActivity || "",
+          pricingMethod: (data as any).pricingMethod || "perItem",
+          cost: (data as any).cost || 0,
+          locationPrices: (data as any).locationPrices || [],
+        };
+      }
+
+      const subActivityId =
+        typeof subActivityPrice.subActivity === "string"
+          ? subActivityPrice.subActivity
+          : subActivityPrice.subActivity._id;
+
+      let requestData: any = {
+        id: vendorDetails?._id || "",
+        subActivity: subActivityId,
+        pricingMethod: subActivityPrice.pricingMethod,
+        cost: subActivityPrice.cost || 0,
+      };
+
+      // Add locationPrices for perLocation pricing method
+      if (subActivityPrice.pricingMethod === "perLocation") {
+        requestData.locationPrices = subActivityPrice.locationPrices || [];
+      }
+
+      const result = await dispatch(actAddVendorSubActivityPrice(requestData));
       if (actAddVendorSubActivityPrice.fulfilled.match(result)) {
         toast({
           title: "Success",
@@ -159,6 +180,25 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest
   ) => {
     try {
+      // Handle both old and new form structures
+      let subActivityPrice;
+      if (
+        "subActivityPrices" in data &&
+        data.subActivityPrices &&
+        data.subActivityPrices.length > 0
+      ) {
+        // Old structure with array
+        subActivityPrice = data.subActivityPrices[0];
+      } else {
+        // New simplified structure - create a mock subActivityPrice from the form data
+        subActivityPrice = {
+          subActivity: (data as any).subActivity || "",
+          pricingMethod: (data as any).pricingMethod || "perItem",
+          cost: (data as any).cost || 0,
+          locationPrices: (data as any).locationPrices || [],
+        };
+      }
+
       const result = await dispatch(
         actUpdateVendorPriceList(data as UpdateVendorPriceListRequest)
       );
@@ -490,7 +530,22 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           setSelectedPriceList(null);
         }}
         vendorId={vendor?._id || ""}
-        initialData={selectedPriceList || undefined}
+        initialData={
+          selectedPriceList
+            ? {
+                _id: selectedPriceList._id,
+                vendorId: vendor?._id || "",
+                name: selectedPriceList.name,
+                nameAr: selectedPriceList.nameAr,
+                description: selectedPriceList.description,
+                descriptionAr: selectedPriceList.descriptionAr,
+                effectiveFrom: selectedPriceList.effectiveFrom.toISOString(),
+                effectiveTo: selectedPriceList.effectiveTo.toISOString(),
+                isActive: selectedPriceList.isActive,
+                subActivityPrices: selectedPriceList.subActivityPrices,
+              }
+            : undefined
+        }
         onSubmit={handleUpdatePriceList}
         isLoading={updatePriceListLoading === "pending"}
       />

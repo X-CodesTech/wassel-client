@@ -5,13 +5,12 @@ import { VendorPriceListFormView } from "./VendorPriceListFormView";
 export const VendorPriceListForm = (props: VendorPriceListFormProps) => {
   const {
     form,
-    subActivityFields,
     subActivities,
-    subActivityPricingMethod,
+    locationPriceFields,
+    pricingMethod,
     isLoading,
-    addSubActivity,
-    removeSubActivity,
-    canRemoveSubActivity,
+    addLocationPrice,
+    removeLocationPrice,
     handleSubmit,
     onCancel,
   } = useVendorPriceListForm(props);
@@ -20,13 +19,12 @@ export const VendorPriceListForm = (props: VendorPriceListFormProps) => {
     <VendorPriceListFormView
       {...props}
       form={form}
-      subActivityFields={subActivityFields}
       subActivities={subActivities}
-      subActivityPricingMethod={subActivityPricingMethod}
+      locationPriceFields={locationPriceFields}
+      pricingMethod={pricingMethod}
       isLoading={isLoading}
-      addSubActivity={addSubActivity}
-      removeSubActivity={removeSubActivity}
-      canRemoveSubActivity={canRemoveSubActivity}
+      addLocationPrice={addLocationPrice}
+      removeLocationPrice={removeLocationPrice}
       handleSubmit={handleSubmit}
       onCancel={onCancel}
     />
