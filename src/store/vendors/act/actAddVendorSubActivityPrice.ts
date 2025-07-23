@@ -9,7 +9,9 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 export const actAddVendorSubActivityPrice = createAsyncThunk(
   "vendors/actAddVendorSubActivityPrice",
   async (
-    data: AddSubActivityPriceRequest<PricingMethod> & { id: string },
+    data: AddSubActivityPriceRequest<PricingMethod> & {
+      vendorPriceListId: string;
+    },
     { rejectWithValue }
   ) => {
     try {

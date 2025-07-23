@@ -1,32 +1,29 @@
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
 import { SubActivityForm } from "./SubActivityForm";
 import { LocationPricesForm } from "./LocationPricesForm";
 import { VendorPriceListFormProps } from "@/types/vendorPriceListTypes";
 
 interface VendorPriceListFormViewProps extends VendorPriceListFormProps {
   form: any;
-  subActivityFields: any[];
   subActivities: any[];
-  subActivityPricingMethod: string;
+  locationPriceFields: any[];
+  pricingMethod: string;
   isLoading: boolean;
-  addSubActivity: () => void;
-  removeSubActivity: (index: number) => void;
-  canRemoveSubActivity: boolean;
+  addLocationPrice: () => void;
+  removeLocationPrice: (index: number) => void;
   handleSubmit: (data: any) => void;
 }
 
 export const VendorPriceListFormView = ({
   form,
-  subActivityFields,
   subActivities,
-  subActivityPricingMethod,
+  locationPriceFields,
+  pricingMethod,
   isLoading,
-  addSubActivity,
-  removeSubActivity,
-  canRemoveSubActivity,
+  addLocationPrice,
+  removeLocationPrice,
   handleSubmit,
   onCancel,
   initialData,
@@ -34,46 +31,25 @@ export const VendorPriceListFormView = ({
   return (
     <Form {...form}>
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Sub Activity Prices */}
+        {/* Sub Activity Price */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Sub Activity Prices</CardTitle>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addSubActivity}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Sub Activity
-            </Button>
+          <CardHeader>
+            <CardTitle>Sub Activity Price</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {subActivityFields.map((field, index) => (
-              <div key={field.id}>
-                <SubActivityForm
-                  form={form}
-                  index={index}
-                  subActivities={subActivities}
-                  onRemove={removeSubActivity}
-                  canRemove={canRemoveSubActivity}
-                />
-
-                {/* Location Prices Section */}
-                {subActivityPricingMethod === "perLocation" ||
-                subActivityPricingMethod === "perTrip" ? (
-                  <LocationPricesForm
-                    form={form}
-                    subActivityIndex={index}
-                    pricingMethod={
-                      subActivityPricingMethod as "perLocation" | "perTrip"
-                    }
-                  />
-                ) : null}
-              </div>
-            ))}
+            <SubActivityForm form={form} subActivities={subActivities} />
           </CardContent>
         </Card>
+
+        {/* Location Prices Section - Only show when pricingMethod is "perLocation" */}
+        {pricingMethod === "perLocation" && (
+          <LocationPricesForm
+            form={form}
+            locationPriceFields={locationPriceFields}
+            addLocationPrice={addLocationPrice}
+            removeLocationPrice={removeLocationPrice}
+          />
+        )}
 
         {/* Form Actions */}
         <div className="flex justify-end space-x-2">

@@ -16,7 +16,6 @@ import {
 } from "@/services/vendorServices";
 import {
   actAddVendorSubActivityPrice,
-  actCreateVendorPriceList,
   actDeleteVendorPriceList,
   actGetVendorPriceLists,
   actUpdateVendorPriceList,
@@ -117,17 +116,51 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
 
   // CRUD Operation Handlers
   const handleCreatePriceList = async (data: CreateVendorPriceListRequest) => {
-    const { subActivityPrices } = data;
-    const toSend = {
-      subActivity: subActivityPrices[0].subActivity,
-      pricingMethod: subActivityPrices[0].pricingMethod,
-      cost: subActivityPrices[0].cost,
-    };
     try {
+      // Handle both old and new form structures
+      let subActivityPrice;
+      if (data.subActivityPrices && data.subActivityPrices.length > 0) {
+        // Old structure with array
+        subActivityPrice = data.subActivityPrices[0];
+      } else {
+        // New simplified structure - create a mock subActivityPrice from the form data
+        subActivityPrice = {
+          subActivity: (data as any).subActivity || "",
+          pricingMethod: (data as any).pricingMethod || "perItem",
+          cost: (data as any).cost || 0,
+          locationPrices: (data as any).locationPrices || [],
+        };
+      }
+
+      const subActivityId =
+        typeof subActivityPrice.subActivity === "string"
+          ? subActivityPrice.subActivity
+          : subActivityPrice.subActivity._id;
+
+      // Always include the id field and structure the request properly
+      let requestData: any = {
+        subActivity: subActivityId,
+        pricingMethod: subActivityPrice.pricingMethod,
+      };
+
+      // For perLocation, always include locationPrices array (even if empty)
+      if (subActivityPrice.pricingMethod === "perLocation") {
+        requestData.locationPrices = (
+          subActivityPrice.locationPrices || []
+        ).map((lp: any) => ({
+          location: lp.location,
+          pricingMethod: "perLocation" as const,
+          cost: lp.cost,
+        }));
+      } else {
+        // For other pricing methods, include cost field
+        requestData.cost = subActivityPrice.cost || 0;
+      }
+
       const result = await dispatch(
         actAddVendorSubActivityPrice({
-          ...toSend,
-          id: vendorDetails?._id || "",
+          ...requestData,
+          vendorPriceListId: vendorDetails?._id || "",
         })
       );
       if (actAddVendorSubActivityPrice.fulfilled.match(result)) {
@@ -159,6 +192,36 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest
   ) => {
     try {
+      // Handle both old and new form structures
+      let subActivityPrice;
+      if (
+        "subActivityPrices" in data &&
+        data.subActivityPrices &&
+        data.subActivityPrices.length > 0
+      ) {
+        // Old structure with array
+        subActivityPrice = data.subActivityPrices[0];
+      } else {
+        // New simplified structure - create a mock subActivityPrice from the form data
+        subActivityPrice = {
+          subActivity: (data as any).subActivity || "",
+          pricingMethod: (data as any).pricingMethod || "perItem",
+          cost: (data as any).cost || 0,
+          locationPrices: (data as any).locationPrices || [],
+        };
+      }
+
+      // Ensure locationPrices have the correct structure for perLocation
+      if (subActivityPrice.pricingMethod === "perLocation") {
+        subActivityPrice.locationPrices = (
+          subActivityPrice.locationPrices || []
+        ).map((lp: any) => ({
+          location: lp.location,
+          pricingMethod: "perLocation" as const,
+          cost: lp.cost,
+        }));
+      }
+
       const result = await dispatch(
         actUpdateVendorPriceList(data as UpdateVendorPriceListRequest)
       );
@@ -225,44 +288,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
   const handleAddPriceList = useCallback(() => {
     setIsAddModalOpen(true);
   }, []);
-
-  const handleEditPriceList = (priceList: VendorPriceList) => {
-    setSelectedPriceList(priceList);
-    setIsEditModalOpen(true);
-  };
-
-  const handleDeletePriceListClick = (priceList: VendorPriceList) => {
-    setSelectedPriceList(priceList);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const getOrderStatusBadge = (status: string) => {
-    const variants = {
-      completed: "outline",
-      "in-progress": "secondary",
-      pending: "default",
-      cancelled: "destructive",
-    } as const;
-
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || "default"}>
-        {status}
-      </Badge>
-    );
-  };
-
-  const getRatingStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`h-4 w-4 ${
-          i < Math.floor(rating)
-            ? "text-yellow-400 fill-current"
-            : "text-gray-300"
-        }`}
-      />
-    ));
-  };
 
   if (loading === "pending") {
     return (
@@ -490,7 +515,22 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           setSelectedPriceList(null);
         }}
         vendorId={vendor?._id || ""}
-        initialData={selectedPriceList || undefined}
+        initialData={
+          selectedPriceList
+            ? {
+                _id: selectedPriceList._id,
+                vendorId: vendor?._id || "",
+                name: selectedPriceList.name,
+                nameAr: selectedPriceList.nameAr,
+                description: selectedPriceList.description,
+                descriptionAr: selectedPriceList.descriptionAr,
+                effectiveFrom: selectedPriceList.effectiveFrom.toISOString(),
+                effectiveTo: selectedPriceList.effectiveTo.toISOString(),
+                isActive: selectedPriceList.isActive,
+                subActivityPrices: selectedPriceList.subActivityPrices,
+              }
+            : undefined
+        }
         onSubmit={handleUpdatePriceList}
         isLoading={updatePriceListLoading === "pending"}
       />

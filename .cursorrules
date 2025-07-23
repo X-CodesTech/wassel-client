@@ -1,0 +1,68 @@
+# Cursor Rules for Git Commit Generator
+
+## Git Commit Message Guidelines
+
+When generating git commit messages, follow these conventions:
+
+### Commit Message Format
+
+- Use conventional commit format: `type(scope): description`
+- Keep the first line under 72 characters
+- Use imperative mood ("add" not "added")
+- Separate subject from body with a blank line
+
+### Commit Types
+
+- `feat` 🚀: New features
+- `fix` 🐛: Bug fixes
+- `docs` 📚: Documentation changes
+- `style` 💄: Code style changes (formatting, missing semicolons, etc.)
+- `refactor` ♻️: Code refactoring
+- `test` 🧪: Adding or updating tests
+- `chore` 🔧: Maintenance tasks, dependencies, etc.
+- `perf` ⚡: Performance improvements
+- `ci` 🔄: CI/CD changes
+- `build` 📦: Build system changes
+
+### Scope Examples
+
+- `(ui)` 🎨: UI/component changes
+- `(api)` 🔌: API-related changes
+- `(auth)` 🔐: Authentication changes
+- `(store)` 🗄️: Redux store changes
+- `(hooks)` 🪝: Custom hooks
+- `(types)` 📝: TypeScript type definitions
+- `(services)` ⚙️: Service layer changes
+
+### Examples
+
+```
+🚀 feat(ui): add customer management module
+🐛 fix(api): resolve authentication token refresh issue
+📚 docs(readme): update installation instructions
+♻️ refactor(store): simplify customer state management
+🧪 test(components): add unit tests for ActivityTable
+```
+
+### Project-Specific Guidelines
+
+- This is a React/TypeScript project with Redux Toolkit
+- Focus on the business domain: activities, customers, vendors, orders
+- Mention specific components or features being modified
+- Include context about what the change accomplishes
+
+### When to Use Detailed Commits
+
+- For complex changes, include a detailed body explaining:
+  - What was changed and why
+  - Breaking changes (if any)
+  - Migration steps (if needed)
+  - Testing considerations
+
+## Code Style Guidelines
+
+- Follow TypeScript best practices
+- Use functional components with hooks
+- Prefer Redux Toolkit for state management
+- Use shadcn/ui components for consistency
+- Follow the existing project structure and naming conventions
