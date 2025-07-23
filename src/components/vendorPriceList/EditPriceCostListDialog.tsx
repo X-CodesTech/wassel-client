@@ -29,7 +29,7 @@ const FormToRender = ({
   const { priceLists } = useAppSelector((state) => state.vendors);
 
   const vendorPriceListId = priceLists?.[0]?._id || "";
-  const subActivityId = selectedSubActivityPrice._id || "";
+  const subActivityId = selectedSubActivityPrice.subActivity._id || "";
 
   if (pricingMethod === "perItem") {
     const schema = z.object({
@@ -43,39 +43,38 @@ const FormToRender = ({
       resolver: zodResolver(schema),
     });
 
-    const onSubmit = async (data: z.infer<typeof schema>) => {
-      try {
-        const result = await dispatch(
-          actEditVendorSubActivityPrice({
-            pricingMethod: "perItem",
-            vendorPriceListId,
-            subActivityId,
-            cost: data.cost,
-          })
-        );
-        if (actEditVendorSubActivityPrice.fulfilled.match(result)) {
+    const onSubmit = (data: z.infer<typeof schema>) => {
+      dispatch(
+        actEditVendorSubActivityPrice({
+          pricingMethod: "perItem",
+          vendorPriceListId,
+          subActivityId,
+          cost: data.cost,
+        })
+      )
+        .unwrap()
+        .catch((error) => {
+          if (error.message) {
+            toast({
+              title: "Error",
+              description: error.message,
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Error",
+              description: "An unexpected error occurred",
+              variant: "destructive",
+            });
+          }
+        })
+        .then(() => {
           toast({
             title: "Success",
-            description: "Price list created successfully",
+            description: "Price list updated successfully",
           });
-          // Refresh the price lists
-          if (vendorPriceListId) {
-            dispatch(actGetVendorPriceLists(vendorPriceListId));
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to create price list",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred",
-          variant: "destructive",
+          dispatch(actGetVendorPriceLists(vendorPriceListId));
         });
-      }
     };
 
     return (
