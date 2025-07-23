@@ -8,6 +8,7 @@ import {
 // Validation schemas
 export const locationPriceSchema = z.object({
   location: z.string().min(1, "Location is required"),
+  pricingMethod: z.literal("perLocation"),
   cost: z.number().min(0, "Cost must be positive"),
 });
 
@@ -25,7 +26,7 @@ export const vendorPriceListSchema = z.object({
   locationPrices: z.array(locationPriceSchema).optional(),
 });
 
-// Type definitions
+// Type definitions matching the required request body
 export type VendorPriceListFormData = z.infer<typeof vendorPriceListSchema>;
 export type SubActivityPriceFormData = z.infer<typeof subActivityPriceSchema>;
 export type LocationPriceFormData = z.infer<typeof locationPriceSchema>;
@@ -64,5 +65,6 @@ export const getDefaultSubActivityPrice = (): SubActivityPriceFormData => ({
 
 export const getDefaultLocationPrice = (): LocationPriceFormData => ({
   location: "",
+  pricingMethod: "perLocation",
   cost: 0,
 });

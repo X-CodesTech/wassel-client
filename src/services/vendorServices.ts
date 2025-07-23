@@ -259,20 +259,21 @@ const vendorServices = {
   },
 
   addSubActivityPrice: async <T extends PricingMethod>({
-    id,
+    vendorPriceListId,
     subActivity,
     pricingMethod,
     cost,
     ...rest
   }: AddSubActivityPriceRequest<T> & {
-    id: string;
+    vendorPriceListId: string;
   }): Promise<any> => {
     const response = await http.post(
-      `${apiUrlConstants.vendorPriceLists}/${id}/sub-activity`,
+      `${apiUrlConstants.vendorPriceLists}/${vendorPriceListId}/sub-activity`,
       {
         subActivity,
         pricingMethod,
         cost,
+        ...rest,
       }
     );
     return response.data;

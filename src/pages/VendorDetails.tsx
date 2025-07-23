@@ -16,7 +16,6 @@ import {
 } from "@/services/vendorServices";
 import {
   actAddVendorSubActivityPrice,
-  actCreateVendorPriceList,
   actDeleteVendorPriceList,
   actGetVendorPriceLists,
   actUpdateVendorPriceList,
@@ -138,19 +137,32 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           ? subActivityPrice.subActivity
           : subActivityPrice.subActivity._id;
 
+      // Always include the id field and structure the request properly
       let requestData: any = {
-        id: vendorDetails?._id || "",
         subActivity: subActivityId,
         pricingMethod: subActivityPrice.pricingMethod,
-        cost: subActivityPrice.cost || 0,
       };
 
-      // Add locationPrices for perLocation pricing method
+      // For perLocation, always include locationPrices array (even if empty)
       if (subActivityPrice.pricingMethod === "perLocation") {
-        requestData.locationPrices = subActivityPrice.locationPrices || [];
+        requestData.locationPrices = (
+          subActivityPrice.locationPrices || []
+        ).map((lp: any) => ({
+          location: lp.location,
+          pricingMethod: "perLocation" as const,
+          cost: lp.cost,
+        }));
+      } else {
+        // For other pricing methods, include cost field
+        requestData.cost = subActivityPrice.cost || 0;
       }
 
-      const result = await dispatch(actAddVendorSubActivityPrice(requestData));
+      const result = await dispatch(
+        actAddVendorSubActivityPrice({
+          ...requestData,
+          vendorPriceListId: vendorDetails?._id || "",
+        })
+      );
       if (actAddVendorSubActivityPrice.fulfilled.match(result)) {
         toast({
           title: "Success",
@@ -197,6 +209,17 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           cost: (data as any).cost || 0,
           locationPrices: (data as any).locationPrices || [],
         };
+      }
+
+      // Ensure locationPrices have the correct structure for perLocation
+      if (subActivityPrice.pricingMethod === "perLocation") {
+        subActivityPrice.locationPrices = (
+          subActivityPrice.locationPrices || []
+        ).map((lp: any) => ({
+          location: lp.location,
+          pricingMethod: "perLocation" as const,
+          cost: lp.cost,
+        }));
       }
 
       const result = await dispatch(
@@ -265,44 +288,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
   const handleAddPriceList = useCallback(() => {
     setIsAddModalOpen(true);
   }, []);
-
-  const handleEditPriceList = (priceList: VendorPriceList) => {
-    setSelectedPriceList(priceList);
-    setIsEditModalOpen(true);
-  };
-
-  const handleDeletePriceListClick = (priceList: VendorPriceList) => {
-    setSelectedPriceList(priceList);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const getOrderStatusBadge = (status: string) => {
-    const variants = {
-      completed: "outline",
-      "in-progress": "secondary",
-      pending: "default",
-      cancelled: "destructive",
-    } as const;
-
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || "default"}>
-        {status}
-      </Badge>
-    );
-  };
-
-  const getRatingStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`h-4 w-4 ${
-          i < Math.floor(rating)
-            ? "text-yellow-400 fill-current"
-            : "text-gray-300"
-        }`}
-      />
-    ));
-  };
 
   if (loading === "pending") {
     return (

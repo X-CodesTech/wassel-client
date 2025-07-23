@@ -109,33 +109,33 @@ export const useVendorPriceListForm = ({
             subActivity: data.subActivity as any,
             pricingMethod: data.pricingMethod,
             cost: data.cost,
-            locationPrices: data.locationPrices || [],
+            locationPrices:
+              data.pricingMethod === "perLocation"
+                ? (data.locationPrices || []).map((lp) => ({
+                    ...lp,
+                    pricingMethod: "perLocation" as const,
+                  }))
+                : [],
           },
         ] as any,
       };
       onSubmit(updateData);
     } else {
-      // Create new price list
-      const createData: CreateVendorPriceListRequest = {
+      // Create new price list - send simplified structure
+      const createData = {
         vendorId: data.vendorId,
-        name: "",
-        nameAr: "",
-        description: "",
-        descriptionAr: "",
-        effectiveFrom: "",
-        effectiveTo: "",
-        isActive: true,
-        subActivityPrices: [
-          {
-            _id: "",
-            subActivity: data.subActivity as any,
-            pricingMethod: data.pricingMethod,
-            cost: data.cost,
-            locationPrices: data.locationPrices || [],
-          },
-        ] as any,
+        subActivity: data.subActivity,
+        pricingMethod: data.pricingMethod,
+        cost: data.cost,
+        locationPrices:
+          data.pricingMethod === "perLocation"
+            ? (data.locationPrices || []).map((lp) => ({
+                ...lp,
+                pricingMethod: "perLocation" as const,
+              }))
+            : [],
       };
-      onSubmit(createData);
+      onSubmit(createData as any);
     }
   };
 
