@@ -114,7 +114,7 @@ export default function Overview() {
     // Fetch all data for dashboard
     dispatch(actGetActivities());
     dispatch(actGetTransactionTypes());
-    dispatch(actGetLocations());
+    dispatch(actGetLocations({ filters: {}, page: 1, limit: 999999 }));
   }, [dispatch]);
 
   // Ensure arrays are properly defined

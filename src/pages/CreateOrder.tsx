@@ -1,18 +1,8 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-// Helper function to generate a valid MongoDB ObjectId string format
-const generateObjectId = () => {
-  // Generate a 24-character hex string (12 bytes)
-  const hexChars = "0123456789abcdef";
-  let result = "";
-  for (let i = 0; i < 24; i++) {
-    result += hexChars[Math.floor(Math.random() * hexChars.length)];
-  }
-  return result;
-};
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +26,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useOrders } from "@/hooks/useOrders";
 import { useLocation } from "wouter";
+import { CustomerDropdown } from "@/components/CustomerDropdown";
+import { LocationDropdown } from "@/components/LocationDropdown";
 import {
   Package,
   MapPin,
@@ -46,7 +38,15 @@ import {
   ArrowLeft,
   CheckCircle,
   AlertCircle,
+  Plus,
+  Trash2,
 } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   createOrderStep1Schema,
   createOrderStep2Schema,
@@ -85,7 +85,7 @@ export default function CreateOrder() {
       service: "",
       typesOfGoods: "",
       goodsDescription: "",
-      billingAccount: generateObjectId(), // Generate a valid ObjectId
+      billingAccount: "", // Will be selected from dropdown
       requesterName: "",
       requesterMobile1: "",
       requesterMobile2: "",
@@ -132,6 +132,25 @@ export default function CreateOrder() {
         },
       ],
     },
+  });
+
+  // Field arrays for multiple pickup and delivery locations
+  const {
+    fields: pickupFields,
+    append: appendPickup,
+    remove: removePickup,
+  } = useFieldArray({
+    control: step2Form.control,
+    name: "pickupInfo",
+  });
+
+  const {
+    fields: deliveryFields,
+    append: appendDelivery,
+    remove: removeDelivery,
+  } = useFieldArray({
+    control: step2Form.control,
+    name: "deliveryInfo",
   });
 
   // Step 3 Form
@@ -434,11 +453,10 @@ export default function CreateOrder() {
                       <FormItem>
                         <FormLabel>Billing Account</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Billing account ID"
-                            {...field}
-                            readOnly
-                            className="bg-gray-50"
+                          <CustomerDropdown
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            placeholder="Select billing account"
                           />
                         </FormControl>
                         <FormMessage />
@@ -547,351 +565,507 @@ export default function CreateOrder() {
             onSubmit={step2Form.handleSubmit(onStep2Submit)}
             className="space-y-6"
           >
-            {/* Pickup Information */}
+            {/* Pickup Information Accordion */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MapPin className="mr-2 h-5 w-5" />
-                  Pickup Information
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <MapPin className="mr-2 h-5 w-5" />
+                    Pickup Information
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      appendPickup({
+                        pickupLocation: "",
+                        pickupDetailedAddress: "",
+                        fromTime: "",
+                        toTime: "",
+                        pickupSpecialRequirements: [],
+                        otherRequirements: "",
+                        pickupNotes: "",
+                        pickupCoordinator: {
+                          requesterName: "",
+                          requesterMobile1: "",
+                          requesterMobile2: "",
+                          emailAddress: "",
+                        },
+                      })
+                    }
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Pickup Location
+                  </Button>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={step2Form.control}
-                    name="pickupInfo.0.pickupLocation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Pickup Location</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Pickup location" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={step2Form.control}
-                    name="pickupInfo.0.pickupDetailedAddress"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Detailed Address</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Full pickup address"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={step2Form.control}
-                    name="pickupInfo.0.fromTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>From Time</FormLabel>
-                        <FormControl>
-                          <Input type="datetime-local" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={step2Form.control}
-                    name="pickupInfo.0.toTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>To Time</FormLabel>
-                        <FormControl>
-                          <Input type="datetime-local" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={step2Form.control}
-                  name="pickupInfo.0.otherRequirements"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Other Requirements</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Additional requirements"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={step2Form.control}
-                  name="pickupInfo.0.pickupNotes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pickup Notes</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Special instructions for pickup"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Pickup Coordinator */}
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-4">Pickup Coordinator</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={step2Form.control}
-                      name="pickupInfo.0.pickupCoordinator.requesterName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Coordinator Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Coordinator name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={step2Form.control}
-                      name="pickupInfo.0.pickupCoordinator.requesterMobile1"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Primary Mobile</FormLabel>
-                          <FormControl>
-                            <Input placeholder="+1234567890" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={step2Form.control}
-                      name="pickupInfo.0.pickupCoordinator.requesterMobile2"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Secondary Mobile</FormLabel>
-                          <FormControl>
-                            <Input placeholder="+0987654321" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={step2Form.control}
-                      name="pickupInfo.0.pickupCoordinator.emailAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="email"
-                              placeholder="coordinator@example.com"
-                              {...field}
+              <CardContent>
+                <Accordion type="multiple" className="space-y-4">
+                  {pickupFields.map((field, index) => (
+                    <AccordionItem
+                      key={field.id}
+                      value={`pickup-${index}`}
+                      className="border rounded-lg"
+                    >
+                      <AccordionTrigger className="px-4 hover:no-underline">
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span className="font-medium">
+                            Pickup Location {index + 1}
+                          </span>
+                          {pickupFields.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removePickup(index);
+                              }}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={step2Form.control}
+                              name={`pickupInfo.${index}.pickupLocation`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Pickup Location</FormLabel>
+                                  <FormControl>
+                                    <LocationDropdown
+                                      value={field.value}
+                                      onValueChange={field.onChange}
+                                      placeholder="Select pickup location"
+                                      useAddressString={false}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
+
+                            <FormField
+                              control={step2Form.control}
+                              name={`pickupInfo.${index}.pickupDetailedAddress`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Detailed Address</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      placeholder="Full pickup address"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={step2Form.control}
+                              name={`pickupInfo.${index}.fromTime`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>From Time</FormLabel>
+                                  <FormControl>
+                                    <Input type="datetime-local" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={step2Form.control}
+                              name={`pickupInfo.${index}.toTime`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>To Time</FormLabel>
+                                  <FormControl>
+                                    <Input type="datetime-local" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <FormField
+                            control={step2Form.control}
+                            name={`pickupInfo.${index}.otherRequirements`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Other Requirements</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Additional requirements"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={step2Form.control}
+                            name={`pickupInfo.${index}.pickupNotes`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Pickup Notes</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Special instructions for pickup"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          {/* Pickup Coordinator */}
+                          <div className="border-t pt-4">
+                            <h4 className="font-medium mb-4">
+                              Pickup Coordinator
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <FormField
+                                control={step2Form.control}
+                                name={`pickupInfo.${index}.pickupCoordinator.requesterName`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Coordinator Name</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="Coordinator name"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={step2Form.control}
+                                name={`pickupInfo.${index}.pickupCoordinator.requesterMobile1`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Primary Mobile</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="+1234567890"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={step2Form.control}
+                                name={`pickupInfo.${index}.pickupCoordinator.requesterMobile2`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Secondary Mobile</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="+0987654321"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={step2Form.control}
+                                name={`pickupInfo.${index}.pickupCoordinator.emailAddress`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Email Address</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="email"
+                                        placeholder="coordinator@example.com"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               </CardContent>
             </Card>
 
-            {/* Delivery Information */}
+            {/* Delivery Information Accordion */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MapPin className="mr-2 h-5 w-5" />
-                  Delivery Information
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <MapPin className="mr-2 h-5 w-5" />
+                    Delivery Information
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      appendDelivery({
+                        deliveryLocation: "",
+                        deliveryDetailedAddress: "",
+                        fromTime: "",
+                        toTime: "",
+                        deliverySpecialRequirements: [],
+                        otherRequirements: "",
+                        deliveryNotes: "",
+                        deliveryCoordinator: {
+                          requesterName: "",
+                          requesterMobile1: "",
+                          requesterMobile2: "",
+                          emailAddress: "",
+                        },
+                      })
+                    }
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Delivery Location
+                  </Button>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={step2Form.control}
-                    name="deliveryInfo.0.deliveryLocation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Delivery Location</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Delivery location" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={step2Form.control}
-                    name="deliveryInfo.0.deliveryDetailedAddress"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Detailed Address</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Full delivery address"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={step2Form.control}
-                    name="deliveryInfo.0.fromTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>From Time</FormLabel>
-                        <FormControl>
-                          <Input type="datetime-local" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={step2Form.control}
-                    name="deliveryInfo.0.toTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>To Time</FormLabel>
-                        <FormControl>
-                          <Input type="datetime-local" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={step2Form.control}
-                  name="deliveryInfo.0.otherRequirements"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Other Requirements</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Additional requirements"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={step2Form.control}
-                  name="deliveryInfo.0.deliveryNotes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Delivery Notes</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Special instructions for delivery"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Delivery Coordinator */}
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-4">Delivery Coordinator</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={step2Form.control}
-                      name="deliveryInfo.0.deliveryCoordinator.requesterName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Coordinator Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Coordinator name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={step2Form.control}
-                      name="deliveryInfo.0.deliveryCoordinator.requesterMobile1"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Primary Mobile</FormLabel>
-                          <FormControl>
-                            <Input placeholder="+1234567890" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={step2Form.control}
-                      name="deliveryInfo.0.deliveryCoordinator.requesterMobile2"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Secondary Mobile</FormLabel>
-                          <FormControl>
-                            <Input placeholder="+0987654321" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={step2Form.control}
-                      name="deliveryInfo.0.deliveryCoordinator.emailAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="email"
-                              placeholder="coordinator@example.com"
-                              {...field}
+              <CardContent>
+                <Accordion type="multiple" className="space-y-4">
+                  {deliveryFields.map((field, index) => (
+                    <AccordionItem
+                      key={field.id}
+                      value={`delivery-${index}`}
+                      className="border rounded-lg"
+                    >
+                      <AccordionTrigger className="px-4 hover:no-underline">
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span className="font-medium">
+                            Delivery Location {index + 1}
+                          </span>
+                          {deliveryFields.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeDelivery(index);
+                              }}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={step2Form.control}
+                              name={`deliveryInfo.${index}.deliveryLocation`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Delivery Location</FormLabel>
+                                  <FormControl>
+                                    <LocationDropdown
+                                      value={field.value}
+                                      onValueChange={field.onChange}
+                                      placeholder="Select delivery location"
+                                      useAddressString={false}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
+
+                            <FormField
+                              control={step2Form.control}
+                              name={`deliveryInfo.${index}.deliveryDetailedAddress`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Detailed Address</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      placeholder="Full delivery address"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={step2Form.control}
+                              name={`deliveryInfo.${index}.fromTime`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>From Time</FormLabel>
+                                  <FormControl>
+                                    <Input type="datetime-local" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={step2Form.control}
+                              name={`deliveryInfo.${index}.toTime`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>To Time</FormLabel>
+                                  <FormControl>
+                                    <Input type="datetime-local" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <FormField
+                            control={step2Form.control}
+                            name={`deliveryInfo.${index}.otherRequirements`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Other Requirements</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Additional requirements"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={step2Form.control}
+                            name={`deliveryInfo.${index}.deliveryNotes`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Delivery Notes</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Special instructions for delivery"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          {/* Delivery Coordinator */}
+                          <div className="border-t pt-4">
+                            <h4 className="font-medium mb-4">
+                              Delivery Coordinator
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <FormField
+                                control={step2Form.control}
+                                name={`deliveryInfo.${index}.deliveryCoordinator.requesterName`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Coordinator Name</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="Coordinator name"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={step2Form.control}
+                                name={`deliveryInfo.${index}.deliveryCoordinator.requesterMobile1`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Primary Mobile</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="+1234567890"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={step2Form.control}
+                                name={`deliveryInfo.${index}.deliveryCoordinator.requesterMobile2`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Secondary Mobile</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="+0987654321"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={step2Form.control}
+                                name={`deliveryInfo.${index}.deliveryCoordinator.emailAddress`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Email Address</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="email"
+                                        placeholder="coordinator@example.com"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               </CardContent>
             </Card>
 

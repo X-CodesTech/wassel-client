@@ -283,6 +283,7 @@ export interface VendorResponse {
 
 // Customer interfaces and schemas
 export interface Customer {
+  _id: string;
   blocked: boolean;
   companyChainId: string;
   createdDate: string;

@@ -10,7 +10,7 @@ import http from "./http";
 class LocationServices {
   constructor() {}
 
-  async getLocations(filters?: LocationFilters, page: number, limit: number) {
+  async getLocations(page: number, limit: number, filters?: LocationFilters) {
     const params = new URLSearchParams();
     if (filters?.country) params.append("country", filters.country);
     if (filters?.area) params.append("area", filters.area);
@@ -19,8 +19,8 @@ class LocationServices {
       params.append("isActive", filters.isActive.toString());
 
     const queryString = params.toString();
-    const url = `${queryString}`
-      ? `${apiUrlConstants.locations}`
+    const url = queryString
+      ? `${apiUrlConstants.locations}?${queryString}`
       : apiUrlConstants.locations;
 
     return await http.get<LocationsResponse>(url, {
