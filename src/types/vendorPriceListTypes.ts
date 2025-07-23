@@ -12,6 +12,13 @@ export const locationPriceSchema = z.object({
   cost: z.number().min(0, "Cost must be positive"),
 });
 
+export const tripLocationPriceSchema = z.object({
+  fromLocation: z.string().min(1, "From location is required"),
+  toLocation: z.string().min(1, "To location is required"),
+  pricingMethod: z.literal("perTrip"),
+  cost: z.number().min(0, "Cost must be positive"),
+});
+
 export const subActivityPriceSchema = z.object({
   subActivity: z.string().min(1, "Sub activity is required"),
   pricingMethod: z.enum(["perLocation", "perItem", "perTrip"]),
@@ -24,12 +31,14 @@ export const vendorPriceListSchema = z.object({
   pricingMethod: z.enum(["perLocation", "perItem", "perTrip"]),
   cost: z.number().min(0, "Cost must be positive"),
   locationPrices: z.array(locationPriceSchema).optional(),
+  tripLocationPrices: z.array(tripLocationPriceSchema).optional(),
 });
 
 // Type definitions matching the required request body
 export type VendorPriceListFormData = z.infer<typeof vendorPriceListSchema>;
 export type SubActivityPriceFormData = z.infer<typeof subActivityPriceSchema>;
 export type LocationPriceFormData = z.infer<typeof locationPriceSchema>;
+export type TripLocationPriceFormData = z.infer<typeof tripLocationPriceSchema>;
 
 // Interface for form props
 export interface VendorPriceListFormProps {
@@ -53,6 +62,11 @@ export interface LocationPricesFormProps {
   form: any;
 }
 
+// Interface for trip location prices component props
+export interface TripLocationPricesFormProps {
+  form: any;
+}
+
 // Pricing method types
 export type PricingMethod = "perLocation" | "perItem" | "perTrip";
 
@@ -66,5 +80,12 @@ export const getDefaultSubActivityPrice = (): SubActivityPriceFormData => ({
 export const getDefaultLocationPrice = (): LocationPriceFormData => ({
   location: "",
   pricingMethod: "perLocation",
+  cost: 0,
+});
+
+export const getDefaultTripLocationPrice = (): TripLocationPriceFormData => ({
+  fromLocation: "",
+  toLocation: "",
+  pricingMethod: "perTrip",
   cost: 0,
 });

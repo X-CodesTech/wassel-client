@@ -6,6 +6,7 @@ import {
 } from "@/types/types";
 import { apiUrlConstants } from "./apiUrlConstants";
 import http from "./http";
+import { TPriceBody } from "@/types/vendorPriceListEditTypes";
 
 export interface VendorSyncResponse {
   message: string;
@@ -277,6 +278,30 @@ const vendorServices = {
       }
     );
     return response.data;
+  },
+
+  deleteSubActivityPrice: async (
+    vendorPriceListId: string,
+    subActivityPriceId: string
+  ) => {
+    return await http.delete(
+      `${apiUrlConstants.vendorPriceLists}/${vendorPriceListId}/sub-activity/${subActivityPriceId}`
+    );
+  },
+
+  editVendorSubActivityPrice: async <T extends PricingMethod>({
+    pricingMethod,
+    subActivityId,
+    vendorPriceListId,
+    ...rest
+  }: TPriceBody<T>): Promise<any> => {
+    return await http.put(
+      `${apiUrlConstants.vendorPriceLists}/${vendorPriceListId}/sub-activity/${subActivityId}`,
+      {
+        pricingMethod,
+        ...rest,
+      }
+    );
   },
 };
 

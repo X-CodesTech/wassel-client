@@ -7,10 +7,13 @@ export const VendorPriceListForm = (props: VendorPriceListFormProps) => {
     form,
     subActivities,
     locationPriceFields,
+    tripLocationPriceFields,
     pricingMethod,
     isLoading,
     addLocationPrice,
     removeLocationPrice,
+    addTripLocationPrice,
+    removeTripLocationPrice,
     handleSubmit,
     onCancel,
   } = useVendorPriceListForm(props);
@@ -21,10 +24,13 @@ export const VendorPriceListForm = (props: VendorPriceListFormProps) => {
       form={form}
       subActivities={subActivities}
       locationPriceFields={locationPriceFields}
+      tripLocationPriceFields={tripLocationPriceFields}
       pricingMethod={pricingMethod}
       isLoading={isLoading}
       addLocationPrice={addLocationPrice}
       removeLocationPrice={removeLocationPrice}
+      addTripLocationPrice={addTripLocationPrice}
+      removeTripLocationPrice={removeTripLocationPrice}
       handleSubmit={handleSubmit}
       onCancel={onCancel}
     />

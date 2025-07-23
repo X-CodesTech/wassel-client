@@ -10,6 +10,7 @@ import {
   vendorPriceListSchema,
   VendorPriceListFormProps,
   getDefaultLocationPrice,
+  getDefaultTripLocationPrice,
 } from "@/types/vendorPriceListTypes";
 import {
   CreateVendorPriceListRequest,
@@ -37,6 +38,7 @@ export const useVendorPriceListForm = ({
       pricingMethod: "perItem",
       cost: 0,
       locationPrices: [],
+      tripLocationPrices: [],
     },
   });
 
@@ -51,6 +53,16 @@ export const useVendorPriceListForm = ({
   } = useFieldArray({
     control: form.control,
     name: "locationPrices",
+  });
+
+  // Field array for trip location prices
+  const {
+    fields: tripLocationPriceFields,
+    append: appendTripLocationPrice,
+    remove: removeTripLocationPrice,
+  } = useFieldArray({
+    control: form.control,
+    name: "tripLocationPrices",
   });
 
   // Load locations on mount
@@ -87,6 +99,16 @@ export const useVendorPriceListForm = ({
   // Remove location price
   const removeLocationPriceHandler = (index: number) => {
     removeLocationPrice(index);
+  };
+
+  // Add trip location price
+  const addTripLocationPrice = () => {
+    appendTripLocationPrice(getDefaultTripLocationPrice());
+  };
+
+  // Remove trip location price
+  const removeTripLocationPriceHandler = (index: number) => {
+    removeTripLocationPrice(index);
   };
 
   // Form submission handler
@@ -134,6 +156,13 @@ export const useVendorPriceListForm = ({
                 pricingMethod: "perLocation" as const,
               }))
             : [],
+        tripLocationPrices:
+          data.pricingMethod === "perTrip"
+            ? (data.tripLocationPrices || []).map((lp) => ({
+                ...lp,
+                pricingMethod: "perTrip" as const,
+              }))
+            : [],
       };
       onSubmit(createData as any);
     }
@@ -144,6 +173,7 @@ export const useVendorPriceListForm = ({
     form,
     subActivities,
     locationPriceFields,
+    tripLocationPriceFields,
     pricingMethod,
     isLoading,
 
@@ -151,6 +181,8 @@ export const useVendorPriceListForm = ({
     handleSubmit: form.handleSubmit(handleSubmit),
     addLocationPrice,
     removeLocationPrice: removeLocationPriceHandler,
+    addTripLocationPrice,
+    removeTripLocationPrice: removeTripLocationPriceHandler,
     onCancel,
 
     // Form submission state

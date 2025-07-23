@@ -5,10 +5,10 @@ import {
   LocationPrice,
   SubActivityPrice,
 } from "@/services/vendorServices";
-import { actDeleteVendorPriceList } from "@/store/vendors";
+import { actDeleteVendorSubActivityPrice } from "@/store/vendors";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -28,6 +28,12 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "./ui/form";
+import { Input } from "./ui/input";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import EditPriceCostListDialog from "./vendorPriceList/EditPriceCostListDialog";
 
 const VENDOR_STATUS_CONFIG = new Map([
   [
@@ -104,13 +110,21 @@ const getPricingMethodColor = (method: string) => {
   }
 };
 
-export default function VendorCostListTable() {
+export default function VendorCostListTable({
+  vendorPriceListId,
+}: {
+  vendorPriceListId: string;
+}) {
   const dispatch = useAppDispatch();
   const { priceLists } = useAppSelector((state) => state.vendors);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
-  const [selectedPriceList, setSelectedPriceList] =
+  const [openEdit, setOpenEdit] = useState(false);
+  const [selectedSubActivityPrice, setSelectedSubActivityPrice] =
     useState<SubActivityPrice | null>(null);
+
+  const [dialog, setDialog] = useState<"delete" | "edit" | null>(null);
+
   const loopItems = priceLists?.[0]?.subActivityPrices;
 
   const EXPANDABLE_ROWS = ["perLocation", "perTrip"];
@@ -373,7 +387,15 @@ export default function VendorCostListTable() {
           </TableCell>
           <TableCell className="font-medium text-center">
             <div className="flex gap-2 justify-center">
-              <Button variant="outline" size="icon" className="text-blue-500">
+              <Button
+                variant="outline"
+                size="icon"
+                className="text-blue-500"
+                onClick={() => {
+                  setSelectedSubActivityPrice(item);
+                  setDialog("edit");
+                }}
+              >
                 <Edit className="w-3 h-3" />
               </Button>
               <Button
@@ -381,8 +403,8 @@ export default function VendorCostListTable() {
                 size="icon"
                 className="text-red-500 hover:text-red-600"
                 onClick={() => {
-                  setSelectedPriceList(item);
-                  setOpen(true);
+                  setSelectedSubActivityPrice(item);
+                  setDialog("delete");
                 }}
               >
                 <Trash2 className="w-3 h-3" />
@@ -396,9 +418,28 @@ export default function VendorCostListTable() {
   };
 
   const handleDeletePriceList = () => {
-    if (selectedPriceList?._id) {
-      dispatch(actDeleteVendorPriceList(selectedPriceList?._id));
-      setOpen(false);
+    if (selectedSubActivityPrice?._id) {
+      dispatch(
+        actDeleteVendorSubActivityPrice({
+          vendorPriceListId,
+          subActivityPriceId: selectedSubActivityPrice?.subActivity._id || "",
+        })
+      )
+        .unwrap()
+        .then(() => {
+          setSelectedSubActivityPrice(null);
+          toast({
+            title: "Success",
+            description: "Price list deleted successfully",
+          });
+        })
+        .catch((error) => {
+          console.log(error);
+          toast({
+            title: "Error",
+            description: error?.message,
+          });
+        });
     } else {
       toast({
         title: "Error",
@@ -406,6 +447,15 @@ export default function VendorCostListTable() {
       });
     }
   };
+
+  useEffect(() => {
+    if (selectedSubActivityPrice && dialog === "delete") {
+      setOpen(true);
+    }
+    if (selectedSubActivityPrice && dialog === "edit") {
+      setOpenEdit(true);
+    }
+  }, [selectedSubActivityPrice, dialog]);
 
   return (
     <>
@@ -448,6 +498,21 @@ export default function VendorCostListTable() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedSubActivityPrice && (
+        <EditPriceCostListDialog
+          vendorPriceListId={vendorPriceListId}
+          open={openEdit}
+          selectedSubActivityPrice={selectedSubActivityPrice}
+          onOpenChange={(open) => {
+            setOpenEdit(open);
+            setDialog(null);
+            setSelectedSubActivityPrice(null);
+          }}
+          pricingMethod={selectedSubActivityPrice?.pricingMethod || "perItem"}
+          // onSubmit={handleEditPriceList}
+        />
+      )}
     </>
   );
 }

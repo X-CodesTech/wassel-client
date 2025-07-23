@@ -129,7 +129,8 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           pricingMethod: (data as any).pricingMethod || "perItem",
           cost: (data as any).cost || 0,
           locationPrices: (data as any).locationPrices || [],
-        };
+          tripLocationPrices: (data as any).tripLocationPrices || [],
+        } as any;
       }
 
       const subActivityId =
@@ -150,6 +151,16 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         ).map((lp: any) => ({
           location: lp.location,
           pricingMethod: "perLocation" as const,
+          cost: lp.cost,
+        }));
+      } else if (subActivityPrice.pricingMethod === "perTrip") {
+        // For perTrip, include tripLocationPrices array
+        requestData.locationPrices = (
+          subActivityPrice.tripLocationPrices || []
+        ).map((lp: any) => ({
+          fromLocation: lp.fromLocation,
+          toLocation: lp.toLocation,
+          pricingMethod: "perTrip" as const,
           cost: lp.cost,
         }));
       } else {
@@ -208,7 +219,8 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           pricingMethod: (data as any).pricingMethod || "perItem",
           cost: (data as any).cost || 0,
           locationPrices: (data as any).locationPrices || [],
-        };
+          tripLocationPrices: (data as any).tripLocationPrices || [],
+        } as any;
       }
 
       // Ensure locationPrices have the correct structure for perLocation
@@ -218,6 +230,16 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         ).map((lp: any) => ({
           location: lp.location,
           pricingMethod: "perLocation" as const,
+          cost: lp.cost,
+        }));
+      } else if (subActivityPrice.pricingMethod === "perTrip") {
+        // Ensure tripLocationPrices have the correct structure for perTrip
+        subActivityPrice.tripLocationPrices = (
+          subActivityPrice.tripLocationPrices || []
+        ).map((lp: any) => ({
+          fromLocation: lp.fromLocation,
+          toLocation: lp.toLocation,
+          pricingMethod: "perTrip" as const,
           cost: lp.cost,
         }));
       }
@@ -423,7 +445,9 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             </div>
           ) : priceLists && priceLists.length > 0 ? (
             <div className="space-y-4">
-              <VendorCostListTable />
+              <VendorCostListTable
+                vendorPriceListId={vendorDetails?._id || ""}
+              />
             </div>
           ) : (
             <div className="text-center py-8">
