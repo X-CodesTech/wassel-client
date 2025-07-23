@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actEditVendorSubActivityPrice } from "@/store/vendors/act/actEditVendorSubActivityPrice";
 import { actGetVendorPriceLists } from "@/store/vendors";
+import { ILocationPrice } from "@/types/ModelTypes/location.type";
 
 const FormToRender = ({
   pricingMethod,
@@ -107,8 +108,79 @@ const FormToRender = ({
     );
   }
 
-  if (pricingMethod === "perTrip") {
-    return <div>Per Trip</div>;
+  if (pricingMethod === "perLocation") {
+    const schema = z.object({
+      locationPrices: z.array(
+        z.object({
+          location: z.string(),
+          cost: z.number().min(0, "Cost must be positive"),
+        })
+      ),
+    });
+
+    const form = useForm<z.infer<typeof schema>>({
+      defaultValues: {
+        locationPrices: selectedSubActivityPrice.locationPrices.map(
+          (locationPrice) => ({
+            location: locationPrice.location?._id,
+            cost: locationPrice.cost,
+          })
+        ),
+      },
+      resolver: zodResolver(schema),
+    });
+
+    const onSubmit = (data: z.infer<typeof schema>) => {
+      dispatch(
+        actEditVendorSubActivityPrice({
+          pricingMethod: "perLocation",
+          vendorPriceListId,
+          subActivityId,
+          locationPrices: data.locationPrices,
+        })
+      )
+        .unwrap()
+        .catch((error) => {
+          if (error.message) {
+            toast({
+              title: "Error",
+              description: error.message,
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Error",
+              description: "An unexpected error occurred",
+              variant: "destructive",
+            });
+          }
+        })
+        .then(() => {
+          toast({
+            title: "Success",
+            description: "Price list updated successfully",
+          });
+          dispatch(actGetVendorPriceLists(vendorPriceListId));
+        });
+    };
+    return (
+      <Form {...form}>
+        <FormControl>
+          <FormField
+            control={form.control}
+            name="locationPrices"
+            render={({ field }) => (
+              <FormItem className="w-full">
+                <FormLabel>Location Prices</FormLabel>
+              </FormItem>
+            )}
+          />
+        </FormControl>
+        <Button type="submit" onClick={form.handleSubmit(onSubmit)}>
+          Save
+        </Button>
+      </Form>
+    );
   }
 
   return <div>Per Location</div>;

@@ -9,3 +9,8 @@ export interface ILocation {
   villageAr: string;
   isActive: boolean;
 }
+
+export interface ILocationPrice {
+  location: string;
+  cost: number;
+}

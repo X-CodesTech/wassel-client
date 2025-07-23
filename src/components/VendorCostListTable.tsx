@@ -244,7 +244,6 @@ export default function VendorCostListTable({
                       <TableHead className="text-center">
                         Pricing Method
                       </TableHead>
-                      <TableHead className="text-center">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -288,11 +287,6 @@ export default function VendorCostListTable({
                                 ]
                               }
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {getStatusBadge(
-                              locationPrice.location?.isActive || false
-                            )}
                           </TableCell>
                         </TableRow>
                       );
