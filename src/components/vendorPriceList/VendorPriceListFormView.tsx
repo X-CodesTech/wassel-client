@@ -3,16 +3,20 @@ import { Form } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SubActivityForm } from "./SubActivityForm";
 import { LocationPricesForm } from "./LocationPricesForm";
+import { TripLocationPricesForm } from "./TripLocationPricesForm";
 import { VendorPriceListFormProps } from "@/types/vendorPriceListTypes";
 
 interface VendorPriceListFormViewProps extends VendorPriceListFormProps {
   form: any;
   subActivities: any[];
   locationPriceFields: any[];
+  tripLocationPriceFields: any[];
   pricingMethod: string;
   isLoading: boolean;
   addLocationPrice: () => void;
   removeLocationPrice: (index: number) => void;
+  addTripLocationPrice: () => void;
+  removeTripLocationPrice: (index: number) => void;
   handleSubmit: (data: any) => void;
 }
 
@@ -20,10 +24,13 @@ export const VendorPriceListFormView = ({
   form,
   subActivities,
   locationPriceFields,
+  tripLocationPriceFields,
   pricingMethod,
   isLoading,
   addLocationPrice,
   removeLocationPrice,
+  addTripLocationPrice,
+  removeTripLocationPrice,
   handleSubmit,
   onCancel,
   initialData,
@@ -48,6 +55,16 @@ export const VendorPriceListFormView = ({
             locationPriceFields={locationPriceFields}
             addLocationPrice={addLocationPrice}
             removeLocationPrice={removeLocationPrice}
+          />
+        )}
+
+        {/* Trip Location Prices Section - Only show when pricingMethod is "perTrip" */}
+        {pricingMethod === "perTrip" && (
+          <TripLocationPricesForm
+            form={form}
+            tripLocationPriceFields={tripLocationPriceFields}
+            addTripLocationPrice={addTripLocationPrice}
+            removeTripLocationPrice={removeTripLocationPrice}
           />
         )}
 
