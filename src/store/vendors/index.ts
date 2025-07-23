@@ -21,4 +21,7 @@ export {
   actAddVendorSubActivityPrice,
   clearAddSubActivityPriceError,
   clearAddSubActivityPriceResponse,
+  actDeleteVendorSubActivityPrice,
+  clearDeleteSubActivityPriceError,
+  clearDeleteSubActivityPriceResponse,
 } from "./vendorsSlice";
