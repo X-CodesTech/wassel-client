@@ -16,7 +16,6 @@ import { toast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actEditVendorSubActivityPrice } from "@/store/vendors/act/actEditVendorSubActivityPrice";
 import { actGetVendorPriceLists } from "@/store/vendors";
-import { ILocationPrice } from "@/types/ModelTypes/location.type";
 
 const FormToRender = ({
   pricingMethod,
@@ -74,7 +73,7 @@ const FormToRender = ({
             title: "Success",
             description: "Price list updated successfully",
           });
-          dispatch(actGetVendorPriceLists(vendorPriceListId));
+          dispatch(actGetVendorPriceLists(priceLists?.[0]?.vendor?._id || ""));
         });
     };
 
