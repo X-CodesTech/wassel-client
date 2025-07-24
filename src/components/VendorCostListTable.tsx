@@ -2,7 +2,7 @@ import {
   Location,
   LocationPrice,
   SubActivityPrice,
-  VendorPriceListResponse,
+  VendorPriceList,
 } from "@/services/vendorServices";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
@@ -67,9 +67,9 @@ const getPricingMethodColor = (method: string) => {
 };
 
 export default function VendorCostListTable({
-  pricelist,
+  priceList,
 }: {
-  pricelist: VendorPriceListResponse;
+  priceList: VendorPriceList;
 }) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
@@ -394,7 +394,7 @@ export default function VendorCostListTable({
                 {/* {pricelist?.map((pricelist) => {
                   return pricelist.subActivityPrices.map((item, index) => renderTableRow(item, index))
                 })} */}
-                {pricelist.subActivityPrices?.map((item, index) =>
+                {priceList.subActivityPrices?.map((item, index) =>
                   renderTableRow(item, index),
                 )}
               </TableBody>

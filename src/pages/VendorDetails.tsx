@@ -446,7 +446,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                <VendorCostListTable pricelist={item} />
+                <VendorCostListTable priceList={item} />
               </div>
             )}
           </CardContent>
