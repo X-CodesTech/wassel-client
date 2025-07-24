@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SubActivityForm } from "./SubActivityForm";
 import { LocationPricesForm } from "./LocationPricesForm";
 import { TripLocationPricesForm } from "./TripLocationPricesForm";
@@ -39,15 +38,7 @@ export const VendorPriceListFormView = ({
     <Form {...form}>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Sub Activity Price */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Sub Activity Price</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <SubActivityForm form={form} subActivities={subActivities} />
-          </CardContent>
-        </Card>
-
+        <SubActivityForm form={form} subActivities={subActivities} />
         {/* Location Prices Section - Only show when pricingMethod is "perLocation" */}
         {pricingMethod === "perLocation" && (
           <LocationPricesForm
@@ -77,8 +68,8 @@ export const VendorPriceListFormView = ({
             {isLoading
               ? "Saving..."
               : initialData
-              ? "Update Price List"
-              : "Create Price List"}
+                ? "Update Price List"
+                : "Create Price List"}
           </Button>
         </div>
       </form>

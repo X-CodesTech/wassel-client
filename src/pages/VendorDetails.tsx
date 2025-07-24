@@ -431,44 +431,43 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       {/* Vendor Information Table */}
       <VendorInfoTable vendor={vendor} vendorDetails={vendorDetails} />
 
+      <div className="w-full flex justify-end">
+        <VendorPriceListActions
+          vendorId={vendor._id}
+          vendorName={vendor.vendName}
+        />
+      </div>
+
       {/* Cost List Section */}
 
-      {loopItems?.length ? (
+      {getPriceListsLoading === "pending" ? (
+        <div className="flex items-center justify-center h-32">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading price lists...</p>
+          </div>
+        </div>
+      ) : loopItems?.length ? (
         loopItems?.map((item) => (
           <Card className="mb-6">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>{item.name}</CardTitle>
-              <VendorPriceListActions
-                id={vendor._id}
-                vendorName={vendor.vendName}
-                handleAddPriceList={handleAddPriceList}
-              />
+              <Button size="sm" variant="outline" onClick={handleAddPriceList}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add
+              </Button>
             </CardHeader>
-
             <CardContent>
-              {getPriceListsLoading === "pending" ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Loading price lists...</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <VendorCostListTable priceList={item} />
-                </div>
-              )}
+              <VendorCostListTable priceList={item} />
             </CardContent>
           </Card>
         ))
       ) : (
         <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle></CardTitle>
+          <CardHeader className="flex flex-row items-center justify-end">
             <VendorPriceListActions
-              id={vendor._id}
+              vendorId={vendor._id}
               vendorName={vendor.vendName}
-              handleAddPriceList={handleAddPriceList}
             />
           </CardHeader>
           <div className="text-center py-8">

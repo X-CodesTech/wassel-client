@@ -391,9 +391,6 @@ export default function VendorCostListTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {/* {pricelist?.map((pricelist) => {
-                  return pricelist.subActivityPrices.map((item, index) => renderTableRow(item, index))
-                })} */}
                 {priceList.subActivityPrices?.map((item, index) =>
                   renderTableRow(item, index),
                 )}

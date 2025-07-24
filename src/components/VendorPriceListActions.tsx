@@ -1,10 +1,8 @@
 import { vendorServices } from "@/services";
 import {
-  ChevronDown,
   Import,
   Loader2,
   LucideDownloadCloud,
-  Plus,
   Upload,
   FileSpreadsheet,
   X,
@@ -19,12 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -36,7 +28,6 @@ import {
   FormMessage,
 } from "./ui/form";
 import { useForm } from "react-hook-form";
-import { Textarea } from "./ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   vendorPriceListUploadSchema,
@@ -109,18 +100,15 @@ const reducer = (state: typeof initialState, action: any) => {
 };
 
 export default function VendorPriceListActions({
-  handleAddPriceList,
-  id,
+  vendorId,
   vendorName,
 }: {
-  handleAddPriceList: () => void;
-  id: string;
+  vendorId: string;
   vendorName: string;
 }) {
   const storeDispatch = useAppDispatch();
   const { priceLists } = useAppSelector((state) => state.vendors);
 
-  const vendorId = priceLists?.[0]?.vendor?._id || "";
   const vendorPriceListId = priceLists?.[0]?._id || "";
 
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -139,24 +127,6 @@ export default function VendorPriceListActions({
     },
     resolver: zodResolver(vendorPriceListUploadSchema),
   });
-
-  // Helper function to convert DD/MM/YYYY to YYYY-MM-DD for HTML date input
-  const formatDateForInput = (dateString: string): string => {
-    if (!dateString) return "";
-    const parts = dateString.split("/");
-    if (parts.length === 3) {
-      const [day, month, year] = parts;
-      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-    }
-    return dateString;
-  };
-
-  // Helper function to convert YYYY-MM-DD to DD/MM/YYYY for API
-  const formatDateForAPI = (dateString: string): string => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB"); // DD/MM/YYYY format
-  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -216,8 +186,11 @@ export default function VendorPriceListActions({
       }
 
       // Append required fields
-      formData.append("name", data.name);
-      formData.append("nameAr", data.nameAr);
+      formData.append("name", typeof data.name === "string" ? data.name : "");
+      formData.append(
+        "nameAr",
+        typeof data.nameAr === "string" ? data.nameAr : "",
+      );
 
       // Append optional fields if provided
       if (data.description) {
@@ -228,19 +201,22 @@ export default function VendorPriceListActions({
       }
 
       // Append required date fields
-      formData.append("effectiveFrom", data.effectiveFrom);
+      formData.append(
+        "effectiveFrom",
+        typeof data.effectiveFrom === "string" ? data.effectiveFrom : "",
+      );
       if (data.effectiveTo) {
         formData.append("effectiveTo", data.effectiveTo);
       }
 
-      await vendorServices.uploadVendorPriceListFromExcel(id, formData);
+      await vendorServices.uploadVendorPriceListFromExcel(vendorId, formData);
       dispatch({ type: "importing/loading", payload: "fulfilled" });
       dispatch({ type: "importing/modalOpen", payload: false });
       toast({
         title: "Success",
         description: "Price list imported successfully",
       });
-      storeDispatch(actGetVendorPriceLists(id))
+      storeDispatch(actGetVendorPriceLists(vendorId))
         .unwrap()
         .then(() => {
           dispatch({ type: "importing/modalOpen", payload: false });
@@ -267,7 +243,7 @@ export default function VendorPriceListActions({
     dispatch({ type: "exporting/loading", payload: "pending" });
     try {
       const response = await vendorServices.exportVendorPriceListAsExcel({
-        id,
+        id: vendorId,
         isActive,
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -291,12 +267,6 @@ export default function VendorPriceListActions({
   return (
     <>
       <div className="flex gap-2 flex-wrap">
-        {vendorPriceListId ? (
-          <Button size="sm" variant="outline" onClick={handleAddPriceList}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add
-          </Button>
-        ) : null}
         <Button size="sm" variant="outline" onClick={handleImportPriceList}>
           <Import className="h-4 w-4 mr-2" />
           Import Price List

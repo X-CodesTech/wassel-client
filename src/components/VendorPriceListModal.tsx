@@ -1,9 +1,4 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   CreateVendorPriceListRequest,
   UpdateVendorPriceListRequest,
@@ -16,7 +11,7 @@ interface VendorPriceListModalProps {
   vendorId: string;
   initialData?: UpdateVendorPriceListRequest;
   onSubmit: (
-    data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest
+    data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest,
   ) => void;
   isLoading?: boolean;
 }
@@ -29,17 +24,10 @@ export default function VendorPriceListModal({
   onSubmit,
   isLoading = false,
 }: VendorPriceListModalProps) {
-  const isEditing = !!initialData;
-  const title = isEditing ? "Edit Price List" : "Add New Price List";
-
   const handleSubmit = (
-    data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest
+    data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest,
   ) => {
-    if (isEditing && "_id" in data) {
-      onSubmit(data as UpdateVendorPriceListRequest);
-    } else {
-      onSubmit(data as CreateVendorPriceListRequest);
-    }
+    onSubmit(data as CreateVendorPriceListRequest);
     onClose();
   };
 
@@ -50,9 +38,6 @@ export default function VendorPriceListModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
         <VendorPriceListForm
           vendorId={vendorId}
           initialData={initialData}
