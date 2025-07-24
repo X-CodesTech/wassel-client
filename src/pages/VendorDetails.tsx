@@ -66,6 +66,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
   } = useAppSelector((state) => state.vendors);
 
   const vendorDetails = priceLists?.[0];
+  const loopItems = priceLists?.map((item) => item);
 
   useEffect(() => {
     // Fetch all vendors if not already loaded
@@ -426,44 +427,52 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       <VendorInfoTable vendor={vendor} vendorDetails={vendorDetails} />
 
       {/* Cost List Section */}
-      <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Cost list</CardTitle>
-          <VendorPriceListActions
-            id={vendor._id}
-            vendorName={vendor.vendName}
-            handleAddPriceList={handleAddPriceList}
-          />
-        </CardHeader>
-        <CardContent>
-          {getPriceListsLoading === "pending" ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
-                <p className="mt-2 text-gray-600">Loading price lists...</p>
-              </div>
-            </div>
-          ) : priceLists && priceLists.length > 0 ? (
-            <div className="space-y-4">
-              <VendorCostListTable />
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No price lists found
-              </h3>
-              <p className="text-gray-500 mb-4">
-                This vendor doesn't have any price lists configured yet.
-              </p>
-              <Button size="sm" variant="outline" onClick={handleAddPriceList}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create First Price List
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+      {
+        loopItems?.map((item) => (
+          <Card className="mb-6">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>{item.name}</CardTitle>
+              <VendorPriceListActions
+                id={vendor._id}
+                vendorName={vendor.vendName}
+                handleAddPriceList={handleAddPriceList}
+              />
+            </CardHeader>
+
+
+            <CardContent>
+              {getPriceListsLoading === "pending" ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
+                    <p className="mt-2 text-gray-600">Loading price lists...</p>
+                  </div>
+                </div>
+              ) : priceLists && priceLists.length > 0 ? (
+                <div className="space-y-4">
+                  <VendorCostListTable pricelist={item} />
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No price lists found
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    This vendor doesn't have any price lists configured yet.
+                  </p>
+                  <Button size="sm" variant="outline" onClick={handleAddPriceList}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Price List
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+        ))
+      }
 
       {/* Payment Requests */}
       {/* <Card className="mb-6">
@@ -540,17 +549,17 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         initialData={
           selectedPriceList
             ? {
-                _id: selectedPriceList._id,
-                vendorId: vendor?._id || "",
-                name: selectedPriceList.name,
-                nameAr: selectedPriceList.nameAr,
-                description: selectedPriceList.description,
-                descriptionAr: selectedPriceList.descriptionAr,
-                effectiveFrom: selectedPriceList.effectiveFrom.toISOString(),
-                effectiveTo: selectedPriceList.effectiveTo.toISOString(),
-                isActive: selectedPriceList.isActive,
-                subActivityPrices: selectedPriceList.subActivityPrices,
-              }
+              _id: selectedPriceList._id,
+              vendorId: vendor?._id || "",
+              name: selectedPriceList.name,
+              nameAr: selectedPriceList.nameAr,
+              description: selectedPriceList.description,
+              descriptionAr: selectedPriceList.descriptionAr,
+              effectiveFrom: selectedPriceList.effectiveFrom.toISOString(),
+              effectiveTo: selectedPriceList.effectiveTo.toISOString(),
+              isActive: selectedPriceList.isActive,
+              subActivityPrices: selectedPriceList.subActivityPrices,
+            }
             : undefined
         }
         onSubmit={handleUpdatePriceList}

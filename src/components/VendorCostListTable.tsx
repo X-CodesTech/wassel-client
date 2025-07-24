@@ -3,6 +3,7 @@ import {
   Location,
   LocationPrice,
   SubActivityPrice,
+  VendorPriceListResponse,
 } from "@/services/vendorServices";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
@@ -66,9 +67,7 @@ const getPricingMethodColor = (method: string) => {
   }
 };
 
-export default function VendorCostListTable() {
-  const { priceLists } = useAppSelector((state) => state.vendors);
-
+export default function VendorCostListTable({ pricelist }: { pricelist: VendorPriceListResponse }) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -76,8 +75,6 @@ export default function VendorCostListTable() {
     useState<SubActivityPrice | null>(null);
 
   const [dialog, setDialog] = useState<"delete" | "edit" | null>(null);
-
-  const loopItems = priceLists?.[0]?.subActivityPrices;
 
   const EXPANDABLE_ROWS = ["perLocation", "perTrip"];
 
@@ -132,18 +129,16 @@ export default function VendorCostListTable() {
 
         if (isArabic) {
           return (
-            `${location.villageAr || ""}, ${location.cityAr || ""}, ${
-              location.areaAr || ""
-            }, ${location.countryAr || ""}`
+            `${location.villageAr || ""}, ${location.cityAr || ""}, ${location.areaAr || ""
+              }, ${location.countryAr || ""}`
               .replace(/^,\s*/, "")
               .replace(/,\s*,/g, ",") || "غير متوفر"
           );
         }
 
         return (
-          `${location.village || ""}, ${location.city || ""}, ${
-            location.area || ""
-          }, ${location.country || ""}`
+          `${location.village || ""}, ${location.city || ""}, ${location.area || ""
+            }, ${location.country || ""}`
             .replace(/^,\s*/, "")
             .replace(/,\s*,/g, ",") || "N/A"
         );
@@ -231,7 +226,7 @@ export default function VendorCostListTable() {
                             >
                               {
                                 PRICING_METHOD_OPTIONS[
-                                  locationPrice.pricingMethod
+                                locationPrice.pricingMethod
                                 ]
                               }
                             </Badge>
@@ -315,8 +310,8 @@ export default function VendorCostListTable() {
             >
               {
                 PRICING_METHOD_OPTIONS[
-                  item.subActivity
-                    .pricingMethod as keyof typeof PRICING_METHOD_OPTIONS
+                item.subActivity
+                  .pricingMethod as keyof typeof PRICING_METHOD_OPTIONS
                 ]
               }
             </Badge>
@@ -391,7 +386,11 @@ export default function VendorCostListTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loopItems?.map((item, index) => renderTableRow(item, index))}
+                {/* {pricelist?.map((pricelist) => {
+                  return pricelist.subActivityPrices.map((item, index) => renderTableRow(item, index))
+                })} */}
+                {pricelist.subActivityPrices?.map((item, index) => renderTableRow(item, index))}
+
               </TableBody>
             </Table>
           </div>
