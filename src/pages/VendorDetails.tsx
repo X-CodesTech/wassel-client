@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import VendorCostListTable from "@/components/VendorCostListTable";
 import VendorInfoTable from "@/components/VendorInfoTable";
+import CreatePriceListDialog from "@/components/vendorPriceList/CreatePriceListDialog";
 import VendorPriceListActions from "@/components/VendorPriceListActions";
 import VendorPriceListModal from "@/components/VendorPriceListModal";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +43,7 @@ interface VendorDetailsProps {
 }
 
 export default function VendorDetails({ params }: VendorDetailsProps) {
+  const [isCreatePriceListOpen, setIsCreatePriceListOpen] = useState(false);
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [location, navigate] = useLocation();
   const { toast } = useToast();
@@ -306,6 +308,10 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     }
   };
 
+  const onOpenChange = (open: boolean) => {
+    setIsCreatePriceListOpen(open);
+  };
+
   // Modal handlers
   const handleAddPriceList = useCallback(() => {
     setIsAddModalOpen(true);
@@ -456,7 +462,12 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
               <p className="text-gray-500 mb-4">
                 This vendor doesn't have any price lists configured yet.
               </p>
-              <Button size="sm" variant="outline" onClick={handleAddPriceList}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!!vendorDetails?._id}
+                onClick={() => setIsCreatePriceListOpen(true)}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Create First Price List
               </Button>
@@ -528,6 +539,12 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         vendorId={vendor?._id || ""}
         onSubmit={handleCreatePriceList}
         isLoading={createPriceListLoading === "pending"}
+      />
+
+      <CreatePriceListDialog
+        open={isCreatePriceListOpen}
+        onOpenChange={onOpenChange}
+        vendorId={vendor?._id || ""}
       />
 
       <VendorPriceListModal
