@@ -33,7 +33,7 @@ export const useVendors = () => {
   );
 
   const syncVendors = useCallback(() => {
-    dispatch(actSyncVendors() as any);
+    return dispatch(actSyncVendors() as any).unwrap()
   }, [dispatch]);
 
   const clearError = useCallback(() => {

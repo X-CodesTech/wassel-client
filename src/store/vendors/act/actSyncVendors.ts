@@ -6,8 +6,7 @@ export const actSyncVendors = createAsyncThunk(
   "vendors/actSyncVendors",
   async (_, { rejectWithValue }) => {
     try {
-      const data = await vendorServices.syncVendors();
-      return data;
+      return await vendorServices.syncVendors();
     } catch (error) {
       return rejectWithValue(axiosErrorHandler(error));
     }
