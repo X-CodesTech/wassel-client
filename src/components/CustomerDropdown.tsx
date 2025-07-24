@@ -22,12 +22,13 @@ export function CustomerDropdown({
   disabled = false,
   className,
 }: CustomerDropdownProps) {
-  const { customers, loading, pagination, getCustomers, clearError } =
+  const { customers, loading, error, pagination, getCustomers, clearError } =
     useCustomers();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // Remove: const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // Convert customers to dropdown options
   const customerOptions: SearchableDropdownOption[] = allCustomers.map(
@@ -57,33 +58,47 @@ export function CustomerDropdown({
         });
       }
     }
+    // Reset loading more state when customers are updated
+    if (currentPage > 1) {
+      setIsLoadingMore(false);
+    }
   }, [customers, currentPage]);
+
+  // Reset loading more state on error
+  useEffect(() => {
+    if (error && currentPage > 1) {
+      setIsLoadingMore(false);
+    }
+  }, [error, currentPage]);
 
   // Handle search
   useEffect(() => {
-    if (debouncedSearchTerm !== searchTerm) {
-      setCurrentPage(1);
-      setAllCustomers([]);
-      getCustomers({
-        page: 1,
-        limit: 30,
-        search: debouncedSearchTerm,
-      });
-    }
-  }, [debouncedSearchTerm, getCustomers]);
+    if (searchTerm === "") return;
+    setCurrentPage(1);
+    setAllCustomers([]);
+    getCustomers({
+      page: 1,
+      limit: 30,
+      search: searchTerm,
+    });
+  }, [searchTerm, getCustomers]);
 
   // Handle load more
   const handleLoadMore = useCallback(() => {
-    if (pagination && currentPage < pagination.totalPages) {
-      const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
-      getCustomers({
-        page: nextPage,
-        limit: 30,
-        search: debouncedSearchTerm,
-      });
+    // Prevent multiple simultaneous requests
+    if (isLoadingMore || !pagination || currentPage >= pagination.totalPages) {
+      return;
     }
-  }, [currentPage, pagination, getCustomers, debouncedSearchTerm]);
+
+    const nextPage = currentPage + 1;
+    setIsLoadingMore(true);
+    setCurrentPage(nextPage);
+    getCustomers({
+      page: nextPage,
+      limit: 30,
+      search: searchTerm,
+    });
+  }, [currentPage, pagination, getCustomers, searchTerm, isLoadingMore]);
 
   // Handle search change
   const handleSearch = useCallback((search: string) => {
@@ -91,7 +106,9 @@ export function CustomerDropdown({
   }, []);
 
   // Check if there are more pages to load
-  const hasMore = pagination ? currentPage < pagination.totalPages : false;
+  const hasMore = pagination
+    ? currentPage < pagination.totalPages && !isLoadingMore
+    : false;
 
   return (
     <SearchableDropdown
@@ -99,7 +116,7 @@ export function CustomerDropdown({
       value={value}
       onValueChange={onValueChange}
       placeholder={placeholder}
-      searchPlaceholder="Search customers..."
+      searchPlaceholder="Search by customer name or account..."
       emptyMessage="No customers found."
       loading={loading && currentPage === 1}
       disabled={disabled}
@@ -107,7 +124,7 @@ export function CustomerDropdown({
       onSearch={handleSearch}
       onLoadMore={handleLoadMore}
       hasMore={hasMore}
-      isLoadingMore={loading && currentPage > 1}
+      isLoadingMore={isLoadingMore}
     />
   );
 }

@@ -82,7 +82,7 @@ export default function CreateOrder() {
   const step1Form = useForm<CreateOrderStep1Data>({
     resolver: zodResolver(createOrderStep1Schema),
     defaultValues: {
-      service: "",
+      service: "Freight Service",
       typesOfGoods: "",
       goodsDescription: "",
       billingAccount: "", // Will be selected from dropdown
@@ -382,31 +382,10 @@ export default function CreateOrder() {
                     name="service"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Service Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select service type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Freight Service">
-                              Freight Service
-                            </SelectItem>
-                            <SelectItem value="Express Delivery">
-                              Express Delivery
-                            </SelectItem>
-                            <SelectItem value="Standard Shipping">
-                              Standard Shipping
-                            </SelectItem>
-                            <SelectItem value="International">
-                              International
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Service</FormLabel>
+                        <FormControl>
+                          <Input value="Freight Service" disabled readOnly />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
