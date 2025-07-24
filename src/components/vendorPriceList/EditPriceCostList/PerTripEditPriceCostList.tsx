@@ -39,7 +39,7 @@ const PerTripEditPriceCostList = ({
   onOpenChange: (open: boolean) => void;
 }) => {
   const dispatch = useAppDispatch();
-  const { priceLists } = useAppSelector((state) => state.vendors);
+  const { priceLists, editSubActivityPriceLoading } = useAppSelector((state) => state.vendors);
   const { records: locations } = useAppSelector((state) => state.locations);
 
   const vendorId = priceLists?.[0]?.vendor?._id || "";
@@ -345,11 +345,15 @@ const PerTripEditPriceCostList = ({
         <Button
           type="button"
           variant="outline"
+          disabled={editSubActivityPriceLoading === "pending"}
           onClick={() => onOpenChange(false)}
         >
           Cancel
         </Button>
-        <Button type="submit" onClick={form.handleSubmit(onSubmit)}>
+        <Button
+          disabled={editSubActivityPriceLoading === "pending"}
+          type="submit" onClick={form.handleSubmit(onSubmit)}
+        >
           Save
         </Button>
       </div>
