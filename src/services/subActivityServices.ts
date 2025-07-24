@@ -32,15 +32,30 @@ class SubActivityServices {
   }
 
   async getSubActivityByPricingMethod(
-    pricingMethods: "perLocation" | "perTrip" | "perItem"
+    pricingMethods:
+      | "perLocation"
+      | "perTrip"
+      | "perItem"
+      | ("perLocation" | "perTrip" | "perItem")[]
+      | string
   ) {
+    let paramValue = pricingMethods;
+    if (Array.isArray(pricingMethods)) {
+      paramValue = pricingMethods.join(",");
+    }
     return await http.get<SubActivityResponse>(
       `${apiUrlConstants.subActivities}/by-pricing-method`,
       {
         params: {
-          pricingMethods,
+          pricingMethods: paramValue,
         },
       }
+    );
+  }
+
+  async getShippingTruckTypes(activityId: string) {
+    return await http.get(
+      `/api/v1/sub-activities/shipping-truck-types/${activityId}`
     );
   }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -58,6 +58,9 @@ import {
   DeliverySpecialRequirementData,
   CoordinatorData,
 } from "@/types/types";
+import { SpecialRequirementsDropdown } from "@/components/SpecialRequirementsDropdown";
+import subActivityServices from "@/services/subActivityServices";
+import activitieServices from "@/services/activitieServices";
 
 type Step = 1 | 2 | 3;
 
@@ -66,6 +69,12 @@ export default function CreateOrder() {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [specialRequirements, setSpecialRequirements] = useState<any[]>([]);
+  const [specialReqLoading, setSpecialReqLoading] = useState(true);
+  const [shippingUnits, setShippingUnits] = useState<any[]>([]);
+  const [shippingUnitsLoading, setShippingUnitsLoading] = useState(false);
+  const [truckTypes, setTruckTypes] = useState<any[]>([]);
+  const [truckTypesLoading, setTruckTypesLoading] = useState(false);
 
   const {
     loading,
@@ -77,6 +86,16 @@ export default function CreateOrder() {
     clearOrderData,
     clearOrderError,
   } = useOrders();
+
+  useEffect(() => {
+    setSpecialReqLoading(true);
+    subActivityServices
+      .getSubActivityByPricingMethod("perItem,perLocation")
+      .then((res) => {
+        setSpecialRequirements(res.data.data || []);
+      })
+      .finally(() => setSpecialReqLoading(false));
+  }, []);
 
   // Step 1 Form
   const step1Form = useForm<CreateOrderStep1Data>({
@@ -168,6 +187,48 @@ export default function CreateOrder() {
       note: "",
     },
   });
+
+  // Fetch shipping units when step 3 is active
+  useEffect(() => {
+    if (currentStep === 3) {
+      setShippingUnitsLoading(true);
+      activitieServices
+        .getShippingUnitActivities()
+        .then((res: any) => {
+          let arr = [];
+          if (Array.isArray(res.data)) {
+            arr = res.data;
+          } else if (res.data && Array.isArray(res.data.data)) {
+            arr = res.data.data;
+          }
+          setShippingUnits(arr);
+        })
+        .finally(() => setShippingUnitsLoading(false));
+    }
+  }, [currentStep]);
+
+  // Fetch truck types when shipping unit changes
+  useEffect(() => {
+    if (currentStep !== 3) return;
+    const shippingUnitId = step3Form.watch("shippingUnits");
+    if (shippingUnitId) {
+      setTruckTypesLoading(true);
+      subActivityServices
+        .getShippingTruckTypes(shippingUnitId)
+        .then((res) => {
+          const subActivities = res.data.data?.subActivities || [];
+          console.log("Truck types response:", res.data);
+          console.log("Sub activities:", subActivities);
+          setTruckTypes(subActivities);
+          // Reset truck type selection when shipping unit changes
+          step3Form.setValue("typeOfTruck", "");
+        })
+        .finally(() => setTruckTypesLoading(false));
+    } else {
+      setTruckTypes([]);
+      step3Form.setValue("typeOfTruck", "");
+    }
+  }, [currentStep, step3Form.watch("shippingUnits")]);
 
   // Handle Step 1 submission
   const onStep1Submit = async (data: CreateOrderStep1Data) => {
@@ -788,6 +849,52 @@ export default function CreateOrder() {
                               />
                             </div>
                           </div>
+
+                          <FormField
+                            control={step2Form.control}
+                            name={`pickupInfo.${index}.pickupSpecialRequirements`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Special Requirements</FormLabel>
+                                <Controller
+                                  control={step2Form.control}
+                                  name={`pickupInfo.${index}.pickupSpecialRequirements`}
+                                  render={({ field: ctrlField }) => {
+                                    // Map array of objects to array of IDs
+                                    const selectedIds = (
+                                      ctrlField.value || []
+                                    ).map((obj: any) => obj.subActivity);
+                                    // When changed, update array of objects
+                                    const handleChange = (ids: string[]) => {
+                                      // Keep existing objects for selected IDs, add new ones with default quantity 1
+                                      const existing = ctrlField.value || [];
+                                      const newArr = ids.map((id) => {
+                                        const found = existing.find(
+                                          (obj: any) => obj.subActivity === id
+                                        );
+                                        return (
+                                          found || {
+                                            subActivity: id,
+                                            quantity: 1,
+                                          }
+                                        );
+                                      });
+                                      ctrlField.onChange(newArr);
+                                    };
+                                    return (
+                                      <SpecialRequirementsDropdown
+                                        options={specialRequirements}
+                                        value={selectedIds}
+                                        onChange={handleChange}
+                                        disabled={specialReqLoading}
+                                      />
+                                    );
+                                  }}
+                                />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
                       </AccordionContent>
                     </AccordionItem>
@@ -1040,6 +1147,49 @@ export default function CreateOrder() {
                               />
                             </div>
                           </div>
+
+                          <FormField
+                            control={step2Form.control}
+                            name={`deliveryInfo.${index}.deliverySpecialRequirements`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Special Requirements</FormLabel>
+                                <Controller
+                                  control={step2Form.control}
+                                  name={`deliveryInfo.${index}.deliverySpecialRequirements`}
+                                  render={({ field: ctrlField }) => {
+                                    const selectedIds = (
+                                      ctrlField.value || []
+                                    ).map((obj: any) => obj.subActivity);
+                                    const handleChange = (ids: string[]) => {
+                                      const existing = ctrlField.value || [];
+                                      const newArr = ids.map((id) => {
+                                        const found = existing.find(
+                                          (obj: any) => obj.subActivity === id
+                                        );
+                                        return (
+                                          found || {
+                                            subActivity: id,
+                                            quantity: 1,
+                                          }
+                                        );
+                                      });
+                                      ctrlField.onChange(newArr);
+                                    };
+                                    return (
+                                      <SpecialRequirementsDropdown
+                                        options={specialRequirements}
+                                        value={selectedIds}
+                                        onChange={handleChange}
+                                        disabled={specialReqLoading}
+                                      />
+                                    );
+                                  }}
+                                />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
                       </AccordionContent>
                     </AccordionItem>
@@ -1100,20 +1250,26 @@ export default function CreateOrder() {
                         <FormLabel>Shipping Units</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
+                          disabled={shippingUnitsLoading}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select shipping units" />
+                              <SelectValue
+                                placeholder={
+                                  shippingUnitsLoading
+                                    ? "Loading..."
+                                    : "Select shipping unit"
+                                }
+                              />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Pallets">Pallets</SelectItem>
-                            <SelectItem value="Boxes">Boxes</SelectItem>
-                            <SelectItem value="Crates">Crates</SelectItem>
-                            <SelectItem value="Containers">
-                              Containers
-                            </SelectItem>
+                            {shippingUnits.map((unit) => (
+                              <SelectItem key={unit._id} value={unit._id}>
+                                {unit.portalActivityNameEn}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -1127,9 +1283,44 @@ export default function CreateOrder() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Type of Truck</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Truck type ID" {...field} />
-                        </FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={
+                            !step3Form.watch("shippingUnits") ||
+                            truckTypesLoading
+                          }
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue
+                                placeholder={
+                                  truckTypesLoading
+                                    ? "Loading..."
+                                    : "Select truck type"
+                                }
+                              >
+                                {field.value
+                                  ? truckTypes.find(
+                                      (t) =>
+                                        (t._id || t.portalItemNameEn) ===
+                                        field.value
+                                    )?.portalItemNameEn || "Select truck type"
+                                  : null}
+                              </SelectValue>
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {truckTypes.map((truck) => (
+                              <SelectItem
+                                key={truck._id || truck.portalItemNameEn}
+                                value={truck._id || truck.portalItemNameEn}
+                              >
+                                {truck.portalItemNameEn}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
