@@ -42,6 +42,7 @@ import {
   vendorPriceListUploadSchema,
   VendorPriceListUploadData,
 } from "@/utils/validationSchemas";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 
 type TLoading = "idle" | "pending" | "fulfilled" | "rejected";
 
@@ -115,6 +116,12 @@ export default function VendorPriceListActions({
   id: string;
   vendorName: string;
 }) {
+  const storeDispatch = useAppDispatch();
+  const { priceLists } = useAppSelector((state) => state.vendors);
+
+  const vendorId = priceLists?.[0]?.vendor?._id || "";
+  const vendorPriceListId = priceLists?.[0]?._id || "";
+
   const [state, dispatch] = useReducer(reducer, initialState);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState<string>("");
@@ -282,46 +289,32 @@ export default function VendorPriceListActions({
   return (
     <>
       <div className="flex gap-2 flex-wrap">
-        <Button size="sm" variant="outline" onClick={handleAddPriceList}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add
-        </Button>
+        {vendorPriceListId ? (
+          <Button size="sm" variant="outline" onClick={handleAddPriceList}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add
+          </Button>
+        ) : null}
         <Button size="sm" variant="outline" onClick={handleImportPriceList}>
           <Import className="h-4 w-4 mr-2" />
           Import Price List
         </Button>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={state.exporting.loading === "pending"}
-            >
-              {state.exporting.loading === "pending" ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <LucideDownloadCloud className="h-4 w-4 mr-2" />
-              )}
-              Export Price List
-              <ChevronDown className="h-4 w-4 ml-2" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => handleExportPriceList(true)}
-              disabled={state.exporting.loading === "pending"}
-            >
-              Active Price Lists Only
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleExportPriceList(false)}
-              disabled={state.exporting.loading === "pending"}
-            >
-              Inactive Price Lists Only
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {vendorPriceListId ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={state.exporting.loading === "pending"}
+            onClick={() => handleExportPriceList(true)}
+          >
+            {state.exporting.loading === "pending" ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <LucideDownloadCloud className="h-4 w-4 mr-2" />
+            )}
+            Export Price List
+          </Button>
+        ) : null}
       </div>
       <Dialog
         open={state.importing.modalOpen}
@@ -412,120 +405,6 @@ export default function VendorPriceListActions({
                   </FormItem>
                 )}
               />
-
-              {/* Name and Arabic Name in one row */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter price list name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="nameAr"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Arabic Name *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter Arabic name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Description and Arabic Description in one row */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Enter description" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="descriptionAr"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Arabic Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter Arabic description"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Effective From and To in one row */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="effectiveFrom"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Effective From *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          value={formatDateForInput(field.value)}
-                          onChange={(e) => {
-                            const formattedDate = formatDateForAPI(
-                              e.target.value
-                            );
-                            field.onChange(formattedDate);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="effectiveTo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Effective To</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          value={formatDateForInput(field.value)}
-                          onChange={(e) => {
-                            const formattedDate = formatDateForAPI(
-                              e.target.value
-                            );
-                            field.onChange(formattedDate);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
             </div>
 
             <DialogFooter>

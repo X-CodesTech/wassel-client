@@ -76,11 +76,11 @@ export const vendorPriceListUploadSchema = z.object({
   priceListFile: z
     .any()
     .refine((files) => files && files.length > 0, "File is required"),
-  name: commonValidation.requiredString,
-  nameAr: commonValidation.requiredString,
+  name: commonValidation.optionalString,
+  nameAr: commonValidation.optionalString,
   description: commonValidation.optionalString,
   descriptionAr: commonValidation.optionalString,
-  effectiveFrom: commonValidation.requiredString,
+  effectiveFrom: commonValidation.optionalString,
   effectiveTo: commonValidation.optionalString,
 });
 
