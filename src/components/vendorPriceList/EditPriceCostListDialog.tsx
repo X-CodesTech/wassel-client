@@ -18,9 +18,11 @@ import { actEditVendorSubActivityPrice } from "@/store/vendors/act/actEditVendor
 import { actGetVendorPriceLists } from "@/store/vendors";
 
 const FormToRender = ({
+  onOpenChange,
   pricingMethod,
   selectedSubActivityPrice,
 }: {
+  onOpenChange: (open: boolean) => void;
   pricingMethod: PricingMethod;
   selectedSubActivityPrice: SubActivityPrice;
   vendorPriceListId: string;
@@ -28,6 +30,7 @@ const FormToRender = ({
   const dispatch = useAppDispatch();
   const { priceLists } = useAppSelector((state) => state.vendors);
 
+  const vendorId = priceLists?.[0]?.vendor?._id || "";
   const vendorPriceListId = priceLists?.[0]?._id || "";
   const subActivityId = selectedSubActivityPrice.subActivity._id || "";
 
@@ -73,7 +76,8 @@ const FormToRender = ({
             title: "Success",
             description: "Price list updated successfully",
           });
-          dispatch(actGetVendorPriceLists(priceLists?.[0]?.vendor?._id || ""));
+          dispatch(actGetVendorPriceLists(vendorId));
+          onOpenChange(false);
         });
     };
 
@@ -107,7 +111,7 @@ const FormToRender = ({
     );
   }
 
-  if (pricingMethod === "perLocation") {
+  if (pricingMethod === "perTrip") {
     const schema = z.object({
       locationPrices: z.array(
         z.object({
@@ -132,7 +136,7 @@ const FormToRender = ({
     const onSubmit = (data: z.infer<typeof schema>) => {
       dispatch(
         actEditVendorSubActivityPrice({
-          pricingMethod: "perLocation",
+          pricingMethod: "perTrip",
           vendorPriceListId,
           subActivityId,
           locationPrices: data.locationPrices,
@@ -159,22 +163,20 @@ const FormToRender = ({
             title: "Success",
             description: "Price list updated successfully",
           });
-          dispatch(actGetVendorPriceLists(vendorPriceListId));
+          dispatch(actGetVendorPriceLists(vendorId));
         });
     };
     return (
       <Form {...form}>
-        <FormControl>
-          <FormField
-            control={form.control}
-            name="locationPrices"
-            render={({ field }) => (
-              <FormItem className="w-full">
-                <FormLabel>Location Prices</FormLabel>
-              </FormItem>
-            )}
-          />
-        </FormControl>
+        {selectedSubActivityPrice.pricingMethod === "perLocation" ? (
+          <>
+            {selectedSubActivityPrice.locationPrices.map((locationPrice) => (
+              <div key={locationPrice._id}>
+                <h3>{locationPrice.location?.city}</h3>
+              </div>
+            ))}
+          </>
+        ) : null}
         <Button type="submit" onClick={form.handleSubmit(onSubmit)}>
           Save
         </Button>
@@ -182,7 +184,7 @@ const FormToRender = ({
     );
   }
 
-  return <div>Per Location</div>;
+  return <div>Per Trip</div>;
 };
 
 const EditPriceCostListDialog = ({
@@ -209,6 +211,7 @@ const EditPriceCostListDialog = ({
             pricingMethod={pricingMethod}
             selectedSubActivityPrice={selectedSubActivityPrice}
             vendorPriceListId={vendorPriceListId}
+            onOpenChange={onOpenChange}
           />
         </DialogDescription>
       </DialogContent>

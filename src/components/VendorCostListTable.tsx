@@ -5,7 +5,10 @@ import {
   LocationPrice,
   SubActivityPrice,
 } from "@/services/vendorServices";
-import { actDeleteVendorSubActivityPrice } from "@/store/vendors";
+import {
+  actDeleteVendorSubActivityPrice,
+  actGetVendorPriceLists,
+} from "@/store/vendors";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -110,13 +113,10 @@ const getPricingMethodColor = (method: string) => {
   }
 };
 
-export default function VendorCostListTable({
-  vendorPriceListId,
-}: {
-  vendorPriceListId: string;
-}) {
+export default function VendorCostListTable() {
   const dispatch = useAppDispatch();
   const { priceLists } = useAppSelector((state) => state.vendors);
+
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -124,6 +124,10 @@ export default function VendorCostListTable({
     useState<SubActivityPrice | null>(null);
 
   const [dialog, setDialog] = useState<"delete" | "edit" | null>(null);
+
+  const vendorId = priceLists?.[0]?.vendor?._id || "";
+  const vendorPriceListId = priceLists?.[0]?._id || "";
+  const subActivityId = selectedSubActivityPrice?._id || "";
 
   const loopItems = priceLists?.[0]?.subActivityPrices;
 
@@ -412,34 +416,36 @@ export default function VendorCostListTable({
   };
 
   const handleDeletePriceList = () => {
-    if (selectedSubActivityPrice?._id) {
-      dispatch(
-        actDeleteVendorSubActivityPrice({
-          vendorPriceListId,
-          subActivityPriceId: selectedSubActivityPrice?.subActivity._id || "",
-        })
-      )
-        .unwrap()
-        .then(() => {
-          setSelectedSubActivityPrice(null);
-          toast({
-            title: "Success",
-            description: "Price list deleted successfully",
-          });
-        })
-        .catch((error) => {
-          console.log(error);
+    dispatch(
+      actDeleteVendorSubActivityPrice({
+        vendorPriceListId,
+        subActivityPriceId: subActivityId,
+      })
+    )
+      .unwrap()
+      .then(() => {
+        toast({
+          title: "Success",
+          description: "Price list deleted successfully",
+        });
+        dispatch(actGetVendorPriceLists(vendorId));
+        setSelectedSubActivityPrice(null);
+        setDialog(null);
+        setOpen(false);
+      })
+      .catch((error) => {
+        if (error.message) {
           toast({
             title: "Error",
-            description: error?.message,
+            description: error.message,
           });
-        });
-    } else {
-      toast({
-        title: "Error",
-        description: "There is an error while deleting the price list",
+        } else {
+          toast({
+            title: "Error",
+            description: "There is an error while deleting the price list",
+          });
+        }
       });
-    }
   };
 
   useEffect(() => {
