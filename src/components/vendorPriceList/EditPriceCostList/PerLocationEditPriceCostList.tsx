@@ -27,9 +27,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ISubActivityPrice, TPricingMethod } from "@/types/ModelTypes";
 
-const PerLocationEditPriceCostList = () => {
-  return <div>PerLocationEditPriceCostList</div>;
+type TPerLocationEditPriceCostListProps = {
+  onOpenChange: (open: boolean) => void;
+  selectedSubActivityPrice: SubActivityPrice;
+};
+
+const PerLocationEditPriceCostList = ({
+  onOpenChange,
+  selectedSubActivityPrice,
+}: TPerLocationEditPriceCostListProps) => {
+  const dispatch = useAppDispatch();
+  const { priceLists, editSubActivityPriceLoading } = useAppSelector(
+    (state) => state.vendors
+  );
+  const { records: locations } = useAppSelector((state) => state.locations);
+
+  const vendorId = priceLists?.[0]?.vendor?._id || "";
+  const vendorPriceListId = priceLists?.[0]?._id || "";
+  const subActivityId = selectedSubActivityPrice.subActivity._id || "";
+
+  return (
+    <div>
+      <h1>PerLocationEditPriceCostList</h1>
+    </div>
+  );
 };
 
 export default PerLocationEditPriceCostList;

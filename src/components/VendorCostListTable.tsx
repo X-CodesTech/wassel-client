@@ -1,28 +1,15 @@
-import { toast } from "@/hooks/use-toast";
-import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { useAppSelector } from "@/hooks/useAppSelector";
 import {
   Location,
   LocationPrice,
   SubActivityPrice,
 } from "@/services/vendorServices";
-import {
-  actDeleteVendorSubActivityPrice,
-  actGetVendorPriceLists,
-} from "@/store/vendors";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog";
 import {
   Table,
   TableBody,
@@ -31,31 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "./ui/form";
-import { Input } from "./ui/input";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import EditPriceCostListDialog from "./vendorPriceList/EditPriceCostList/EditPriceCostListDialog";
-
-const VENDOR_STATUS_CONFIG = new Map([
-  [
-    true,
-    {
-      variant: "destructive" as const,
-      label: "Inactive",
-      className: undefined,
-    },
-  ],
-  [
-    false,
-    {
-      variant: "default" as const,
-      label: "Active",
-      className: "bg-green-100 text-green-800",
-    },
-  ],
-]);
+import DeletePriceCostListDialog from "./vendorPriceList/DeletePriceCostListDialog";
 
 const renderCostRange = (
   cost: number | undefined,
@@ -70,17 +34,6 @@ const renderCostRange = (
     return `${min.toLocaleString()}-${max.toLocaleString()}`;
   }
   return "N/A";
-};
-
-const getStatusBadge = (blocked: boolean): React.ReactNode => {
-  const config = VENDOR_STATUS_CONFIG.get(blocked);
-  if (!config) return null;
-
-  return (
-    <Badge variant={config.variant} className={config.className}>
-      {config.label}
-    </Badge>
-  );
 };
 
 const getTransactionTypeColor = (type: string) => {
@@ -114,7 +67,6 @@ const getPricingMethodColor = (method: string) => {
 };
 
 export default function VendorCostListTable() {
-  const dispatch = useAppDispatch();
   const { priceLists } = useAppSelector((state) => state.vendors);
 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -124,10 +76,6 @@ export default function VendorCostListTable() {
     useState<SubActivityPrice | null>(null);
 
   const [dialog, setDialog] = useState<"delete" | "edit" | null>(null);
-
-  const vendorId = priceLists?.[0]?.vendor?._id || "";
-  const vendorPriceListId = priceLists?.[0]?._id || "";
-  const subActivityId = selectedSubActivityPrice?._id || "";
 
   const loopItems = priceLists?.[0]?.subActivityPrices;
 
@@ -150,10 +98,6 @@ export default function VendorCostListTable() {
       label: "Pricing Method",
       key: "subActivity.pricingMethod",
     },
-    // {
-    //   label: "Status",
-    //   key: "subActivity.isActive",
-    // },
     {
       label: "Cost Range",
       key: "subActivity.cost",
@@ -415,37 +359,10 @@ export default function VendorCostListTable() {
     );
   };
 
-  const handleDeletePriceList = () => {
-    dispatch(
-      actDeleteVendorSubActivityPrice({
-        vendorPriceListId,
-        subActivityPriceId: subActivityId,
-      })
-    )
-      .unwrap()
-      .then(() => {
-        toast({
-          title: "Success",
-          description: "Price list deleted successfully",
-        });
-        dispatch(actGetVendorPriceLists(vendorId));
-        setSelectedSubActivityPrice(null);
-        setDialog(null);
-        setOpen(false);
-      })
-      .catch((error) => {
-        if (error.message) {
-          toast({
-            title: "Error",
-            description: error.message,
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: "There is an error while deleting the price list",
-          });
-        }
-      });
+  const handleDialog = (open: boolean) => {
+    setOpen(open);
+    setDialog(null);
+    setSelectedSubActivityPrice(null);
   };
 
   useEffect(() => {
@@ -480,37 +397,19 @@ export default function VendorCostListTable() {
           </div>
         </CardContent>
       </Card>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Price List Confirmation</DialogTitle>
-          </DialogHeader>
-          <DialogDescription>
-            Are you sure you want to delete this price list?
-          </DialogDescription>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeletePriceList}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {selectedSubActivityPrice && dialog === "delete" && (
+        <DeletePriceCostListDialog
+          open={open}
+          onOpenChange={handleDialog}
+          selectedSubActivityPrice={selectedSubActivityPrice}
+        />
+      )}
 
-      {selectedSubActivityPrice && (
+      {selectedSubActivityPrice && dialog === "edit" && (
         <EditPriceCostListDialog
-          vendorPriceListId={vendorPriceListId}
           open={openEdit}
           selectedSubActivityPrice={selectedSubActivityPrice}
-          onOpenChange={(open) => {
-            setOpenEdit(open);
-            setDialog(null);
-            setSelectedSubActivityPrice(null);
-          }}
-          pricingMethod={selectedSubActivityPrice?.pricingMethod || "perItem"}
-          // onSubmit={handleEditPriceList}
+          onOpenChange={handleDialog}
         />
       )}
     </>

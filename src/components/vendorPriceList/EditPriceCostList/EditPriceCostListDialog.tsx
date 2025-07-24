@@ -1,4 +1,4 @@
-import { PricingMethod, SubActivityPrice } from "@/services/vendorServices";
+import { SubActivityPrice } from "@/services/vendorServices";
 import {
   Dialog,
   DialogTitle,
@@ -10,17 +10,19 @@ import PerItemEditPriceCostListForm from "./PerItemEditPriceCostListForm";
 import PerLocationEditPriceCostList from "./PerLocationEditPriceCostList";
 import PerTripEditPriceCostList from "./PerTripEditPriceCostList";
 
+type TEditPriceCostListDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  selectedSubActivityPrice: SubActivityPrice;
+};
+
 const EditPriceCostListDialog = ({
   open,
   onOpenChange,
-  pricingMethod,
   selectedSubActivityPrice,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  pricingMethod: PricingMethod;
-  selectedSubActivityPrice: SubActivityPrice;
-}) => {
+}: TEditPriceCostListDialogProps) => {
+  const pricingMethod = selectedSubActivityPrice.pricingMethod;
+
   const EDIT_PRICE_COST_LIST_FORM = {
     perItem: (
       <PerItemEditPriceCostListForm
