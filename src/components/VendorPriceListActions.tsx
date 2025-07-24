@@ -43,6 +43,7 @@ import {
   VendorPriceListUploadData,
 } from "@/utils/validationSchemas";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { actGetVendorPriceLists } from "@/store/vendors";
 
 type TLoading = "idle" | "pending" | "fulfilled" | "rejected";
 
@@ -232,17 +233,18 @@ export default function VendorPriceListActions({
         formData.append("effectiveTo", data.effectiveTo);
       }
 
-      const response = await vendorServices.uploadVendorPriceListFromExcel(
-        id,
-        formData
-      );
-      console.log(response);
+      await vendorServices.uploadVendorPriceListFromExcel(id, formData);
       dispatch({ type: "importing/loading", payload: "fulfilled" });
       dispatch({ type: "importing/modalOpen", payload: false });
       toast({
         title: "Success",
         description: "Price list imported successfully",
       });
+      storeDispatch(actGetVendorPriceLists(id))
+        .unwrap()
+        .then(() => {
+          dispatch({ type: "importing/modalOpen", payload: false });
+        });
       // Reset form
       form.reset();
       setSelectedFileName("");
