@@ -30,7 +30,6 @@ import {
   FileText,
   Package,
   Plus,
-  Star,
   TrendingUp,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -45,7 +44,7 @@ interface VendorDetailsProps {
 export default function VendorDetails({ params }: VendorDetailsProps) {
   const [isCreatePriceListOpen, setIsCreatePriceListOpen] = useState(false);
   const [vendor, setVendor] = useState<Vendor | null>(null);
-  const [location, navigate] = useLocation();
+  const [_, navigate] = useLocation();
   const { toast } = useToast();
   const { records, loading, getVendors } = useVendors();
   const dispatch = useAppDispatch();
@@ -68,6 +67,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
   } = useAppSelector((state) => state.vendors);
 
   const vendorDetails = priceLists?.[0];
+  const loopItems = priceLists?.map((item) => item);
 
   useEffect(() => {
     // Fetch all vendors if not already loaded
@@ -174,7 +174,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         actAddVendorSubActivityPrice({
           ...requestData,
           vendorPriceListId: vendorDetails?._id || "",
-        })
+        }),
       );
       if (actAddVendorSubActivityPrice.fulfilled.match(result)) {
         toast({
@@ -202,7 +202,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
   };
 
   const handleUpdatePriceList = async (
-    data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest
+    data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest,
   ) => {
     try {
       // Handle both old and new form structures
@@ -247,7 +247,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       }
 
       const result = await dispatch(
-        actUpdateVendorPriceList(data as UpdateVendorPriceListRequest)
+        actUpdateVendorPriceList(data as UpdateVendorPriceListRequest),
       );
       if (actUpdateVendorPriceList.fulfilled.match(result)) {
         toast({
@@ -279,7 +279,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
 
     try {
       const result = await dispatch(
-        actDeleteVendorPriceList(selectedPriceList._id)
+        actDeleteVendorPriceList(selectedPriceList._id),
       );
       if (actDeleteVendorPriceList.fulfilled.match(result)) {
         toast({
@@ -432,49 +432,34 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       <VendorInfoTable vendor={vendor} vendorDetails={vendorDetails} />
 
       {/* Cost List Section */}
-      <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Cost list</CardTitle>
-          <VendorPriceListActions
-            id={vendor._id}
-            vendorName={vendor.vendName}
-            handleAddPriceList={handleAddPriceList}
-          />
-        </CardHeader>
-        <CardContent>
-          {getPriceListsLoading === "pending" ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
-                <p className="mt-2 text-gray-600">Loading price lists...</p>
+
+      {loopItems?.map((item) => (
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>{item.name}</CardTitle>
+            <VendorPriceListActions
+              id={vendor._id}
+              vendorName={vendor.vendName}
+              handleAddPriceList={handleAddPriceList}
+            />
+          </CardHeader>
+
+          <CardContent>
+            {getPriceListsLoading === "pending" ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading price lists...</p>
+                </div>
               </div>
-            </div>
-          ) : priceLists && priceLists.length > 0 ? (
-            <div className="space-y-4">
-              <VendorCostListTable />
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No price lists found
-              </h3>
-              <p className="text-gray-500 mb-4">
-                This vendor doesn't have any price lists configured yet.
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!!vendorDetails?._id}
-                onClick={() => setIsCreatePriceListOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create First Price List
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            ) : (
+              <div className="space-y-4">
+                <VendorCostListTable pricelist={item} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
 
       {/* Payment Requests */}
       {/* <Card className="mb-6">
