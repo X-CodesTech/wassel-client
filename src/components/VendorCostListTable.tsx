@@ -11,7 +11,7 @@ import {
 } from "@/store/vendors";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -36,7 +36,7 @@ import { Input } from "./ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import EditPriceCostListDialog from "./vendorPriceList/EditPriceCostListDialog";
+import EditPriceCostListDialog from "./vendorPriceList/EditPriceCostList/EditPriceCostListDialog";
 
 const VENDOR_STATUS_CONFIG = new Map([
   [
@@ -314,7 +314,7 @@ export default function VendorCostListTable() {
     const isExpanded = expandedRows.has(item.subActivity.portalItemNameEn);
 
     return (
-      <>
+      <React.Fragment key={index}>
         <TableRow key={index} className="hover:bg-gray-50">
           <TableCell className="text-center">
             {isExpandable && (
@@ -411,7 +411,7 @@ export default function VendorCostListTable() {
           </TableCell>
         </TableRow>
         {isExpandable && renderExpandableContent(item)}
-      </>
+      </React.Fragment>
     );
   };
 
