@@ -20,5 +20,8 @@ class ActivitieServices {
   async deleteActivity(id: string) {
     return await http.delete(`${apiUrlConstants.activities}/${id}`);
   }
+  async getShippingUnitActivities() {
+    return await http.get<Activity[]>("/api/v1/activities/shipping-unit");
+  }
 }
 export default new ActivitieServices();

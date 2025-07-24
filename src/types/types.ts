@@ -191,6 +191,7 @@ export type InsertLocation = z.infer<typeof insertLocationSchema>;
 
 // Location filter interface
 export interface LocationFilters {
+  search?: string;
   country?: string;
   area?: string;
   city?: string;

@@ -12,6 +12,7 @@ class LocationServices {
 
   async getLocations(page: number, limit: number, filters?: LocationFilters) {
     const params = new URLSearchParams();
+    if (filters?.search) params.append("search", filters.search);
     if (filters?.country) params.append("country", filters.country);
     if (filters?.area) params.append("area", filters.area);
     if (filters?.city) params.append("city", filters.city);
