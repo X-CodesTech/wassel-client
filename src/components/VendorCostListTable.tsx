@@ -1,4 +1,3 @@
-import { useAppSelector } from "@/hooks/useAppSelector";
 import {
   Location,
   LocationPrice,
@@ -24,7 +23,7 @@ import DeletePriceCostListDialog from "./vendorPriceList/DeletePriceCostListDial
 
 const renderCostRange = (
   cost: number | undefined,
-  locationPrices: LocationPrice[]
+  locationPrices: LocationPrice[],
 ) => {
   if (cost) {
     return cost.toLocaleString();
@@ -67,7 +66,11 @@ const getPricingMethodColor = (method: string) => {
   }
 };
 
-export default function VendorCostListTable({ pricelist }: { pricelist: VendorPriceListResponse }) {
+export default function VendorCostListTable({
+  pricelist,
+}: {
+  pricelist: VendorPriceListResponse;
+}) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -123,22 +126,24 @@ export default function VendorCostListTable({ pricelist }: { pricelist: VendorPr
     const formatFromToAddress = (locationPrice: LocationPrice) => {
       const formatFullAddress = (
         location: Location | undefined,
-        isArabic: boolean = false
+        isArabic: boolean = false,
       ) => {
         if (!location) return isArabic ? "غير متوفر" : "N/A";
 
         if (isArabic) {
           return (
-            `${location.villageAr || ""}, ${location.cityAr || ""}, ${location.areaAr || ""
-              }, ${location.countryAr || ""}`
+            `${location.villageAr || ""}, ${location.cityAr || ""}, ${
+              location.areaAr || ""
+            }, ${location.countryAr || ""}`
               .replace(/^,\s*/, "")
               .replace(/,\s*,/g, ",") || "غير متوفر"
           );
         }
 
         return (
-          `${location.village || ""}, ${location.city || ""}, ${location.area || ""
-            }, ${location.country || ""}`
+          `${location.village || ""}, ${location.city || ""}, ${
+            location.area || ""
+          }, ${location.country || ""}`
             .replace(/^,\s*/, "")
             .replace(/,\s*,/g, ",") || "N/A"
         );
@@ -149,7 +154,7 @@ export default function VendorCostListTable({ pricelist }: { pricelist: VendorPr
         const locationAddress = formatFullAddress(locationPrice.location);
         const locationAddressAr = formatFullAddress(
           locationPrice.location,
-          true
+          true,
         );
 
         return {
@@ -221,12 +226,12 @@ export default function VendorCostListTable({ pricelist }: { pricelist: VendorPr
                           <TableCell className="text-center">
                             <Badge
                               className={getPricingMethodColor(
-                                locationPrice.pricingMethod
+                                locationPrice.pricingMethod,
                               )}
                             >
                               {
                                 PRICING_METHOD_OPTIONS[
-                                locationPrice.pricingMethod
+                                  locationPrice.pricingMethod
                                 ]
                               }
                             </Badge>
@@ -298,7 +303,7 @@ export default function VendorCostListTable({ pricelist }: { pricelist: VendorPr
           <TableCell className="font-medium text-center">
             <Badge
               className={getTransactionTypeColor(
-                item.subActivity.transactionType.name
+                item.subActivity.transactionType.name,
               )}
             >
               {item.subActivity.transactionType.name}
@@ -310,8 +315,8 @@ export default function VendorCostListTable({ pricelist }: { pricelist: VendorPr
             >
               {
                 PRICING_METHOD_OPTIONS[
-                item.subActivity
-                  .pricingMethod as keyof typeof PRICING_METHOD_OPTIONS
+                  item.subActivity
+                    .pricingMethod as keyof typeof PRICING_METHOD_OPTIONS
                 ]
               }
             </Badge>
@@ -389,8 +394,9 @@ export default function VendorCostListTable({ pricelist }: { pricelist: VendorPr
                 {/* {pricelist?.map((pricelist) => {
                   return pricelist.subActivityPrices.map((item, index) => renderTableRow(item, index))
                 })} */}
-                {pricelist.subActivityPrices?.map((item, index) => renderTableRow(item, index))}
-
+                {pricelist.subActivityPrices?.map((item, index) =>
+                  renderTableRow(item, index),
+                )}
               </TableBody>
             </Table>
           </div>

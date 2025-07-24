@@ -23,15 +23,7 @@ import {
   clearPriceLists,
 } from "@/store/vendors";
 import { Vendor } from "@/types/types";
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  FileText,
-  Package,
-  Plus,
-  TrendingUp,
-} from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Package, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
