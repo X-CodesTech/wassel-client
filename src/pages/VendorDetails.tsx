@@ -445,9 +445,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
             </div>
           ) : priceLists && priceLists.length > 0 ? (
             <div className="space-y-4">
-              <VendorCostListTable
-                vendorPriceListId={vendorDetails?._id || ""}
-              />
+              <VendorCostListTable />
             </div>
           ) : (
             <div className="text-center py-8">
