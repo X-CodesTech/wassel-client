@@ -12,6 +12,7 @@ import {
   setStep1Data,
   setStep2Data,
   setStep3Data,
+  setOrderDetails,
 } from "../ordersSlice";
 
 // Step 1: Create basic order
@@ -117,6 +118,8 @@ export const actGetOrderById = createAsyncThunk(
       const response = await orderServices.getOrderById(orderId);
 
       if (response.success) {
+        dispatch(setOrderDetails(response.data));
+        dispatch(setSuccess(true));
         return response;
       } else {
         throw new Error(response.message || "Failed to get order");
