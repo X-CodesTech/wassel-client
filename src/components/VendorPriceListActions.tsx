@@ -266,26 +266,28 @@ export default function VendorPriceListActions({
   return (
     <>
       <div className="flex gap-2 flex-wrap">
-        <Button size="sm" variant="outline" onClick={handleImportPriceList}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleImportPriceList}
+          disabled={state.importing.loading === "pending"}
+        >
           <Import className="h-4 w-4 mr-2" />
           Import Price List
         </Button>
-
-        {priceListId ? (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={state.exporting.loading === "pending"}
-            onClick={() => handleExportPriceList(true)}
-          >
-            {state.exporting.loading === "pending" ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <LucideDownloadCloud className="h-4 w-4 mr-2" />
-            )}
-            Export Price List
-          </Button>
-        ) : null}
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={state.exporting.loading === "pending"}
+          onClick={() => handleExportPriceList(true)}
+        >
+          {state.exporting.loading === "pending" ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <LucideDownloadCloud className="h-4 w-4 mr-2" />
+          )}
+          Export Price List
+        </Button>
       </div>
       <Dialog
         open={state.importing.modalOpen}
