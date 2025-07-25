@@ -26,7 +26,7 @@ const VendorDetailsEmptyState = ({
         <Button
           size="sm"
           variant="outline"
-          disabled={!!vendorDetails?._id}
+          disabled={!vendorDetails?._id}
           onClick={() => handleOpenDialog("createPriceList")}
         >
           <Plus className="h-4 w-4 mr-2" />

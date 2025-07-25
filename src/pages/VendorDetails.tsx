@@ -47,21 +47,21 @@ export type TVendorDialogType =
   | null;
 
 export default function VendorDetails({ params }: VendorDetailsProps) {
+  const { toast } = useToast();
+
+  const [_, navigate] = useLocation();
+
+  const { records, loading, getVendors } = useVendors();
+
+  const [selectedPriceList, setSelectedPriceList] =
+    useState<VendorPriceList | null>(null);
   const [selectedPriceListId, setSelectedPriceListId] = useState<string | null>(
     null
   );
   const [dialogType, setDialogType] = useState<TVendorDialogType>(null);
   const [vendor, setVendor] = useState<Vendor | null>(null);
-  const [_, navigate] = useLocation();
-  const { toast } = useToast();
-  const { records, loading, getVendors } = useVendors();
+
   const dispatch = useAppDispatch();
-
-  // Modal states
-  const [selectedPriceList, setSelectedPriceList] =
-    useState<VendorPriceList | null>(null);
-
-  // Get vendor price lists state from Redux
   const {
     priceLists,
     getPriceListsLoading,
@@ -69,7 +69,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     createPriceListLoading,
   } = useAppSelector((state) => state.vendors);
 
-  const vendorDetails = priceLists?.[0];
   const loopItems = priceLists?.map((item) => item);
 
   useEffect(() => {
@@ -101,7 +100,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     }
   }, [params?.id, records, toast, navigate, dispatch]);
 
-  // Cleanup price lists when component unmounts
   useEffect(() => {
     return () => {
       dispatch(clearPriceLists());
@@ -136,55 +134,56 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
 
   // CRUD Operation Handlers
   const handleAddSubActivityPrice = (data: CreateVendorPriceListRequest) => {
-    // Handle both old and new form structures
-    let subActivityPrice;
-    if (data.subActivityPrices && data.subActivityPrices.length > 0) {
-      // Old structure with array
-      subActivityPrice = data.subActivityPrices[0];
-    } else {
-      // New simplified structure - create a mock subActivityPrice from the form data
-      subActivityPrice = {
-        subActivity: (data as any).subActivity || "",
-        pricingMethod: (data as any).pricingMethod || "perItem",
-        cost: (data as any).cost || 0,
-        locationPrices: (data as any).locationPrices || [],
-        tripLocationPrices: (data as any).tripLocationPrices || [],
-      } as any;
-    }
+    // Extract subActivityPrice from either old or new form structure
+    const subActivityPrice =
+      data.subActivityPrices && data.subActivityPrices.length > 0
+        ? data.subActivityPrices[0] // Old structure with array
+        : ({
+            // New simplified structure
+            subActivity: (data as any).subActivity || "",
+            pricingMethod: (data as any).pricingMethod || "perItem",
+            cost: (data as any).cost || 0,
+            locationPrices: (data as any).locationPrices || [],
+            tripLocationPrices: (data as any).tripLocationPrices || [],
+          } as any);
 
-    const subActivityId =
-      typeof subActivityPrice.subActivity === "string"
-        ? subActivityPrice.subActivity
-        : subActivityPrice.subActivity._id;
-
-    // Always include the id field and structure the request properly
-    let requestData: any = {
-      subActivity: subActivityId,
+    // Build request data based on pricing method
+    const baseRequest = {
       pricingMethod: subActivityPrice.pricingMethod,
+      cost: subActivityPrice.cost || 0,
     };
 
-    // For perLocation, always include locationPrices array (even if empty)
-    if (subActivityPrice.pricingMethod === "perLocation") {
-      requestData.locationPrices = (
-        subActivityPrice.locationPrices || [{}]
-      ).map((lp: any) => ({
-        location: lp.location,
-        pricingMethod: "perLocation" as const,
-        cost: lp.cost,
-      }));
-    } else if (subActivityPrice.pricingMethod === "perTrip") {
-      // For perTrip, include tripLocationPrices array
-      requestData.locationPrices = (
-        subActivityPrice.tripLocationPrices || []
-      ).map((lp: any) => ({
-        fromLocation: lp.fromLocation,
-        toLocation: lp.toLocation,
-        pricingMethod: "perTrip" as const,
-        cost: lp.cost,
-      }));
-    } else {
-      // For other pricing methods, include cost field
-      requestData.cost = subActivityPrice.cost || 0;
+    let requestData;
+    switch (subActivityPrice.pricingMethod) {
+      case "perLocation":
+        requestData = {
+          ...baseRequest,
+          locationPrices: (subActivityPrice.locationPrices || [{}]).map(
+            (lp: any) => ({
+              location: lp.location,
+              pricingMethod: "perLocation" as const,
+              cost: lp.cost,
+            })
+          ),
+        };
+        break;
+
+      case "perTrip":
+        requestData = {
+          ...baseRequest,
+          locationPrices: (subActivityPrice.tripLocationPrices || []).map(
+            (lp: any) => ({
+              fromLocation: lp.fromLocation,
+              toLocation: lp.toLocation,
+              pricingMethod: "perTrip" as const,
+              cost: lp.cost,
+            })
+          ),
+        };
+        break;
+
+      default:
+        requestData = baseRequest;
     }
 
     dispatch(
@@ -202,19 +201,12 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         dispatch(actGetVendorPriceLists(vendor?._id || ""));
       })
       .catch((error) => {
-        if (error.message) {
-          toast({
-            title: "Error",
-            description: error.message,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: "An unexpected error occurred",
-            variant: "destructive",
-          });
-        }
+        const errorMessage = error.message || "An unexpected error occurred";
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
       });
   };
 
@@ -330,7 +322,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       </div>
 
       {/* Vendor Information Table */}
-      <VendorInfoTable vendor={vendor} vendorDetails={vendorDetails} />
+      <VendorInfoTable vendor={vendor} vendorDetails={priceLists?.[0]} />
 
       <div className="w-full flex justify-end">
         <VendorPriceListActions
