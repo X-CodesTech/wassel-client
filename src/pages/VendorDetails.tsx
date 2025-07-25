@@ -32,7 +32,7 @@ import {
   Plus,
   TrendingUp,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
 interface VendorDetailsProps {
@@ -42,7 +42,16 @@ interface VendorDetailsProps {
 }
 
 export default function VendorDetails({ params }: VendorDetailsProps) {
-  const [isCreatePriceListOpen, setIsCreatePriceListOpen] = useState(false);
+  const [selectedPriceListId, setSelectedPriceListId] = useState<string | null>(
+    null
+  );
+  const [dialogType, setDialogType] = useState<
+    | "createPriceList"
+    | "addSubActivityPrice"
+    | "editSubActivityPrice"
+    | "deleteSubActivityPrice"
+    | null
+  >(null);
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [_, navigate] = useLocation();
   const { toast } = useToast();
@@ -50,9 +59,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
   const dispatch = useAppDispatch();
 
   // Modal states
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPriceList, setSelectedPriceList] =
     useState<VendorPriceList | null>(null);
 
@@ -116,8 +122,26 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     }
   }, [getPriceListsError, toast]);
 
+  const handleOpenDialog = (type: typeof dialogType, priceListId?: string) => {
+    setDialogType(type);
+    setSelectedPriceListId(priceListId || null);
+    setSelectedPriceList(null);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogType(null);
+    setSelectedPriceListId(null);
+    setSelectedPriceList(null);
+  };
+
+  const isDialogOpen = (type: typeof dialogType) => {
+    return dialogType === type;
+  };
+
   // CRUD Operation Handlers
-  const handleCreatePriceList = async (data: CreateVendorPriceListRequest) => {
+  const handleAddSubActivityPrice = async (
+    data: CreateVendorPriceListRequest
+  ) => {
     try {
       // Handle both old and new form structures
       let subActivityPrice;
@@ -149,7 +173,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       // For perLocation, always include locationPrices array (even if empty)
       if (subActivityPrice.pricingMethod === "perLocation") {
         requestData.locationPrices = (
-          subActivityPrice.locationPrices || []
+          subActivityPrice.locationPrices || [{}]
         ).map((lp: any) => ({
           location: lp.location,
           pricingMethod: "perLocation" as const,
@@ -173,8 +197,8 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       const result = await dispatch(
         actAddVendorSubActivityPrice({
           ...requestData,
-          vendorPriceListId: vendorDetails?._id || "",
-        }),
+          vendorPriceListId: selectedPriceListId!,
+        })
       );
       if (actAddVendorSubActivityPrice.fulfilled.match(result)) {
         toast({
@@ -202,7 +226,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
   };
 
   const handleUpdatePriceList = async (
-    data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest,
+    data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest
   ) => {
     try {
       // Handle both old and new form structures
@@ -247,7 +271,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       }
 
       const result = await dispatch(
-        actUpdateVendorPriceList(data as UpdateVendorPriceListRequest),
+        actUpdateVendorPriceList(data as UpdateVendorPriceListRequest)
       );
       if (actUpdateVendorPriceList.fulfilled.match(result)) {
         toast({
@@ -279,15 +303,14 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
 
     try {
       const result = await dispatch(
-        actDeleteVendorPriceList(selectedPriceList._id),
+        actDeleteVendorPriceList(selectedPriceList._id)
       );
       if (actDeleteVendorPriceList.fulfilled.match(result)) {
         toast({
           title: "Success",
           description: "Price list deleted successfully",
         });
-        setIsDeleteDialogOpen(false);
-        setSelectedPriceList(null);
+        handleCloseDialog();
         // Refresh the price lists
         if (vendor) {
           dispatch(actGetVendorPriceLists(vendor._id));
@@ -307,15 +330,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       });
     }
   };
-
-  const onOpenChange = (open: boolean) => {
-    setIsCreatePriceListOpen(open);
-  };
-
-  // Modal handlers
-  const handleAddPriceList = useCallback(() => {
-    setIsAddModalOpen(true);
-  }, []);
 
   if (loading === "pending") {
     return (
@@ -435,6 +449,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         <VendorPriceListActions
           vendorId={vendor._id}
           vendorName={vendor.vendName}
+          priceListId={selectedPriceListId!}
         />
       </div>
 
@@ -452,7 +467,13 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           <Card className="mb-6">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>{item.name}</CardTitle>
-              <Button size="sm" variant="outline" onClick={handleAddPriceList}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  handleOpenDialog("addSubActivityPrice", item._id)
+                }
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add
               </Button>
@@ -464,12 +485,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         ))
       ) : (
         <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-end">
-            <VendorPriceListActions
-              vendorId={vendor._id}
-              vendorName={vendor.vendName}
-            />
-          </CardHeader>
           <div className="text-center py-8">
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -482,7 +497,7 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
               size="sm"
               variant="outline"
               disabled={!!vendorDetails?._id}
-              onClick={() => setIsCreatePriceListOpen(true)}
+              onClick={() => handleOpenDialog("createPriceList")}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create First Price List
@@ -549,25 +564,22 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
 
       {/* Modals */}
       <VendorPriceListModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        isOpen={isDialogOpen("addSubActivityPrice")}
+        onClose={handleCloseDialog}
         vendorId={vendor?._id || ""}
-        onSubmit={handleCreatePriceList}
+        onSubmit={handleAddSubActivityPrice}
         isLoading={createPriceListLoading === "pending"}
       />
 
       <CreatePriceListDialog
-        open={isCreatePriceListOpen}
-        onOpenChange={onOpenChange}
+        open={isDialogOpen("createPriceList")}
+        onOpenChange={handleCloseDialog}
         vendorId={vendor?._id || ""}
       />
 
       <VendorPriceListModal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setSelectedPriceList(null);
-        }}
+        isOpen={isDialogOpen("editSubActivityPrice")}
+        onClose={handleCloseDialog}
         vendorId={vendor?._id || ""}
         initialData={
           selectedPriceList
@@ -590,11 +602,8 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       />
 
       <DeleteConfirmationDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => {
-          setIsDeleteDialogOpen(false);
-          setSelectedPriceList(null);
-        }}
+        isOpen={isDialogOpen("deleteSubActivityPrice")}
+        onClose={handleCloseDialog}
         onConfirm={handleDeletePriceList}
         title="Delete Price List"
         description={`Are you sure you want to delete "${selectedPriceList?.name}"? This action cannot be undone.`}

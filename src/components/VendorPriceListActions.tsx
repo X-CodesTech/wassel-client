@@ -33,7 +33,7 @@ import {
   vendorPriceListUploadSchema,
   VendorPriceListUploadData,
 } from "@/utils/validationSchemas";
-import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { useAppDispatch } from "@/hooks/useAppSelector";
 import { actGetVendorPriceLists } from "@/store/vendors";
 
 type TLoading = "idle" | "pending" | "fulfilled" | "rejected";
@@ -102,14 +102,13 @@ const reducer = (state: typeof initialState, action: any) => {
 export default function VendorPriceListActions({
   vendorId,
   vendorName,
+  priceListId,
 }: {
   vendorId: string;
   vendorName: string;
+  priceListId?: string;
 }) {
   const storeDispatch = useAppDispatch();
-  const { priceLists } = useAppSelector((state) => state.vendors);
-
-  const vendorPriceListId = priceLists?.[0]?._id || "";
 
   const [state, dispatch] = useReducer(reducer, initialState);
   const [dragActive, setDragActive] = useState(false);
@@ -189,7 +188,7 @@ export default function VendorPriceListActions({
       formData.append("name", typeof data.name === "string" ? data.name : "");
       formData.append(
         "nameAr",
-        typeof data.nameAr === "string" ? data.nameAr : "",
+        typeof data.nameAr === "string" ? data.nameAr : ""
       );
 
       // Append optional fields if provided
@@ -203,7 +202,7 @@ export default function VendorPriceListActions({
       // Append required date fields
       formData.append(
         "effectiveFrom",
-        typeof data.effectiveFrom === "string" ? data.effectiveFrom : "",
+        typeof data.effectiveFrom === "string" ? data.effectiveFrom : ""
       );
       if (data.effectiveTo) {
         formData.append("effectiveTo", data.effectiveTo);
@@ -272,7 +271,7 @@ export default function VendorPriceListActions({
           Import Price List
         </Button>
 
-        {vendorPriceListId ? (
+        {priceListId ? (
           <Button
             size="sm"
             variant="outline"
