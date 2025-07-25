@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import VendorCostListTable from "@/components/VendorCostListTable";
+import VendorDetailsEmptyState from "@/components/VendorDetailsEmptyState";
 import VendorInfoTable from "@/components/VendorInfoTable";
 import CreatePriceListDialog from "@/components/vendorPriceList/CreatePriceListDialog";
 import VendorPriceListActions from "@/components/VendorPriceListActions";
@@ -12,14 +13,11 @@ import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { useVendors } from "@/hooks/useVendors";
 import {
   CreateVendorPriceListRequest,
-  UpdateVendorPriceListRequest,
   VendorPriceList,
 } from "@/services/vendorServices";
 import {
   actAddVendorSubActivityPrice,
-  actDeleteVendorPriceList,
   actGetVendorPriceLists,
-  actUpdateVendorPriceList,
   clearPriceLists,
 } from "@/store/vendors";
 import { Vendor } from "@/types/types";
@@ -27,9 +25,9 @@ import {
   ArrowLeft,
   Calendar,
   Clock,
-  FileText,
   Package,
   Plus,
+  Trash2,
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -41,17 +39,18 @@ interface VendorDetailsProps {
   };
 }
 
+export type TVendorDialogType =
+  | "createPriceList"
+  | "addSubActivityPrice"
+  | "deletePriceList"
+  | "deleteSubActivityPrice"
+  | null;
+
 export default function VendorDetails({ params }: VendorDetailsProps) {
   const [selectedPriceListId, setSelectedPriceListId] = useState<string | null>(
     null
   );
-  const [dialogType, setDialogType] = useState<
-    | "createPriceList"
-    | "addSubActivityPrice"
-    | "editSubActivityPrice"
-    | "deleteSubActivityPrice"
-    | null
-  >(null);
+  const [dialogType, setDialogType] = useState<TVendorDialogType>(null);
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [_, navigate] = useLocation();
   const { toast } = useToast();
@@ -68,8 +67,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     getPriceListsLoading,
     getPriceListsError,
     createPriceListLoading,
-    updatePriceListLoading,
-    deletePriceListLoading,
   } = useAppSelector((state) => state.vendors);
 
   const vendorDetails = priceLists?.[0];
@@ -122,10 +119,9 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     }
   }, [getPriceListsError, toast]);
 
-  const handleOpenDialog = (type: typeof dialogType, priceListId?: string) => {
+  const handleOpenDialog = (type: TVendorDialogType, priceListId?: string) => {
     setDialogType(type);
     setSelectedPriceListId(priceListId || null);
-    setSelectedPriceList(null);
   };
 
   const handleCloseDialog = () => {
@@ -134,201 +130,92 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
     setSelectedPriceList(null);
   };
 
-  const isDialogOpen = (type: typeof dialogType) => {
+  const isDialogOpen = (type: TVendorDialogType) => {
     return dialogType === type;
   };
 
   // CRUD Operation Handlers
-  const handleAddSubActivityPrice = async (
-    data: CreateVendorPriceListRequest
-  ) => {
-    try {
-      // Handle both old and new form structures
-      let subActivityPrice;
-      if (data.subActivityPrices && data.subActivityPrices.length > 0) {
-        // Old structure with array
-        subActivityPrice = data.subActivityPrices[0];
-      } else {
-        // New simplified structure - create a mock subActivityPrice from the form data
-        subActivityPrice = {
-          subActivity: (data as any).subActivity || "",
-          pricingMethod: (data as any).pricingMethod || "perItem",
-          cost: (data as any).cost || 0,
-          locationPrices: (data as any).locationPrices || [],
-          tripLocationPrices: (data as any).tripLocationPrices || [],
-        } as any;
-      }
+  const handleAddSubActivityPrice = (data: CreateVendorPriceListRequest) => {
+    // Handle both old and new form structures
+    let subActivityPrice;
+    if (data.subActivityPrices && data.subActivityPrices.length > 0) {
+      // Old structure with array
+      subActivityPrice = data.subActivityPrices[0];
+    } else {
+      // New simplified structure - create a mock subActivityPrice from the form data
+      subActivityPrice = {
+        subActivity: (data as any).subActivity || "",
+        pricingMethod: (data as any).pricingMethod || "perItem",
+        cost: (data as any).cost || 0,
+        locationPrices: (data as any).locationPrices || [],
+        tripLocationPrices: (data as any).tripLocationPrices || [],
+      } as any;
+    }
 
-      const subActivityId =
-        typeof subActivityPrice.subActivity === "string"
-          ? subActivityPrice.subActivity
-          : subActivityPrice.subActivity._id;
+    const subActivityId =
+      typeof subActivityPrice.subActivity === "string"
+        ? subActivityPrice.subActivity
+        : subActivityPrice.subActivity._id;
 
-      // Always include the id field and structure the request properly
-      let requestData: any = {
-        subActivity: subActivityId,
-        pricingMethod: subActivityPrice.pricingMethod,
-      };
+    // Always include the id field and structure the request properly
+    let requestData: any = {
+      subActivity: subActivityId,
+      pricingMethod: subActivityPrice.pricingMethod,
+    };
 
-      // For perLocation, always include locationPrices array (even if empty)
-      if (subActivityPrice.pricingMethod === "perLocation") {
-        requestData.locationPrices = (
-          subActivityPrice.locationPrices || [{}]
-        ).map((lp: any) => ({
-          location: lp.location,
-          pricingMethod: "perLocation" as const,
-          cost: lp.cost,
-        }));
-      } else if (subActivityPrice.pricingMethod === "perTrip") {
-        // For perTrip, include tripLocationPrices array
-        requestData.locationPrices = (
-          subActivityPrice.tripLocationPrices || []
-        ).map((lp: any) => ({
-          fromLocation: lp.fromLocation,
-          toLocation: lp.toLocation,
-          pricingMethod: "perTrip" as const,
-          cost: lp.cost,
-        }));
-      } else {
-        // For other pricing methods, include cost field
-        requestData.cost = subActivityPrice.cost || 0;
-      }
+    // For perLocation, always include locationPrices array (even if empty)
+    if (subActivityPrice.pricingMethod === "perLocation") {
+      requestData.locationPrices = (
+        subActivityPrice.locationPrices || [{}]
+      ).map((lp: any) => ({
+        location: lp.location,
+        pricingMethod: "perLocation" as const,
+        cost: lp.cost,
+      }));
+    } else if (subActivityPrice.pricingMethod === "perTrip") {
+      // For perTrip, include tripLocationPrices array
+      requestData.locationPrices = (
+        subActivityPrice.tripLocationPrices || []
+      ).map((lp: any) => ({
+        fromLocation: lp.fromLocation,
+        toLocation: lp.toLocation,
+        pricingMethod: "perTrip" as const,
+        cost: lp.cost,
+      }));
+    } else {
+      // For other pricing methods, include cost field
+      requestData.cost = subActivityPrice.cost || 0;
+    }
 
-      const result = await dispatch(
-        actAddVendorSubActivityPrice({
-          ...requestData,
-          vendorPriceListId: selectedPriceListId!,
-        })
-      );
-      if (actAddVendorSubActivityPrice.fulfilled.match(result)) {
+    dispatch(
+      actAddVendorSubActivityPrice({
+        ...requestData,
+        vendorPriceListId: selectedPriceListId!,
+      })
+    )
+      .unwrap()
+      .then(() => {
         toast({
           title: "Success",
           description: "Price list created successfully",
         });
-        // Refresh the price lists
-        if (vendor) {
-          dispatch(actGetVendorPriceLists(vendor._id));
+        dispatch(actGetVendorPriceLists(vendor?._id || ""));
+      })
+      .catch((error) => {
+        if (error.message) {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "An unexpected error occurred",
+            variant: "destructive",
+          });
         }
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to create price list",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
       });
-    }
-  };
-
-  const handleUpdatePriceList = async (
-    data: CreateVendorPriceListRequest | UpdateVendorPriceListRequest
-  ) => {
-    try {
-      // Handle both old and new form structures
-      let subActivityPrice;
-      if (
-        "subActivityPrices" in data &&
-        data.subActivityPrices &&
-        data.subActivityPrices.length > 0
-      ) {
-        // Old structure with array
-        subActivityPrice = data.subActivityPrices[0];
-      } else {
-        // New simplified structure - create a mock subActivityPrice from the form data
-        subActivityPrice = {
-          subActivity: (data as any).subActivity || "",
-          pricingMethod: (data as any).pricingMethod || "perItem",
-          cost: (data as any).cost || 0,
-          locationPrices: (data as any).locationPrices || [],
-          tripLocationPrices: (data as any).tripLocationPrices || [],
-        } as any;
-      }
-
-      // Ensure locationPrices have the correct structure for perLocation
-      if (subActivityPrice.pricingMethod === "perLocation") {
-        subActivityPrice.locationPrices = (
-          subActivityPrice.locationPrices || []
-        ).map((lp: any) => ({
-          location: lp.location,
-          pricingMethod: "perLocation" as const,
-          cost: lp.cost,
-        }));
-      } else if (subActivityPrice.pricingMethod === "perTrip") {
-        // Ensure tripLocationPrices have the correct structure for perTrip
-        subActivityPrice.tripLocationPrices = (
-          subActivityPrice.tripLocationPrices || []
-        ).map((lp: any) => ({
-          fromLocation: lp.fromLocation,
-          toLocation: lp.toLocation,
-          pricingMethod: "perTrip" as const,
-          cost: lp.cost,
-        }));
-      }
-
-      const result = await dispatch(
-        actUpdateVendorPriceList(data as UpdateVendorPriceListRequest)
-      );
-      if (actUpdateVendorPriceList.fulfilled.match(result)) {
-        toast({
-          title: "Success",
-          description: "Price list updated successfully",
-        });
-        // Refresh the price lists
-        if (vendor) {
-          dispatch(actGetVendorPriceLists(vendor._id));
-        }
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to update price list",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeletePriceList = async () => {
-    if (!selectedPriceList) return;
-
-    try {
-      const result = await dispatch(
-        actDeleteVendorPriceList(selectedPriceList._id)
-      );
-      if (actDeleteVendorPriceList.fulfilled.match(result)) {
-        toast({
-          title: "Success",
-          description: "Price list deleted successfully",
-        });
-        handleCloseDialog();
-        // Refresh the price lists
-        if (vendor) {
-          dispatch(actGetVendorPriceLists(vendor._id));
-        }
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to delete price list",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
   };
 
   if (loading === "pending") {
@@ -467,16 +354,28 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           <Card className="mb-6">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>{item.name}</CardTitle>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  handleOpenDialog("addSubActivityPrice", item._id)
-                }
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add
-              </Button>
+              <div className="flex items-center gap-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    handleOpenDialog("addSubActivityPrice", item._id)
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedPriceList(item);
+                    handleOpenDialog("deletePriceList", item._id);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <VendorCostListTable priceList={item} />
@@ -484,83 +383,11 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
           </Card>
         ))
       ) : (
-        <Card className="mb-6">
-          <div className="text-center py-8">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No price lists found
-            </h3>
-            <p className="text-gray-500 mb-4">
-              This vendor doesn't have any price lists configured yet.
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!!vendorDetails?._id}
-              onClick={() => handleOpenDialog("createPriceList")}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Price List
-            </Button>
-          </div>
-        </Card>
+        <VendorDetailsEmptyState
+          vendorDetails={vendor}
+          handleOpenDialog={handleOpenDialog}
+        />
       )}
-
-      {/* Payment Requests */}
-      {/* <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-pink-600">
-            Payment requests per vendor
-          </CardTitle>
-          <p className="text-sm text-gray-600">
-            View and send shipment number and confirmation date and amount and
-            currency with ability to confirm, update, and print list of PR, and
-            generate a payment request to be sent to the vendor
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Payment voucher</h4>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-blue-800 text-white">
-                  <TableHead className="text-white">Date</TableHead>
-                  <TableHead className="text-white">Ref number</TableHead>
-                  <TableHead className="text-white">Description</TableHead>
-                  <TableHead className="text-white">Amount</TableHead>
-                  <TableHead className="text-white">Currency</TableHead>
-                  <TableHead className="text-white">Payment date</TableHead>
-                  <TableHead className="text-white">Confirmate</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>-</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell>-</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card> */}
-
-      {/* Sub vendor - Commented out for future use */}
-      {/* <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-pink-600">Sub vendor</CardTitle>
-          <p className="text-sm text-gray-600">
-            Define drivers, trucks, and the default one
-          </p>
-        </CardHeader>
-        <CardContent className="min-h-[100px] border-2 border-dashed border-pink-300 rounded-lg flex items-center justify-center">
-          <p className="text-gray-500">No sub vendors defined</p>
-        </CardContent>
-      </Card> */}
 
       {/* Modals */}
       <VendorPriceListModal
@@ -577,37 +404,11 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         vendorId={vendor?._id || ""}
       />
 
-      <VendorPriceListModal
-        isOpen={isDialogOpen("editSubActivityPrice")}
-        onClose={handleCloseDialog}
-        vendorId={vendor?._id || ""}
-        initialData={
-          selectedPriceList
-            ? {
-                _id: selectedPriceList._id,
-                vendorId: vendor?._id || "",
-                name: selectedPriceList.name,
-                nameAr: selectedPriceList.nameAr,
-                description: selectedPriceList.description,
-                descriptionAr: selectedPriceList.descriptionAr,
-                effectiveFrom: selectedPriceList.effectiveFrom.toISOString(),
-                effectiveTo: selectedPriceList.effectiveTo.toISOString(),
-                isActive: selectedPriceList.isActive,
-                subActivityPrices: selectedPriceList.subActivityPrices,
-              }
-            : undefined
-        }
-        onSubmit={handleUpdatePriceList}
-        isLoading={updatePriceListLoading === "pending"}
-      />
-
       <DeleteConfirmationDialog
-        isOpen={isDialogOpen("deleteSubActivityPrice")}
-        onClose={handleCloseDialog}
-        onConfirm={handleDeletePriceList}
-        title="Delete Price List"
-        description={`Are you sure you want to delete "${selectedPriceList?.name}"? This action cannot be undone.`}
-        isLoading={deletePriceListLoading === "pending"}
+        open={isDialogOpen("deletePriceList")}
+        onOpenChange={handleCloseDialog}
+        selectedPriceList={selectedPriceList!}
+        vendorId={vendor?._id || ""}
       />
     </div>
   );
