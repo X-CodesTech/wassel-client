@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ export interface SearchableDropdownProps {
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  showSearch?: boolean;
 }
 
 export function SearchableDropdown({
@@ -51,56 +52,22 @@ export function SearchableDropdown({
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
+  showSearch = true,
 }: SearchableDropdownProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
-  const lastFiredSearch = useRef<string>("");
 
   const selectedOption = options.find((option) => option.value === value);
 
-  // Debounce search
-  useEffect(() => {
-    if (!onSearch) return;
-    if (debounceTimeout.current) {
-      clearTimeout(debounceTimeout.current);
-    }
-    debounceTimeout.current = setTimeout(() => {
-      if (searchValue !== lastFiredSearch.current) {
-        onSearch(searchValue);
-        lastFiredSearch.current = searchValue;
-      }
-    }, 300);
-    return () => {
-      if (debounceTimeout.current) {
-        clearTimeout(debounceTimeout.current);
-      }
-    };
-  }, [searchValue, onSearch]);
-
   // Handle search input change
-  const handleSearchChange = useCallback((search: string) => {
-    setSearchValue(search);
-  }, []);
-
-  // Handle scroll to load more
-  const handleScroll = useCallback(
-    (event: React.UIEvent<HTMLDivElement>) => {
-      const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
-      const threshold = 50; // pixels from bottom
-
-      // Only proceed if we have more data to load and not currently loading
-      if (!hasMore || isLoadingMore || !onLoadMore) {
-        return;
-      }
-
-      // Check if we're near the bottom
-      if (scrollHeight - scrollTop - clientHeight < threshold) {
-        onLoadMore();
+  const handleSearchChange = useCallback(
+    (search: string) => {
+      setSearchValue(search);
+      if (onSearch) {
+        onSearch(search);
       }
     },
-    [hasMore, isLoadingMore, onLoadMore]
+    [onSearch]
   );
 
   // Reset search when dropdown closes
@@ -129,73 +96,75 @@ export function SearchableDropdown({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command>
-          <CommandInput
-            placeholder={searchPlaceholder}
-            value={searchValue}
-            onValueChange={handleSearchChange}
-            className="h-9"
-          />
+        <Command shouldFilter={false}>
+          {showSearch && (
+            <CommandInput
+              placeholder={searchPlaceholder}
+              value={searchValue}
+              onValueChange={handleSearchChange}
+              className="h-9"
+            />
+          )}
           <CommandList
             className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
-            ref={scrollAreaRef}
             style={{ scrollbarWidth: "thin" }}
           >
-            <CommandEmpty>
-              {loading ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Loading...
-                </div>
-              ) : (
-                emptyMessage
-              )}
-            </CommandEmpty>
-            {options.map((option) => (
-              <CommandItem
-                key={option.value}
-                value={option.value}
-                onSelect={() => {
-                  onValueChange(option.value);
-                  setOpen(false);
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value === option.value ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                <div className="flex flex-col">
-                  <span>{option.label}</span>
-                  {option.description && (
-                    <span className="text-xs text-muted-foreground">
-                      {option.description}
-                    </span>
-                  )}
-                </div>
-              </CommandItem>
-            ))}
-            {hasMore && (
-              <div className="flex items-center justify-center py-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  disabled={isLoadingMore}
-                  onClick={onLoadMore}
-                >
-                  {isLoadingMore ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Loading more...
-                    </>
-                  ) : (
-                    "Load More"
-                  )}
-                </Button>
+            {loading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Loading...
               </div>
+            ) : options.length === 0 ? (
+              <CommandEmpty>{emptyMessage}</CommandEmpty>
+            ) : (
+              <>
+                {options.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    onSelect={() => {
+                      onValueChange(option.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-col">
+                      <span>{option.label}</span>
+                      {option.description && (
+                        <span className="text-xs text-muted-foreground">
+                          {option.description}
+                        </span>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+                {hasMore && (
+                  <div className="flex items-center justify-center py-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      disabled={isLoadingMore}
+                      onClick={onLoadMore}
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Loading more...
+                        </>
+                      ) : (
+                        "Load More"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </CommandList>
         </Command>

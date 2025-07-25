@@ -16,6 +16,7 @@ class LocationServices {
     if (filters?.country) params.append("country", filters.country);
     if (filters?.area) params.append("area", filters.area);
     if (filters?.city) params.append("city", filters.city);
+    if (filters?.village) params.append("village", filters.village);
     if (filters?.isActive !== undefined)
       params.append("isActive", filters.isActive.toString());
 
