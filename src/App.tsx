@@ -29,6 +29,7 @@ function Router() {
         <Route path="/" component={Overview} />
         <Route path="/activities" component={ActivityManagement} />
         <Route path="/orders" component={OrdersList} />
+        <Route path="/orders/:id" component={OrdersList} />
         <Route path="/create-order" component={CreateOrder} />
         <Route path="/price-lists" component={PriceLists} />
         <Route path="/price-lists/:id" component={PriceListDetails} />

@@ -1,4 +1,5 @@
 import { useAppDispatch, useAppSelector } from "./useAppSelector";
+import { useCallback } from "react";
 import {
   actCreateBasicOrder,
   actAddPickupDeliveryInfo,
@@ -21,81 +22,93 @@ export const useOrders = () => {
     (state) => state.orders
   );
 
-  const createBasicOrder = async (data: CreateOrderStep1Request) => {
-    try {
-      const result = await dispatch(actCreateBasicOrder(data)).unwrap();
-      return result;
-    } catch (error) {
-      throw error;
-    }
-  };
+  const createBasicOrder = useCallback(
+    async (data: CreateOrderStep1Request) => {
+      try {
+        const result = await dispatch(actCreateBasicOrder(data)).unwrap();
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [dispatch]
+  );
 
-  const addPickupDeliveryInfo = async (
-    orderId: string,
-    data: CreateOrderStep2Request
-  ) => {
-    try {
-      const result = await dispatch(
-        actAddPickupDeliveryInfo({ orderId, data })
-      ).unwrap();
-      return result;
-    } catch (error) {
-      throw error;
-    }
-  };
+  const addPickupDeliveryInfo = useCallback(
+    async (orderId: string, data: CreateOrderStep2Request) => {
+      try {
+        const result = await dispatch(
+          actAddPickupDeliveryInfo({ orderId, data })
+        ).unwrap();
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [dispatch]
+  );
 
-  const addShippingDetails = async (
-    orderId: string,
-    data: CreateOrderStep3Request
-  ) => {
-    try {
-      const result = await dispatch(
-        actAddShippingDetails({ orderId, data })
-      ).unwrap();
-      return result;
-    } catch (error) {
-      throw error;
-    }
-  };
+  const addShippingDetails = useCallback(
+    async (orderId: string, data: CreateOrderStep3Request) => {
+      try {
+        const result = await dispatch(
+          actAddShippingDetails({ orderId, data })
+        ).unwrap();
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [dispatch]
+  );
 
-  const getOrderById = async (orderId: string) => {
-    try {
-      const result = await dispatch(actGetOrderById(orderId)).unwrap();
-      return result;
-    } catch (error) {
-      throw error;
-    }
-  };
+  const getOrderById = useCallback(
+    async (orderId: string) => {
+      try {
+        const result = await dispatch(actGetOrderById(orderId)).unwrap();
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [dispatch]
+  );
 
-  const calculateOrderPrice = async (orderId: string, data?: any) => {
-    try {
-      const result = await dispatch(
-        actCalculateOrderPrice({ orderId, data })
-      ).unwrap();
-      return result;
-    } catch (error) {
-      throw error;
-    }
-  };
+  const calculateOrderPrice = useCallback(
+    async (orderId: string, data?: any) => {
+      try {
+        const result = await dispatch(
+          actCalculateOrderPrice({ orderId, data })
+        ).unwrap();
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [dispatch]
+  );
 
-  const getOrderPriceBreakdown = async (orderId: string) => {
-    try {
-      const result = await dispatch(
-        actGetOrderPriceBreakdown(orderId)
-      ).unwrap();
-      return result;
-    } catch (error) {
-      throw error;
-    }
-  };
+  const getOrderPriceBreakdown = useCallback(
+    async (orderId: string) => {
+      try {
+        const result = await dispatch(
+          actGetOrderPriceBreakdown(orderId)
+        ).unwrap();
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [dispatch]
+  );
 
-  const clearOrderData = () => {
+  const clearOrderData = useCallback(() => {
     dispatch(clearOrder());
-  };
+  }, [dispatch]);
 
-  const clearOrderError = () => {
+  const clearOrderError = useCallback(() => {
     dispatch(clearError());
-  };
+  }, [dispatch]);
 
   return {
     // State

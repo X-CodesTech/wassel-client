@@ -472,30 +472,231 @@ export interface GetOrderResponse {
   success: boolean;
   data: {
     _id: string;
-    orderNumber: string;
     service: string;
     typesOfGoods: string;
     goodsDescription: string;
-    billingAccount: string;
-    contactPerson: string;
+    billingAccount: {
+      _id: string;
+      custName: string;
+      custAccount: string;
+      companyChainId: string;
+      blocked: boolean;
+      createdDate: string;
+    };
     requesterName: string;
     requesterMobile1: string;
     requesterMobile2?: string;
     emailAddress: string;
-    pickupInfo?: PickupInfo[];
-    deliveryInfo?: DeliveryInfo[];
-    shippingUnits?: string;
-    typeOfTruck?: string;
-    qty?: number;
-    dimM?: number;
-    length?: number;
-    width?: number;
-    height?: number;
-    totalWeight?: number;
-    note?: string;
-    status: string;
+    pickupInfo: Array<{
+      _id: string;
+      pickupLocation: {
+        _id: string;
+        country: string;
+        countryAr: string;
+        area: string;
+        areaAr: string;
+        city: string;
+        cityAr: string;
+        village: string;
+        villageAr: string;
+        isActive: boolean;
+      };
+      pickupDetailedAddress: string;
+      fromTime: string;
+      toTime: string;
+      pickupSpecialRequirements: Array<{
+        _id: string;
+        subActivity: {
+          _id: string;
+          portalItemNameEn: string;
+          portalItemNameAr: string;
+          pricingMethod: string;
+          financeEffect: string;
+          isActive: boolean;
+          transactionType: {
+            _id: string;
+            name: string;
+          };
+          activity: {
+            _id: string;
+            activityNameEn: string;
+            activityNameAr: string;
+            activityCode: string;
+            portalActivityNameEn: string;
+            portalActivityNameAr: string;
+          };
+        };
+        quantity: number;
+        note?: string;
+      }>;
+      otherRequirements?: string;
+      pickupNotes?: string;
+      pickupCoordinator: {
+        requesterName: string;
+        requesterMobile1: string;
+        requesterMobile2?: string;
+        emailAddress: string;
+      };
+    }>;
+    deliveryInfo: Array<{
+      _id: string;
+      deliveryLocation: {
+        _id: string;
+        country: string;
+        countryAr: string;
+        area: string;
+        areaAr: string;
+        city: string;
+        cityAr: string;
+        village: string;
+        villageAr: string;
+        isActive: boolean;
+      };
+      deliveryDetailedAddress: string;
+      fromTime: string;
+      toTime: string;
+      deliverySpecialRequirements: Array<{
+        _id: string;
+        subActivity: {
+          _id: string;
+          portalItemNameEn: string;
+          portalItemNameAr: string;
+          pricingMethod: string;
+          financeEffect: string;
+          isActive: boolean;
+          transactionType: {
+            _id: string;
+            name: string;
+          };
+          activity: {
+            _id: string;
+            activityNameEn: string;
+            activityNameAr: string;
+            activityCode: string;
+            portalActivityNameEn: string;
+            portalActivityNameAr: string;
+          };
+        };
+        quantity: number;
+        note?: string;
+      }>;
+      otherRequirements?: string;
+      deliveryNotes?: string;
+      deliveryCoordinator: {
+        requesterName: string;
+        requesterMobile1: string;
+        requesterMobile2?: string;
+        emailAddress: string;
+      };
+    }>;
+    shippingDetails: {
+      shippingUnits: {
+        _id: string;
+        activityNameEn: string;
+        activityNameAr: string;
+        activityCode: string;
+        portalActivityNameEn: string;
+        portalActivityNameAr: string;
+        isInShippingUnit: boolean;
+      };
+      typeOfTruck: {
+        _id: string;
+        portalItemNameEn: string;
+        portalItemNameAr: string;
+        pricingMethod: string;
+        financeEffect: string;
+        isActive: boolean;
+        transactionType: {
+          _id: string;
+          name: string;
+        };
+        activity: {
+          _id: string;
+          activityNameEn: string;
+          activityNameAr: string;
+          activityCode: string;
+          portalActivityNameEn: string;
+          portalActivityNameAr: string;
+        };
+      };
+      qty: number;
+      dimM: number;
+      length: number;
+      width: number;
+      height: number;
+      totalWeight: number;
+      note?: string;
+    };
+    truckTypeMatches: Array<{
+      subActivityId: string;
+      subActivityName: string;
+      subActivityNameAr: string;
+      pricingMethod: string;
+      price: number;
+      locationDetails: {
+        fromLocation: string;
+        toLocation: string;
+        fromLocationDetails: {
+          _id: string;
+          country: string;
+          countryAr: string;
+          area: string;
+          areaAr: string;
+          city: string;
+          cityAr: string;
+          village: string;
+          villageAr: string;
+          isActive: boolean;
+        };
+        toLocationDetails: {
+          _id: string;
+          country: string;
+          countryAr: string;
+          area: string;
+          areaAr: string;
+          city: string;
+          cityAr: string;
+          village: string;
+          villageAr: string;
+          isActive: boolean;
+        };
+      };
+      cost: number;
+      vendor: string | null;
+    }>;
+    contactPerson: string;
+    isDraft: boolean;
+    specialRequirementsPrices: {
+      pickupSpecialRequirements: Array<{
+        subActivityId: string;
+        subActivityName: string;
+        subActivityNameAr: string;
+        pricingMethod: string;
+        quantity: number;
+        note?: string;
+        basePrice: number;
+        cost: number;
+        locationPrice: number;
+        locationCost: number | null;
+      }>;
+      deliverySpecialRequirements: Array<{
+        subActivityId: string;
+        subActivityName: string;
+        subActivityNameAr: string;
+        pricingMethod: string;
+        quantity: number;
+        note?: string;
+        basePrice: number;
+        cost: number;
+        locationPrice: number;
+        locationCost: number;
+        vendor: string;
+        vendorPriceList: string;
+      }>;
+    };
     createdAt: string;
     updatedAt: string;
+    __v: number;
   };
   message: string;
 }
