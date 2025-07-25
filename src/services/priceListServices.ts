@@ -9,6 +9,7 @@ export interface LocationPrice {
 export type PricingMethod = "perItem" | "perLocation";
 
 export interface SubActivityPrice {
+  _id?: string;
   subActivity:
     | string
     | {
@@ -72,6 +73,15 @@ class PriceListService {
 
   async deletePriceList(id: string) {
     return await http.delete(`${apiUrlConstants.priceLists}/${id}`);
+  }
+
+  async deleteSubActivityFromPriceList(
+    priceListId: string,
+    subActivityId: string
+  ) {
+    return await http.delete(
+      `${apiUrlConstants.priceLists}/${priceListId}/sub-activity/${subActivityId}`
+    );
   }
 
   async getPriceListBySubActivity(
