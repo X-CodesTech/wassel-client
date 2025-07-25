@@ -248,33 +248,6 @@ const PerTripEditPriceCostList = ({
               </SelectItem>
             ))}
           </ScrollArea>
-          {totalPages > 1 && (
-            <div className="flex justify-between items-center p-2 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={currentPage === totalPages}
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                }
-              >
-                Next
-              </Button>
-            </div>
-          )}
         </SelectContent>
       </Select>
     </FormItem>
