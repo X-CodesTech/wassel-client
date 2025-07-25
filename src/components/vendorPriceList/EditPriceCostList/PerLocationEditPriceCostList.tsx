@@ -267,80 +267,72 @@ const PerLocationEditPriceCostList = ({
   };
 
   // Virtualized row renderer
-  const rowRenderer = useCallback(
-    ({
-      index,
-      key,
-      style,
-    }: {
-      index: number;
-      key: string;
-      style: React.CSSProperties;
-    }) => {
-      return (
-        <div key={key} style={style} className="mb-4">
-          <div className={cn(`border rounded-lg p-4 space-y-4`)}>
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium">Location {index + 1}</h4>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => removeLocationPrice(index)}
-              >
-                Remove
-              </Button>
-            </div>
-
-            <div
-              className="grid grid-cols-1 md:grid-cols-2 gap-4"
-              id="location-dropdown"
+  const rowRenderer = ({
+    index,
+    key,
+    style,
+  }: {
+    index: number;
+    key: string;
+    style: React.CSSProperties;
+  }) => {
+    return (
+      <div key={key} style={style} className="mb-4">
+        <div className={cn(`border rounded-lg p-4 space-y-4`)}>
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">Location {index + 1}</h4>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => removeLocationPrice(index)}
             >
-              <FormField
-                control={form.control}
-                name={`locationPrices.${index}.location`}
-                render={({ field }) => (
-                  <LocationDropdown
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder="Select location"
-                    label="Location"
-                  />
-                )}
-              />
+              Remove
+            </Button>
+          </div>
 
-              <FormField
-                control={form.control}
-                name={`locationPrices.${index}.cost`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cost</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        {...field}
-                        value={field.value}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            id="location-dropdown"
+          >
+            <FormField
+              control={form.control}
+              name={`locationPrices.${index}.location`}
+              render={({ field }) => (
+                <LocationDropdown
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Select location"
+                  label="Location"
+                />
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name={`locationPrices.${index}.cost`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cost</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      {...field}
+                      value={field.value}
+                      onChange={(e) =>
+                        field.onChange(parseFloat(e.target.value) || 0)
+                      }
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
           </div>
         </div>
-      );
-    },
-    [
-      locationPriceFields,
-      selectedSubActivityPrice.locationPrices,
-      removeLocationPrice,
-      form.control,
-    ]
-  );
+      </div>
+    );
+  };
 
   return (
     <Form {...form}>
