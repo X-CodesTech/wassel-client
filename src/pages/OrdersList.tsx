@@ -32,6 +32,9 @@ import {
   DollarSign,
   Truck,
   Weight,
+  Plus,
+  Upload,
+  Paperclip,
 } from "lucide-react";
 
 export default function OrdersList() {
@@ -39,6 +42,65 @@ export default function OrdersList() {
   const { toast } = useToast();
   const { getOrderById, loading, error, currentOrder } = useOrders();
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<
+    Array<{
+      id: string;
+      name: string;
+      type: string;
+      size: number;
+      uploadedAt: string;
+    }>
+  >([]);
+  const [uploading, setUploading] = useState(false);
+
+  // File upload function
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !orderId) return;
+
+    setUploading(true);
+    const formData = new FormData();
+
+    for (let i = 0; i < files.length; i++) {
+      formData.append("files", files[i]);
+    }
+
+    try {
+      const response = await fetch(`/uploads/orders/${orderId}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Success",
+          description: "Files uploaded successfully",
+        });
+        // Refresh attachments list
+        // You might want to fetch the updated attachments list here
+      } else {
+        throw new Error("Upload failed");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to upload files",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Handle file input change
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    handleFileUpload(event.target.files);
+    // Reset the input
+    event.target.value = "";
+  };
 
   // Extract order ID from URL and fetch data
   useEffect(() => {
@@ -838,6 +900,234 @@ export default function OrdersList() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Initial Price Offer */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Initial Price Offer</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Offer ID */}
+                <div className="bg-blue-600 text-white p-4 rounded-lg">
+                  <h3 className="font-bold text-lg">IPO-{order._id}</h3>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" className="bg-blue-600">
+                    Submit this IPO
+                  </Button>
+                  <Button size="sm" className="bg-blue-600">
+                    Add service line +
+                  </Button>
+                  <Button size="sm" className="bg-blue-600">
+                    Download excel
+                  </Button>
+                  <Button size="sm" className="bg-green-600">
+                    Send by email
+                  </Button>
+                  <Button size="sm" className="bg-blue-600">
+                    Print IPO
+                  </Button>
+                </div>
+
+                {/* Service Lines Table */}
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 p-4 border-b">
+                    <div className="grid grid-cols-9 gap-4 text-sm font-medium">
+                      <span>PL#</span>
+                      <span>Service</span>
+                      <span>Qty</span>
+                      <span>Description</span>
+                      <span>Price</span>
+                      <span>Cost Window</span>
+                      <span>Vendor</span>
+                      <span>Cost</span>
+                      <span>Pricing</span>
+                    </div>
+                  </div>
+
+                  {/* Sample service line - you can map through actual data */}
+                  <div className="p-4 border-b">
+                    <div className="grid grid-cols-9 gap-4 text-sm">
+                      <span
+                        className="text-blue-600 cursor-pointer"
+                        title="Click to view customer price line"
+                      >
+                        PL-001
+                      </span>
+                      <span>Transportation</span>
+                      <span>1</span>
+                      <span
+                        className="truncate"
+                        title="Transportation from pickup to delivery location"
+                      >
+                        Transportation Service
+                      </span>
+                      <span>${order.truckTypeMatches[0]?.price || 0}</span>
+                      <span className="text-xs">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{ width: "60%" }}
+                          ></div>
+                        </div>
+                      </span>
+                      <span>Auto</span>
+                      <span>${order.truckTypeMatches[0]?.cost || 0}</span>
+                      <span>Auto</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* IPO Summary */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Initial Price Offer Summary</h4>
+                    <div>
+                      <p className="text-sm text-gray-600">
+                        Selling price:{" "}
+                        <span className="font-medium text-gray-900">
+                          $
+                          {order.truckTypeMatches.reduce(
+                            (sum, item) => sum + item.price,
+                            0
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Cost:{" "}
+                        <span className="font-medium text-gray-900">
+                          $
+                          {order.truckTypeMatches.reduce(
+                            (sum, item) => sum + item.cost,
+                            0
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Profit margin:{" "}
+                        <span className="font-medium text-gray-900">40%</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Actions</h4>
+                    <div className="space-y-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                      >
+                        Update price manual
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                      >
+                        Update cost
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                      >
+                        Unactive
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Attachments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Paperclip className="mr-2 h-5 w-5" />
+                  Attachments
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                    id="file-upload"
+                    accept="*/*"
+                  />
+                  <label htmlFor="file-upload">
+                    <Button
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                      disabled={uploading}
+                    >
+                      {uploading ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Uploading...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <Plus className="h-4 w-4" />
+                          <span>Add Files</span>
+                        </div>
+                      )}
+                    </Button>
+                  </label>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {attachments.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Upload className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No attachments uploaded yet</p>
+                  <p className="text-sm">
+                    Click "Add Files" to upload documents
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {attachments.map((attachment) => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <p className="font-medium text-sm">
+                            {attachment.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {attachment.type} •{" "}
+                            {(attachment.size / 1024 / 1024).toFixed(2)} MB •{" "}
+                            {formatDate(attachment.uploadedAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
