@@ -220,19 +220,19 @@ const PerLocationEditPriceCostList = ({
         <FormLabel>{label}</FormLabel>
         <FormControl>
           <AsyncPaginate
-            menuIsOpen
-            menuPortalTarget={document.body}
             styles={{
-              menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-              menuList: (base) => ({ ...base, zIndex: 9999 }),
-              menu: (base) => ({ ...base, zIndex: 9999 }),
-              control: (base) => ({ ...base, zIndex: 9999 }),
-              option: (base) => ({ ...base, zIndex: 9999 }),
-              input: (base) => ({ ...base, zIndex: 9999 }),
-              singleValue: (base) => ({ ...base, zIndex: 9999 }),
-              multiValue: (base) => ({ ...base, zIndex: 9999 }),
-              multiValueLabel: (base) => ({ ...base, zIndex: 9999 }),
-              multiValueRemove: (base) => ({ ...base, zIndex: 9999 }),
+              menu: (base) => ({
+                ...base,
+                zIndex: 9999,
+              }),
+              menuList: (base) => ({
+                ...base,
+                zIndex: 9999,
+              }),
+              menuPortal: (base) => ({
+                ...base,
+                zIndex: 9999,
+              }),
             }}
             value={
               selectedLocation
@@ -242,6 +242,7 @@ const PerLocationEditPriceCostList = ({
                   }
                 : null
             }
+            maxMenuHeight={200}
             onChange={(option) => onValueChange(option?.value || "")}
             loadOptions={async (searchInputValue) => {
               const { data } = await locationServices.getLocations(1, 999999, {
@@ -354,18 +355,13 @@ const PerLocationEditPriceCostList = ({
           </div>
 
           <div className="h-96">
-            <AutoSizer>
-              {({ height, width }) => (
-                <List
-                  width={width}
-                  height={height}
-                  rowCount={locationPriceFields.length}
-                  rowHeight={170} // Approximate height of each location item
-                  rowRenderer={rowRenderer}
-                  overscanRowCount={3} // Render 3 extra rows for smooth scrolling
-                />
-              )}
-            </AutoSizer>
+            <ScrollArea className="h-full">
+              {locationPriceFields.map((field, index) => (
+                <div key={field.id}>
+                  {rowRenderer({ index, key: field.id, style: {} })}
+                </div>
+              ))}
+            </ScrollArea>
           </div>
         </div>
       ) : null}
