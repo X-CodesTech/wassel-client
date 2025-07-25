@@ -105,6 +105,7 @@ export default function CreateOrder() {
       typesOfGoods: "",
       goodsDescription: "",
       billingAccount: "", // Will be selected from dropdown
+      contactPerson: "",
       requesterName: "",
       requesterMobile1: "",
       requesterMobile2: "",
@@ -503,6 +504,20 @@ export default function CreateOrder() {
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={step1Form.control}
+                    name="contactPerson"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact Person</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Contact person name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </CardContent>
               </Card>
 
@@ -855,41 +870,12 @@ export default function CreateOrder() {
                             name={`pickupInfo.${index}.pickupSpecialRequirements`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Special Requirements</FormLabel>
-                                <Controller
-                                  control={step2Form.control}
-                                  name={`pickupInfo.${index}.pickupSpecialRequirements`}
-                                  render={({ field: ctrlField }) => {
-                                    // Map array of objects to array of IDs
-                                    const selectedIds = (
-                                      ctrlField.value || []
-                                    ).map((obj: any) => obj.subActivity);
-                                    // When changed, update array of objects
-                                    const handleChange = (ids: string[]) => {
-                                      // Keep existing objects for selected IDs, add new ones with default quantity 1
-                                      const existing = ctrlField.value || [];
-                                      const newArr = ids.map((id) => {
-                                        const found = existing.find(
-                                          (obj: any) => obj.subActivity === id
-                                        );
-                                        return (
-                                          found || {
-                                            subActivity: id,
-                                            quantity: 1,
-                                          }
-                                        );
-                                      });
-                                      ctrlField.onChange(newArr);
-                                    };
-                                    return (
-                                      <SpecialRequirementsDropdown
-                                        options={specialRequirements}
-                                        value={selectedIds}
-                                        onChange={handleChange}
-                                        disabled={specialReqLoading}
-                                      />
-                                    );
-                                  }}
+                                <SpecialRequirementsDropdown
+                                  options={specialRequirements}
+                                  value={field.value || []}
+                                  onChange={field.onChange}
+                                  disabled={specialReqLoading}
+                                  label="Pickup special requirements"
                                 />
                                 <FormMessage />
                               </FormItem>
@@ -1153,38 +1139,12 @@ export default function CreateOrder() {
                             name={`deliveryInfo.${index}.deliverySpecialRequirements`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Special Requirements</FormLabel>
-                                <Controller
-                                  control={step2Form.control}
-                                  name={`deliveryInfo.${index}.deliverySpecialRequirements`}
-                                  render={({ field: ctrlField }) => {
-                                    const selectedIds = (
-                                      ctrlField.value || []
-                                    ).map((obj: any) => obj.subActivity);
-                                    const handleChange = (ids: string[]) => {
-                                      const existing = ctrlField.value || [];
-                                      const newArr = ids.map((id) => {
-                                        const found = existing.find(
-                                          (obj: any) => obj.subActivity === id
-                                        );
-                                        return (
-                                          found || {
-                                            subActivity: id,
-                                            quantity: 1,
-                                          }
-                                        );
-                                      });
-                                      ctrlField.onChange(newArr);
-                                    };
-                                    return (
-                                      <SpecialRequirementsDropdown
-                                        options={specialRequirements}
-                                        value={selectedIds}
-                                        onChange={handleChange}
-                                        disabled={specialReqLoading}
-                                      />
-                                    );
-                                  }}
+                                <SpecialRequirementsDropdown
+                                  options={specialRequirements}
+                                  value={field.value || []}
+                                  onChange={field.onChange}
+                                  disabled={specialReqLoading}
+                                  label="Delivery special requirements"
                                 />
                                 <FormMessage />
                               </FormItem>

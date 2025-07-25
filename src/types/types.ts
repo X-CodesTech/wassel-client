@@ -195,6 +195,7 @@ export interface LocationFilters {
   country?: string;
   area?: string;
   city?: string;
+  village?: string;
   isActive?: boolean;
 }
 
@@ -348,6 +349,7 @@ export interface CreateOrderStep1Request {
   typesOfGoods: string;
   goodsDescription: string;
   billingAccount: string;
+  contactPerson: string;
   requesterName: string;
   requesterMobile1: string;
   requesterMobile2?: string;
@@ -363,6 +365,7 @@ export interface CreateOrderStep1Response {
     typesOfGoods: string;
     goodsDescription: string;
     billingAccount: string;
+    contactPerson: string;
     requesterName: string;
     requesterMobile1: string;
     requesterMobile2?: string;
@@ -474,6 +477,7 @@ export interface GetOrderResponse {
     typesOfGoods: string;
     goodsDescription: string;
     billingAccount: string;
+    contactPerson: string;
     requesterName: string;
     requesterMobile1: string;
     requesterMobile2?: string;
@@ -587,6 +591,7 @@ export const createOrderStep1Schema = z.object({
   typesOfGoods: z.string().min(1, "Types of goods is required"),
   goodsDescription: z.string().min(1, "Goods description is required"),
   billingAccount: z.string().min(1, "Billing account is required"),
+  contactPerson: z.string().min(1, "Contact person is required"),
   requesterName: z.string().min(1, "Requester name is required"),
   requesterMobile1: z.string().min(1, "Primary mobile is required"),
   requesterMobile2: z.string().optional(),
