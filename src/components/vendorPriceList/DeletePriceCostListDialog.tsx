@@ -19,12 +19,14 @@ type TDeletePriceCostListDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedSubActivityPrice: SubActivityPrice;
+  priceListId: string;
 };
 
 const DeletePriceCostListDialog = ({
   open,
   onOpenChange,
   selectedSubActivityPrice,
+  priceListId,
 }: TDeletePriceCostListDialogProps) => {
   const dispatch = useAppDispatch();
   const { priceLists, deleteSubActivityPriceLoading } = useAppSelector(
@@ -32,7 +34,7 @@ const DeletePriceCostListDialog = ({
   );
 
   const vendorId = priceLists?.[0]?.vendor?._id || "";
-  const vendorPriceListId = priceLists?.[0]?._id || "";
+  const vendorPriceListId = priceListId;
   const subActivityId = selectedSubActivityPrice?._id || "";
 
   const handleDeletePriceList = () => {

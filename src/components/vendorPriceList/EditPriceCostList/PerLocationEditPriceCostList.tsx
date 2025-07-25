@@ -32,11 +32,13 @@ import { ISubActivityPrice, TPricingMethod } from "@/types/ModelTypes";
 type TPerLocationEditPriceCostListProps = {
   onOpenChange: (open: boolean) => void;
   selectedSubActivityPrice: SubActivityPrice;
+  priceListId: string;
 };
 
 const PerLocationEditPriceCostList = ({
   onOpenChange,
   selectedSubActivityPrice,
+  priceListId,
 }: TPerLocationEditPriceCostListProps) => {
   const dispatch = useAppDispatch();
   const { priceLists, editSubActivityPriceLoading } = useAppSelector(
@@ -45,7 +47,7 @@ const PerLocationEditPriceCostList = ({
   const { records: locations } = useAppSelector((state) => state.locations);
 
   const vendorId = priceLists?.[0]?.vendor?._id || "";
-  const vendorPriceListId = priceLists?.[0]?._id || "";
+  const vendorPriceListId = priceListId;
   const subActivityId = selectedSubActivityPrice.subActivity._id || "";
 
   return (

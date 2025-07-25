@@ -21,15 +21,17 @@ import { Button } from "@/components/ui/button";
 const PerItemEditPriceCostListForm = ({
   selectedSubActivityPrice,
   onOpenChange,
+  priceListId,
 }: {
   selectedSubActivityPrice: SubActivityPrice;
   onOpenChange: (open: boolean) => void;
+  priceListId: string;
 }) => {
   const dispatch = useAppDispatch();
   const { priceLists } = useAppSelector((state) => state.vendors);
 
   const vendorId = priceLists?.[0]?.vendor?._id || "";
-  const vendorPriceListId = priceLists?.[0]?._id || "";
+  const vendorPriceListId = priceListId;
   const subActivityId = selectedSubActivityPrice.subActivity._id || "";
   const pricingMethod = selectedSubActivityPrice.pricingMethod;
 

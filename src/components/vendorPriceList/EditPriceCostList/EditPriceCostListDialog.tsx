@@ -14,12 +14,14 @@ type TEditPriceCostListDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedSubActivityPrice: SubActivityPrice;
+  priceListId: string;
 };
 
 const EditPriceCostListDialog = ({
   open,
   onOpenChange,
   selectedSubActivityPrice,
+  priceListId,
 }: TEditPriceCostListDialogProps) => {
   const pricingMethod = selectedSubActivityPrice.pricingMethod;
 
@@ -28,18 +30,21 @@ const EditPriceCostListDialog = ({
       <PerItemEditPriceCostListForm
         selectedSubActivityPrice={selectedSubActivityPrice}
         onOpenChange={onOpenChange}
+        priceListId={priceListId}
       />
     ),
     perTrip: (
       <PerTripEditPriceCostList
         selectedSubActivityPrice={selectedSubActivityPrice}
         onOpenChange={onOpenChange}
+        priceListId={priceListId}
       />
     ),
     perLocation: (
       <PerLocationEditPriceCostList
         selectedSubActivityPrice={selectedSubActivityPrice}
         onOpenChange={onOpenChange}
+        priceListId={priceListId}
       />
     ),
   };

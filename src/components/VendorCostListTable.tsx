@@ -23,7 +23,7 @@ import DeletePriceCostListDialog from "./vendorPriceList/DeletePriceCostListDial
 
 const renderCostRange = (
   cost: number | undefined,
-  locationPrices: LocationPrice[],
+  locationPrices: LocationPrice[]
 ) => {
   if (cost) {
     return cost.toLocaleString();
@@ -126,7 +126,7 @@ export default function VendorCostListTable({
     const formatFromToAddress = (locationPrice: LocationPrice) => {
       const formatFullAddress = (
         location: Location | undefined,
-        isArabic: boolean = false,
+        isArabic: boolean = false
       ) => {
         if (!location) return isArabic ? "غير متوفر" : "N/A";
 
@@ -154,7 +154,7 @@ export default function VendorCostListTable({
         const locationAddress = formatFullAddress(locationPrice.location);
         const locationAddressAr = formatFullAddress(
           locationPrice.location,
-          true,
+          true
         );
 
         return {
@@ -226,7 +226,7 @@ export default function VendorCostListTable({
                           <TableCell className="text-center">
                             <Badge
                               className={getPricingMethodColor(
-                                locationPrice.pricingMethod,
+                                locationPrice.pricingMethod
                               )}
                             >
                               {
@@ -277,20 +277,6 @@ export default function VendorCostListTable({
                 )}
               </Button>
             )}
-            {/* {!isExpandable && item.subActivity.pricingMethod === "perItem" && (
-              <div className="text-xs space-y-1 text-left">
-                <div>
-                  {typeof item.subActivity.activity === "string"
-                    ? item.subActivity.activity
-                    : item.subActivity.activity.activityNameEn}
-                </div>
-                <div>
-                  {typeof item.subActivity.activity === "string"
-                    ? ""
-                    : item.subActivity.activity.activityNameAr}
-                </div>
-              </div>
-            )} */}
           </TableCell>
           <TableCell className="font-medium text-center">
             {item.subActivity.portalItemNameEn}
@@ -303,7 +289,7 @@ export default function VendorCostListTable({
           <TableCell className="font-medium text-center">
             <Badge
               className={getTransactionTypeColor(
-                item.subActivity.transactionType.name,
+                item.subActivity.transactionType.name
               )}
             >
               {item.subActivity.transactionType.name}
@@ -321,9 +307,6 @@ export default function VendorCostListTable({
               }
             </Badge>
           </TableCell>
-          {/* <TableCell className="font-medium text-center">
-            {getStatusBadge(item.subActivity.isActive)}
-          </TableCell> */}
           <TableCell className="font-medium text-center">
             {renderCostRange(item.cost, item.locationPrices)}
           </TableCell>
@@ -392,7 +375,7 @@ export default function VendorCostListTable({
               </TableHeader>
               <TableBody>
                 {priceList.subActivityPrices?.map((item, index) =>
-                  renderTableRow(item, index),
+                  renderTableRow(item, index)
                 )}
               </TableBody>
             </Table>
@@ -404,6 +387,7 @@ export default function VendorCostListTable({
           open={open}
           onOpenChange={handleDialog}
           selectedSubActivityPrice={selectedSubActivityPrice}
+          priceListId={priceList._id}
         />
       )}
 
@@ -412,6 +396,7 @@ export default function VendorCostListTable({
           open={openEdit}
           selectedSubActivityPrice={selectedSubActivityPrice}
           onOpenChange={handleDialog}
+          priceListId={priceList._id}
         />
       )}
     </>
