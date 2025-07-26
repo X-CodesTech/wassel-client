@@ -42,11 +42,13 @@ type PriceListFormValues = z.infer<typeof priceListFormSchema>;
 interface AddPriceListDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isEdit?: boolean;
 }
 
 const AddPriceListDialog = ({
   open,
   onOpenChange,
+  isEdit = false,
 }: AddPriceListDialogProps) => {
   const dispatch = useAppDispatch();
   const { loading } = useAppSelector((state) => state.priceLists);
@@ -234,27 +236,28 @@ const AddPriceListDialog = ({
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                      <FormLabel>Active Status</FormLabel>
-                      <FormDescription>
-                        Enable this price list immediately
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              {!isEdit ? (
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Active Status</FormLabel>
+                        <FormDescription>
+                          Enable this price list immediately
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              ) : null}
             </div>
 
             <DialogFooter>
