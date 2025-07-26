@@ -1,3 +1,4 @@
+import { AsyncPaginate } from "react-select-async-paginate";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -19,7 +20,6 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { actGetLocations } from "@/store/locations";
 import {
   Select,
   SelectContent,
@@ -31,6 +31,8 @@ import { cn } from "@/utils";
 import { Plus, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AutoSizer, List } from "react-virtualized";
+import { actGetLocations } from "@/store/locations";
+import locationServices from "@/services/locationServices";
 
 type TPerLocationEditPriceCostListProps = {
   onOpenChange: (open: boolean) => void;
@@ -46,6 +48,7 @@ const PerLocationEditPriceCostList = ({
   const dispatch = useAppDispatch();
   const { priceLists } = useAppSelector((state) => state.vendors);
   const { records: locations } = useAppSelector((state) => state.locations);
+  const { pagination } = useAppSelector((state) => state.locations);
 
   const vendorId = priceLists?.[0]?.vendor?._id || "";
   const vendorPriceListId = priceListId;
@@ -53,14 +56,6 @@ const PerLocationEditPriceCostList = ({
 
   // Performance optimization states
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20); // Show 20 items per page
-
-  useEffect(() => {
-    if (locations.length === 0) {
-      dispatch(actGetLocations({ filters: {}, page: 1, limit: 999999 }));
-    }
-  }, [dispatch, locations?.length]);
 
   const schema = z.object({
     locationPrices: z.array(
@@ -144,17 +139,16 @@ const PerLocationEditPriceCostList = ({
   }, [locations, searchTerm]);
 
   const paginatedLocations = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
+    const startIndex = (pagination.page - 1) * pagination.limit;
+    const endIndex = startIndex + pagination.limit;
     return filteredLocations.slice(startIndex, endIndex);
-  }, [filteredLocations, currentPage, itemsPerPage]);
+  }, [filteredLocations, pagination.page, pagination.limit]);
 
-  const totalPages = Math.ceil(filteredLocations.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredLocations.length / pagination.limit);
 
   // Debounced search handler
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
   }, []);
 
   // Add new location handler
@@ -217,138 +211,129 @@ const PerLocationEditPriceCostList = ({
     onValueChange: (value: string) => void;
     placeholder: string;
     label: string;
-  }) => (
-    <FormItem>
-      <FormLabel>{label}</FormLabel>
-      <Select value={value} onValueChange={onValueChange}>
+  }) => {
+    // Find the selected location object
+    const selectedLocation = locations.find((loc) => loc._id === value);
+
+    return (
+      <FormItem>
+        <FormLabel>{label}</FormLabel>
         <FormControl>
-          <SelectTrigger>
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
+          <AsyncPaginate
+            styles={{
+              menu: (base) => ({
+                ...base,
+                zIndex: 9999,
+              }),
+              menuList: (base) => ({
+                ...base,
+                zIndex: 9999,
+              }),
+              menuPortal: (base) => ({
+                ...base,
+                zIndex: 9999,
+              }),
+            }}
+            value={
+              selectedLocation
+                ? {
+                    value: selectedLocation._id,
+                    label: getStructuredAddress(selectedLocation).en,
+                  }
+                : null
+            }
+            maxMenuHeight={200}
+            onChange={(option) => onValueChange(option?.value || "")}
+            loadOptions={async (searchInputValue) => {
+              const { data } = await locationServices.getLocations(1, 999999, {
+                search: searchInputValue,
+              });
+
+              return {
+                options: data.locations.map((location: any) => ({
+                  value: location._id,
+                  label: getStructuredAddress(location).en,
+                })),
+                hasMore: data.totalPages > 1,
+              };
+            }}
+            placeholder={placeholder}
+            isClearable
+            isSearchable
+            cacheUniqs={[locations.length]}
+          />
         </FormControl>
-        <SelectContent className="max-h-60">
-          <div className="p-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search locations..."
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
-          <ScrollArea className="h-48">
-            {paginatedLocations.map((location) => (
-              <SelectItem key={location._id} value={location._id}>
-                {getStructuredAddress(location).en}
-              </SelectItem>
-            ))}
-          </ScrollArea>
-          {totalPages > 1 && (
-            <div className="flex justify-between items-center p-2 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={currentPage === totalPages}
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                }
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </SelectContent>
-      </Select>
-    </FormItem>
-  );
+      </FormItem>
+    );
+  };
 
   // Virtualized row renderer
-  const rowRenderer = useCallback(
-    ({
-      index,
-      key,
-      style,
-    }: {
-      index: number;
-      key: string;
-      style: React.CSSProperties;
-    }) => {
-      return (
-        <div key={key} style={style} className="mb-4">
-          <div className={cn(`border rounded-lg p-4 space-y-4`)}>
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium">Location {index + 1}</h4>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => removeLocationPrice(index)}
-              >
-                Remove
-              </Button>
-            </div>
+  const rowRenderer = ({
+    index,
+    key,
+    style,
+  }: {
+    index: number;
+    key: string;
+    style: React.CSSProperties;
+  }) => {
+    return (
+      <div key={key} style={style} className="mb-4">
+        <div className={cn(`border rounded-lg p-4 space-y-4`)}>
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium">Location {index + 1}</h4>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => removeLocationPrice(index)}
+            >
+              Remove
+            </Button>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name={`locationPrices.${index}.location`}
-                render={({ field }) => (
-                  <LocationDropdown
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder="Select location"
-                    label="Location"
-                  />
-                )}
-              />
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            id="location-dropdown"
+          >
+            <FormField
+              control={form.control}
+              name={`locationPrices.${index}.location`}
+              render={({ field }) => (
+                <LocationDropdown
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Select location"
+                  label="Location"
+                />
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name={`locationPrices.${index}.cost`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cost</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        {...field}
-                        value={field.value}
-                        onChange={(e) =>
-                          field.onChange(parseFloat(e.target.value) || 0)
-                        }
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name={`locationPrices.${index}.cost`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cost</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      {...field}
+                      value={field.value}
+                      onChange={(e) =>
+                        field.onChange(parseFloat(e.target.value) || 0)
+                      }
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
           </div>
         </div>
-      );
-    },
-    [
-      locationPriceFields,
-      selectedSubActivityPrice.locationPrices,
-      removeLocationPrice,
-      form.control,
-    ]
-  );
+      </div>
+    );
+  };
 
   return (
     <Form {...form}>
@@ -370,18 +355,13 @@ const PerLocationEditPriceCostList = ({
           </div>
 
           <div className="h-96">
-            <AutoSizer>
-              {({ height, width }) => (
-                <List
-                  width={width}
-                  height={height}
-                  rowCount={locationPriceFields.length}
-                  rowHeight={170} // Approximate height of each location item
-                  rowRenderer={rowRenderer}
-                  overscanRowCount={3} // Render 3 extra rows for smooth scrolling
-                />
-              )}
-            </AutoSizer>
+            <ScrollArea className="h-full">
+              {locationPriceFields.map((field, index) => (
+                <div key={field.id}>
+                  {rowRenderer({ index, key: field.id, style: {} })}
+                </div>
+              ))}
+            </ScrollArea>
           </div>
         </div>
       ) : null}

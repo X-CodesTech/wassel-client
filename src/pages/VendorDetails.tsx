@@ -15,6 +15,7 @@ import {
   CreateVendorPriceListRequest,
   VendorPriceList,
 } from "@/services/vendorServices";
+import { actGetLocations } from "@/store/locations";
 import {
   actAddVendorSubActivityPrice,
   actGetVendorPriceLists,
@@ -215,6 +216,10 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         }
       });
   };
+
+  useEffect(() => {
+    dispatch(actGetLocations({ page: 1, limit: 999999, filters: {} }));
+  }, []);
 
   if (loading === "pending") {
     return (
