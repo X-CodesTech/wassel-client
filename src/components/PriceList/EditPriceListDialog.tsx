@@ -26,6 +26,7 @@ import { z } from "zod";
 import { toast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actUpdatePriceList } from "@/store/priceLists";
+import { useEffect } from "react";
 
 // Form schema for price list
 const priceListFormSchema = z.object({
@@ -136,6 +137,22 @@ const EditPriceListDialog = ({
     }
   );
 
+  useEffect(() => {
+    editForm.reset({
+      name: priceList?.name,
+      nameAr: priceList?.nameAr,
+      description: priceList?.description,
+      descriptionAr: priceList?.descriptionAr,
+      effectiveFrom: priceList?.effectiveFrom
+        ? new Date(priceList?.effectiveFrom).toISOString().split("T")[0]
+        : "",
+      effectiveTo: priceList?.effectiveTo
+        ? new Date(priceList?.effectiveTo).toISOString().split("T")[0]
+        : "",
+      isActive: priceList?.isActive,
+    });
+  }, [priceList, editForm]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -227,7 +244,7 @@ const EditPriceListDialog = ({
                   <FormItem>
                     <FormLabel>Effective From</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} />
+                      <Input type="date" {...field} />
                     </FormControl>
                     <FormDescription>
                       When this price list becomes active
@@ -244,7 +261,7 @@ const EditPriceListDialog = ({
                   <FormItem>
                     <FormLabel>Effective To</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} />
+                      <Input type="date" {...field} />
                     </FormControl>
                     <FormDescription>
                       When this price list expires
