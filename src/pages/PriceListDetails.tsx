@@ -227,9 +227,12 @@ export default function PriceListDetails() {
     if (item.locationPrices && item.locationPrices.length > 0) {
       const min = Math.min(...item.locationPrices.map((lp: any) => lp.price));
       const max = Math.max(...item.locationPrices.map((lp: any) => lp.price));
+      if (min === max) {
+        return min.toLocaleString();
+      }
       return `${min.toLocaleString()}-${max.toLocaleString()}`;
     }
-    return "N/A";
+    return "0";
   };
 
   const toggleExpanded = (key: string) => {
