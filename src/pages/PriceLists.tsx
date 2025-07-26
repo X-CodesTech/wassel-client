@@ -7,88 +7,23 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+
 import { Plus, Edit, Trash, FileText, Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import {
-  actGetPriceLists,
-  actAddPriceList,
-  actDeletePriceList,
-  clearError,
-} from "@/store/priceLists";
+import { actGetPriceLists, clearError } from "@/store/priceLists";
 import { useLocation } from "wouter";
 import { PriceList, PricingMethod } from "@/services/priceListServices";
 import { SubActivity } from "@/types/types";
 import EditPriceListDialog from "@/components/PriceList/EditPriceListDialog";
+import DeletePriceListDialog from "@/components/PriceList/DeletePriceListDialog";
+import AddPriceListDialog from "@/components/PriceList/AddPriceListDialog";
 
-const priceListFormSchema = z.object({
-  name: z.string().min(1, "Price list name (English) is required"),
-  nameAr: z.string().min(1, "Price list name (Arabic) is required"),
-  description: z.string().optional(),
-  descriptionAr: z.string().optional(),
-  effectiveFrom: z.string().min(1, "Effective from date is required"),
-  effectiveTo: z.string().min(1, "Effective to date is required"),
-  isActive: z.boolean(),
-  subActivityPrices: z.array(
-    z.object({
-      subActivity: z.string().min(1, "Sub-activity is required"),
-      pricingMethod: z.enum(["perItem", "perLocation"]),
-      basePrice: z.number().min(0, "Base price must be positive").optional(),
-      cost: z.number().min(0, "Cost must be positive"),
-      locationPrices: z
-        .array(
-          z.object({
-            location: z.string().min(1, "Location is required"),
-            price: z.number().min(0, "Location price must be positive"),
-          })
-        )
-        .optional(),
-    })
-  ),
-});
-
-type PriceListFormValues = z.infer<typeof priceListFormSchema>;
+export type TPriceListModalType =
+  | "AddPriceList"
+  | "EditPriceList"
+  | "DeletePriceList";
 
 export default function PriceLists() {
   const dispatch = useAppDispatch();
@@ -123,21 +58,6 @@ export default function PriceLists() {
       pricingMethod: PricingMethod;
     }[]
   >([]);
-
-  // Initialize form for adding new price list
-  const form = useForm<PriceList>({
-    resolver: zodResolver(priceListFormSchema),
-    defaultValues: {
-      name: "",
-      nameAr: "",
-      description: "",
-      descriptionAr: "",
-      effectiveFrom: "",
-      effectiveTo: "",
-      isActive: true,
-      subActivityPrices: [],
-    },
-  });
 
   // Fetch price lists on component mount
   useEffect(() => {
@@ -224,81 +144,6 @@ export default function PriceLists() {
     }
   }, [error, toast, dispatch]);
 
-  // Handle form submission
-  const onSubmit = async (data: PriceListFormValues) => {
-    try {
-      const priceListData: PriceList = {
-        name: data.name,
-        nameAr: data.nameAr,
-        description: data.description || "",
-        descriptionAr: data.descriptionAr || "",
-        effectiveFrom: data.effectiveFrom,
-        effectiveTo: data.effectiveTo,
-        isActive: data.isActive,
-        subActivityPrices:
-          data.subActivityPrices?.map((subActivityPrice) => ({
-            subActivity: subActivityPrice.subActivity,
-            pricingMethod: subActivityPrice.pricingMethod,
-            basePrice: subActivityPrice.basePrice,
-            cost: subActivityPrice.cost,
-            locationPrices: subActivityPrice.locationPrices,
-          })) || [],
-      };
-
-      await dispatch(actAddPriceList(priceListData)).unwrap();
-
-      // Reset form and close modal
-      form.reset();
-      setModalOpen(false);
-
-      // Reset selected sub-activities
-      setSelectedSubActivities((prev) =>
-        prev.map((item) => ({
-          ...item,
-          selected: false,
-          price: "0.00",
-          cost: "0.00",
-        }))
-      );
-
-      toast({
-        title: "Price List Created",
-        description: `"${data.name}" has been created successfully.`,
-      });
-    } catch (error) {
-      console.error("Failed to create price list:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create price list. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle delete price list
-  const handleDeletePriceList = async () => {
-    if (!deletingPriceList?._id) return;
-
-    try {
-      await dispatch(actDeletePriceList(deletingPriceList._id)).unwrap();
-
-      setDeleteConfirmOpen(false);
-      setDeletingPriceList(null);
-
-      toast({
-        title: "Price List Deleted",
-        description: `"${deletingPriceList.name}" has been deleted successfully.`,
-      });
-    } catch (error) {
-      console.error("Failed to delete price list:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete price list. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   // Handle checkbox change for sub-activities
   const handleCheckboxChange = (id: string, checked: boolean) => {
     setSelectedSubActivities((prev) =>
@@ -332,55 +177,6 @@ export default function PriceLists() {
     );
   };
 
-  // Handle form submission with sub-activity data
-  const handleFormSubmit = form.handleSubmit(
-    (data) => {
-      // Get selected items with their prices for subActivityPrices
-      const selectedSubActivityPrices = selectedSubActivities
-        .filter((item) => item.selected)
-        .map((item) => ({
-          subActivity: item.id,
-          pricingMethod: item.pricingMethod,
-          basePrice: parseFloat(item.price) || 0,
-          cost: parseFloat(item.cost) || 0,
-        }));
-
-      // Check if any sub-activities are selected
-      if (selectedSubActivityPrices.length === 0) {
-        toast({
-          title: "No Sub-Activities Selected",
-          description:
-            "Please select at least one sub-activity to create a price list.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Create the final data with selected sub-activities
-      const finalData = {
-        ...data,
-        subActivityPrices: selectedSubActivityPrices,
-      };
-
-      // Submit the form with the complete data
-      onSubmit(finalData);
-    },
-    (errors) => {
-      console.error("Form validation errors:", errors);
-      const errorMessages = Object.values(errors)
-        .map((error: any) => error?.message)
-        .filter(Boolean)
-        .join(", ");
-
-      toast({
-        title: "Validation Error",
-        description:
-          errorMessages || "Please check the form and fix any errors.",
-        variant: "destructive",
-      });
-    }
-  );
-
   // Open edit modal
   const openEditModal = (priceList: PriceList) => {
     setEditingPriceList(priceList);
@@ -407,6 +203,24 @@ export default function PriceLists() {
   const getSubActivityName = (subActivityId: string) => {
     const subActivity = subActivities.find((sa) => sa._id === subActivityId);
     return subActivity?.portalItemNameEn || "Unknown Activity";
+  };
+
+  const onOpenChange = (open: boolean, modalType?: TPriceListModalType) => {
+    setModalOpen(open);
+    setEditModalOpen(open);
+    setDeleteConfirmOpen(open);
+    setEditingPriceList(null);
+    setDeletingPriceList(null);
+    if (modalType === "AddPriceList") {
+      setSelectedSubActivities((prev) =>
+        prev.map((item) => ({
+          ...item,
+          selected: false,
+          price: "0.00",
+          cost: "0.00",
+        }))
+      );
+    }
   };
 
   if (loading && priceLists.length === 0) {
@@ -592,312 +406,30 @@ export default function PriceLists() {
       )}
 
       {/* Add Price List Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            Add New Bilingual Price List
-            <DialogTitle></DialogTitle>
-            <DialogDescription>
-              Create a comprehensive price list with English and Arabic support,
-              date ranges, and flexible pricing methods.
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...form}>
-            <form onSubmit={handleFormSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Price List Name (English)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter price list name in English"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="nameAr"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Price List Name (Arabic)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="أدخل اسم قائمة الأسعار بالعربية"
-                          {...field}
-                          dir="rtl"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description (English)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter description in English"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="descriptionAr"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description (Arabic)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="أدخل الوصف بالعربية"
-                          {...field}
-                          dir="rtl"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="effectiveFrom"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Effective From</FormLabel>
-                      <FormControl>
-                        <Input type="datetime-local" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        When this price list becomes active
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="effectiveTo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Effective To</FormLabel>
-                      <FormControl>
-                        <Input type="datetime-local" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        When this price list expires
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>Active Status</FormLabel>
-                        <FormDescription>
-                          Enable this price list immediately
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium mb-2">
-                  Select Sub-Activities and Set Pricing
-                </h4>
-                {subActivities.length === 0 ? (
-                  <div className="flex items-center justify-center py-8">
-                    <span className="text-gray-500">
-                      No sub-activities available. Create a price list first to
-                      see available activities.
-                    </span>
-                  </div>
-                ) : (
-                  <div className="border rounded-md p-3 max-h-[300px] overflow-y-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-2 px-2 w-8"></th>
-                          <th className="text-left py-2 px-2">Activity</th>
-                          <th className="text-left py-2 px-2 w-32">
-                            Pricing Method
-                          </th>
-                          <th className="text-left py-2 px-2 w-32">
-                            Base Price ($)
-                          </th>
-                          <th className="text-left py-2 px-2 w-32">Cost ($)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedSubActivities.map((item) => (
-                          <tr key={item.id} className="border-b last:border-0">
-                            <td className="py-2 px-2">
-                              <Checkbox
-                                checked={item.selected}
-                                onCheckedChange={(checked) =>
-                                  handleCheckboxChange(
-                                    item.id,
-                                    checked === true
-                                  )
-                                }
-                              />
-                            </td>
-                            <td className="py-2 px-2">{item.name}</td>
-                            <td className="py-2 px-2">
-                              <Select
-                                disabled={!item.selected}
-                                value={item.pricingMethod}
-                                onValueChange={(value: PricingMethod) =>
-                                  handlePricingMethodChange(item.id, value)
-                                }
-                              >
-                                <SelectTrigger className="h-8">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="perItem">
-                                    Per Item
-                                  </SelectItem>
-                                  <SelectItem value="perLocation">
-                                    Per Location
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </td>
-                            <td className="py-2 px-2">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={item.price}
-                                onChange={(e) =>
-                                  handlePriceChange(item.id, e.target.value)
-                                }
-                                disabled={!item.selected}
-                                className="h-8"
-                              />
-                            </td>
-                            <td className="py-2 px-2">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={item.cost}
-                                onChange={(e) =>
-                                  handleCostChange(item.id, e.target.value)
-                                }
-                                disabled={!item.selected}
-                                className="h-8"
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setModalOpen(false)}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  style={{
-                    backgroundColor: "#1e88e5",
-                    color: "white",
-                    border: "none",
-                  }}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Price List"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <AddPriceListDialog
+        open={modalOpen}
+        onOpenChange={onOpenChange}
+        handleCheckboxChange={handleCheckboxChange}
+        handleCostChange={handleCostChange}
+        handlePriceChange={handlePriceChange}
+        handlePricingMethodChange={handlePricingMethodChange}
+        selectedSubActivities={selectedSubActivities}
+        subActivitiesAvailable={subActivities.length > 0}
+      />
 
       {/* Edit Price List Modal */}
       <EditPriceListDialog
         open={editModalOpen}
-        onOpenChange={setEditModalOpen}
+        onOpenChange={onOpenChange}
         priceList={editingPriceList as PriceList}
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the price list "
-              {deletingPriceList?.name}". This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleDeletePriceList}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeletePriceListDialog
+        open={deleteConfirmOpen}
+        onOpenChange={onOpenChange}
+        deletingPriceList={deletingPriceList as PriceList}
+      />
     </div>
   );
 }

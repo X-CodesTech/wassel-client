@@ -53,7 +53,7 @@ const EditPriceListDialog = ({
   priceList,
 }: EditPriceListDialogProps) => {
   const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector((state) => state.priceLists);
+  const { loading } = useAppSelector((state) => state.priceLists);
 
   const editForm = useForm<PriceListFormValues>({
     resolver: zodResolver(priceListFormSchema),
@@ -86,6 +86,7 @@ const EditPriceListDialog = ({
         effectiveFrom: data.effectiveFrom,
         effectiveTo: data.effectiveTo,
         isActive: data.isActive,
+        subActivityPrices: priceList.subActivityPrices,
       };
 
       console.log("Sending update request with data:", priceListData);

@@ -7,7 +7,7 @@ export interface LocationPrice {
   price: number;
 }
 
-export type PricingMethod = "perItem" | "perLocation";
+export type PricingMethod = "perItem" | "perLocation" | "perTrip";
 
 export interface SubActivityPrice {
   _id?: string;
