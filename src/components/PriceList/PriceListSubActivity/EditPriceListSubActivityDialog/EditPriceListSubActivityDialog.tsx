@@ -57,9 +57,9 @@ const EditPriceListSubActivityDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-[80vw] max-h-[80dvh]">
         <DialogHeader>
-          <DialogTitle>Edit Price List</DialogTitle>
+          <DialogTitle>Edit Sub-Activity Price List</DialogTitle>
         </DialogHeader>
         <DialogDescription className="max-h-[500px] overflow-y-auto">
           {FormToRender}

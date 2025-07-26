@@ -1,32 +1,37 @@
-type ILocationPrice = {
+type TLocationPrice = {
   location: string;
   cost: number;
 };
 
-type PriceMethod = "perLocation" | "perTrip" | "perItem";
+type TLocationFromToPrice = {
+  fromLocation: string;
+  toLocation: string;
+} & ({ price: number; cost?: never } | { cost: number; price?: never });
+
+export type TPriceMethod = "perLocation" | "perTrip" | "perItem";
 
 interface IMultipleOptions {
-  pricingMethod: PriceMethod;
-  vendorPriceListId: string;
+  pricingMethod: TPriceMethod;
+  priceListId: string;
   subActivityId: string;
 }
 
 export interface IPerLocation extends IMultipleOptions {
   pricingMethod: "perLocation";
-  locationPrices: ILocationPrice[];
+  locationPrices: TLocationPrice[];
 }
 
 export interface IPerTrip extends IMultipleOptions {
   pricingMethod: "perTrip";
-  locationPrices: ILocationPrice[];
+  locationPrices: TLocationFromToPrice[];
 }
 
 export interface IPerItem extends IMultipleOptions {
   pricingMethod: "perItem";
-  cost: number;
+  basePrice: number;
 }
 
-export type TPriceBody<T extends PriceMethod> = T extends "perItem"
+export type TPriceBody<T extends TPriceMethod> = T extends "perItem"
   ? IPerItem
   : T extends "perLocation"
   ? IPerLocation

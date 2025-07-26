@@ -5,34 +5,47 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { useFieldArray, useForm } from "react-hook-form";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SubActivityPrice, LocationPrice } from "@/services/priceListServices";
-import { getStructuredAddress } from "@/utils/getStructuredAddress";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actUpdateSubActivityPrice } from "@/store/priceLists";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { actGetLocations } from "@/store/locations";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, Plus } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { List, AutoSizer } from "react-virtualized";
+import { Plus, Trash2 } from "lucide-react";
+import { AsyncLocationSelect } from "@/components/ui/async-location-select";
 
 interface PerTripEditPriceListSubActivityProps {
   selectedSubActivityPrice: SubActivityPrice;
   onOpenChange: (open: boolean) => void;
   priceListId: string;
 }
+
+// per‐trip schema for edit
+const perTripEditSchema = z
+  .object({
+    pricingMethod: z.literal("perTrip"),
+    locationPrices: z
+      .array(
+        z
+          .object({
+            fromLocation: z.string().min(1, "From location is required"),
+            toLocation: z.string().min(1, "To location is required"),
+            pricingMethod: z.literal("perTrip"),
+            price: z.number().min(0, "Price must be positive"),
+          })
+          .strict()
+      )
+      .min(1, "At least one trip price is required"),
+  })
+  .strict();
+
+type TPerTripEditSchema = z.infer<typeof perTripEditSchema>;
 
 const PerTripEditPriceListSubActivity = ({
   selectedSubActivityPrice,
@@ -69,43 +82,30 @@ const PerTripEditPriceListSubActivity = ({
 
   const subActivityId = getSubActivityId(selectedSubActivityPrice.subActivity);
 
-  // Performance optimization states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20); // Show 20 items per page
-
   useEffect(() => {
     if (locations.length === 0) {
       dispatch(actGetLocations({ filters: {}, page: 1, limit: 999999 }));
     }
   }, [dispatch, locations?.length]);
 
-  const schema = z.object({
-    locationPrices: z.array(
-      z.object({
-        fromLocation: z.string().min(1, "From location is required"),
-        toLocation: z.string().min(1, "To location is required"),
-        price: z.number().min(0, "Price must be positive"),
-      })
-    ),
-  });
-
   // Memoized default values to prevent unnecessary re-renders
   const defaultValues = useMemo(
     () => ({
+      pricingMethod: "perTrip" as const,
       locationPrices:
         selectedSubActivityPrice.locationPrices?.map((locationPrice) => ({
           fromLocation: getLocationId(locationPrice.fromLocation),
           toLocation: getLocationId(locationPrice.toLocation),
+          pricingMethod: "perTrip" as const,
           price: locationPrice.price,
         })) || [],
     }),
     [selectedSubActivityPrice.locationPrices]
   );
 
-  const form = useForm<z.infer<typeof schema>>({
+  const form = useForm<TPerTripEditSchema>({
     defaultValues,
-    resolver: zodResolver(schema),
+    resolver: zodResolver(perTripEditSchema),
     mode: "all", // Enable real-time validation
     reValidateMode: "onChange",
   });
@@ -119,10 +119,21 @@ const PerTripEditPriceListSubActivity = ({
     name: "locationPrices",
   });
 
+  // Watch location prices for validation
+  const locationPrices = form.watch("locationPrices");
+
   // Reset form when selectedSubActivityPrice changes
   useEffect(() => {
     form.reset(defaultValues);
   }, [defaultValues]);
+
+  // Helper function to check if both locations are selected for perTrip pricing
+  const isTripLocationsSelected = (index: number) => {
+    if (!locationPrices || !locationPrices[index]) return false;
+    return !!(
+      locationPrices[index].fromLocation && locationPrices[index].toLocation
+    );
+  };
 
   // Check if form is valid
   const isFormValid = form.formState.isValid;
@@ -152,41 +163,17 @@ const PerTripEditPriceListSubActivity = ({
     });
   }, [form.watch(), defaultValues]);
 
-  // Memoized filtered and paginated locations
-  const filteredLocations = useMemo(() => {
-    if (!searchTerm) return locations;
-
-    return locations.filter((location) => {
-      const address = getStructuredAddress(location).en.toLowerCase();
-      const searchLower = searchTerm.toLowerCase();
-      return address.includes(searchLower);
-    });
-  }, [locations, searchTerm]);
-
-  const paginatedLocations = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredLocations.slice(startIndex, endIndex);
-  }, [filteredLocations, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(filteredLocations.length / itemsPerPage);
-
-  // Debounced search handler
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
-  }, []);
-
   // Add new trip handler
   const handleAddTrip = useCallback(() => {
     appendLocationPrice({
       fromLocation: "",
       toLocation: "",
+      pricingMethod: "perTrip" as const,
       price: 0,
     });
   }, [appendLocationPrice]);
 
-  const onSubmit = (data: z.infer<typeof schema>) => {
+  const onSubmit = (data: TPerTripEditSchema) => {
     // Transform the data to match the expected API structure
     const transformedLocationPrices: LocationPrice[] = data.locationPrices.map(
       (lp) => ({
@@ -231,132 +218,10 @@ const PerTripEditPriceListSubActivity = ({
       });
   };
 
-  // Optimized location dropdown component
-  const LocationDropdown = ({
-    value,
-    onValueChange,
-    placeholder,
-    label,
-  }: {
-    value: string;
-    onValueChange: (value: string) => void;
-    placeholder: string;
-    label: string;
-  }) => (
-    <FormItem>
-      <FormLabel>{label}</FormLabel>
-      <Select value={value} onValueChange={onValueChange}>
-        <FormControl>
-          <SelectTrigger>
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent className="max-h-60">
-          <div className="p-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search locations..."
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
-          <ScrollArea className="h-48">
-            {paginatedLocations.map((location) => (
-              <SelectItem key={location._id} value={location._id}>
-                {getStructuredAddress(location).en}
-              </SelectItem>
-            ))}
-          </ScrollArea>
-        </SelectContent>
-      </Select>
-    </FormItem>
-  );
-
-  // Virtualized row renderer
-  const rowRenderer = ({
-    index,
-    key,
-    style,
-  }: {
-    index: number;
-    key: string;
-    style: React.CSSProperties;
-  }) => {
-    return (
-      <div key={key} style={style} className="mb-4">
-        <div className="border rounded-lg p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Trip {index + 1}</h4>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={() => removeLocationPrice(index)}
-            >
-              Remove
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField
-              control={form.control}
-              name={`locationPrices.${index}.fromLocation`}
-              render={({ field }) => (
-                <LocationDropdown
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  placeholder="Select from location"
-                  label="From Location"
-                />
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name={`locationPrices.${index}.toLocation`}
-              render={({ field }) => (
-                <LocationDropdown
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  placeholder="Select to location"
-                  label="To Location"
-                />
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name={`locationPrices.${index}.price`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Price</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0.00"
-                      {...field}
-                      value={field.value}
-                      onChange={(e) =>
-                        field.onChange(parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <Form {...form}>
       {selectedSubActivityPrice.pricingMethod === "perTrip" ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Edit Trip Pricing</h3>
             <Button
@@ -372,19 +237,100 @@ const PerTripEditPriceListSubActivity = ({
             </Button>
           </div>
 
-          <div className="h-96">
-            <AutoSizer>
-              {({ height, width }) => (
-                <List
-                  width={width}
-                  height={height}
-                  rowCount={locationPriceFields.length}
-                  rowHeight={170} // Approximate height of each trip item
-                  rowRenderer={rowRenderer}
-                  overscanRowCount={3} // Render 3 extra rows for smooth scrolling
+          <div className="space-y-4">
+            {locationPriceFields.map((field, index) => (
+              <div
+                key={field.id}
+                className="flex items-center gap-3 p-3 border rounded-lg"
+              >
+                <FormField
+                  control={form.control}
+                  name={`locationPrices.${index}.fromLocation`}
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>From Location</FormLabel>
+                      <FormControl>
+                        <AsyncLocationSelect
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Clear focus from any active element after location selection
+                            if (document.activeElement instanceof HTMLElement) {
+                              document.activeElement.blur();
+                            }
+                          }}
+                          placeholder="Select from location"
+                          useAddressString={true}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              )}
-            </AutoSizer>
+                <FormField
+                  control={form.control}
+                  name={`locationPrices.${index}.toLocation`}
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>To Location</FormLabel>
+                      <FormControl>
+                        <AsyncLocationSelect
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Clear focus from any active element after location selection
+                            if (document.activeElement instanceof HTMLElement) {
+                              document.activeElement.blur();
+                            }
+                          }}
+                          placeholder="Select to location"
+                          useAddressString={true}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`locationPrices.${index}.price`}
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Price</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          {...field}
+                          value={field.value}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
+                          disabled={!isTripLocationsSelected(index)}
+                          onFocus={(e) => {
+                            if (!isTripLocationsSelected(index)) {
+                              e.target.blur();
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {locationPriceFields.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeLocationPrice(index)}
+                    className="mt-6"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       ) : null}

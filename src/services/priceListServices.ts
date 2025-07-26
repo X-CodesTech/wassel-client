@@ -2,6 +2,7 @@ import { SubActivity } from "@/types/types";
 import { apiUrlConstants } from "./apiUrlConstants";
 import http from "./http";
 import { IActivity } from "@/types/ModelTypes";
+import { TPriceBody, TPriceMethod } from "@/types/vendorPriceListEditTypes";
 export interface LocationPrice {
   location?: any;
   fromLocation?: any;
@@ -35,7 +36,7 @@ export interface SubActivityPrice {
       }
     | {
         subActivity: SubActivity;
-        locationPrices: LocationPrice[];
+        locationPrices?: LocationPrice[];
         pricingMethod: string;
         _id: string;
       };
@@ -54,7 +55,7 @@ export interface PriceList {
   effectiveFrom: string; // ISO date string
   effectiveTo: string; // ISO date string
   isActive: boolean;
-  subActivityPrices: SubActivityPrice[];
+  subActivityPrices?: SubActivityPrice[];
 }
 
 class PriceListService {
@@ -64,6 +65,13 @@ class PriceListService {
 
   async createPriceList(priceList: PriceList) {
     return await http.post(apiUrlConstants.priceLists, priceList);
+  }
+
+  async addSubActivityToPriceList(data: TPriceBody<TPriceMethod>) {
+    return await http.post<{ message?: string; data?: PriceList }>(
+      `${apiUrlConstants.priceLists}/${data.priceListId}/sub-activity`,
+      { ...data, subActivity: data.subActivityId }
+    );
   }
 
   async getPriceListById(id: string) {

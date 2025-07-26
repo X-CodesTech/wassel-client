@@ -17,6 +17,7 @@ import {
   Loader2,
   ChevronDownIcon,
   ChevronUpIcon,
+  Plus,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +35,7 @@ import React from "react";
 import DeletePriceListSubActivityDialog from "@/components/DeletePriceListSubActivityDialog";
 import DeleteSubActivityConfirmationDialog from "@/components/PriceList/PriceListSubActivity/DeleteSubActivityConfirmationDialog";
 import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
+import { AddPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/AddPriceListSubActivityDialog";
 
 // Form schema for editing price list
 const editPriceListFormSchema = z.object({
@@ -60,6 +62,7 @@ export default function PriceListDetails() {
     useState(false);
   const [selectedSubActivityPrice, setSelectedSubActivityPrice] =
     useState<SubActivityPrice | null>(null);
+  const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
 
   const {
     selectedPriceList: priceList,
@@ -128,10 +131,6 @@ export default function PriceListDetails() {
       });
     }
   }, [priceList, editDialogOpen, editForm]);
-
-  const handleEdit = () => {
-    setEditDialogOpen(true);
-  };
 
   const handleEditSubActivity = (subActivityPrice: SubActivityPrice) => {
     setSelectedSubActivityPrice(subActivityPrice);
@@ -506,35 +505,28 @@ export default function PriceListDetails() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={handleEdit}
-          >
-            <Edit className="h-4 w-4" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            className="flex items-center gap-2 text-red-500 hover:text-red-600"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            <Trash className="h-4 w-4" />
-            Delete
-          </Button>
-        </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Items in this Price List</CardTitle>
-          <CardDescription>
-            These are the items and their prices included in this price list
-          </CardDescription>
+        <CardHeader className="flex flex-row justify-between">
+          <div>
+            <CardTitle>Items in this Price List</CardTitle>
+            <CardDescription>
+              These are the items and their prices included in this price list
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setAddItemDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Add Item
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          {priceList.subActivityPrices.length === 0 ? (
+          {priceList.subActivityPrices?.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="rounded-full bg-gray-100 p-3 mb-3">
                 <DollarSign className="h-6 w-6 text-gray-400" />
@@ -559,7 +551,7 @@ export default function PriceListDetails() {
                   </tr>
                 </thead>
                 <tbody>
-                  {priceList.subActivityPrices.map((item, index) =>
+                  {priceList.subActivityPrices?.map((item, index) =>
                     renderTableRow(item, index)
                   )}
                 </tbody>
@@ -592,6 +584,12 @@ export default function PriceListDetails() {
           priceListId={priceList._id || ""}
         />
       )}
+
+      {/* Add Item Dialog */}
+      <AddPriceListSubActivityDialog
+        open={addItemDialogOpen}
+        onOpenChange={setAddItemDialogOpen}
+      />
     </div>
   );
 }

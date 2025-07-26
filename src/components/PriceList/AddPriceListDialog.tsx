@@ -17,14 +17,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
@@ -32,10 +24,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "@/hooks/use-toast";
-import { TPricingMethod } from "@/types/ModelTypes";
 import { actAddPriceList } from "@/store/priceLists";
 import { PriceList } from "@/services/priceListServices";
-import { TPriceListModalType } from "@/pages/PriceLists";
+import { useState, useEffect } from "react";
 
 const priceListFormSchema = z.object({
   name: z.string().min(1, "Price list name (English) is required"),
@@ -45,59 +36,24 @@ const priceListFormSchema = z.object({
   effectiveFrom: z.string().min(1, "Effective from date is required"),
   effectiveTo: z.string().min(1, "Effective to date is required"),
   isActive: z.boolean(),
-  subActivityPrices: z.array(
-    z.object({
-      subActivity: z.string().min(1, "Sub-activity is required"),
-      pricingMethod: z.enum(["perItem", "perLocation", "perTrip"]),
-      basePrice: z.number().min(0, "Base price must be positive").optional(),
-      cost: z.number().min(0, "Cost must be positive"),
-      locationPrices: z
-        .array(
-          z.object({
-            location: z.string().min(1, "Location is required"),
-            price: z.number().min(0, "Location price must be positive"),
-          })
-        )
-        .optional(),
-    })
-  ),
 });
 
 type PriceListFormValues = z.infer<typeof priceListFormSchema>;
 
 interface AddPriceListDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean, modalType?: TPriceListModalType) => void;
-  selectedSubActivities: {
-    id: string;
-    name: string;
-    price: string;
-    cost: string;
-    selected: boolean;
-    pricingMethod: TPricingMethod;
-  }[];
-  subActivitiesAvailable: boolean;
-  handleCheckboxChange: (id: string, checked: boolean) => void;
-  handlePricingMethodChange: (
-    id: string,
-    pricingMethod: TPricingMethod
-  ) => void;
-  handlePriceChange: (id: string, price: string) => void;
-  handleCostChange: (id: string, cost: string) => void;
+  onOpenChange: (open: boolean) => void;
+  isEdit?: boolean;
 }
 
 const AddPriceListDialog = ({
   open,
   onOpenChange,
-  selectedSubActivities,
-  subActivitiesAvailable,
-  handleCheckboxChange,
-  handlePricingMethodChange,
-  handlePriceChange,
-  handleCostChange,
+  isEdit = false,
 }: AddPriceListDialogProps) => {
   const dispatch = useAppDispatch();
   const { loading } = useAppSelector((state) => state.priceLists);
+  const [isAnyInputFocused, setIsAnyInputFocused] = useState(false);
 
   const form = useForm<PriceListFormValues>({
     resolver: zodResolver(priceListFormSchema),
@@ -109,9 +65,153 @@ const AddPriceListDialog = ({
       effectiveFrom: "",
       effectiveTo: "",
       isActive: true,
-      subActivityPrices: [],
     },
   });
+
+  // Reset paste success state when dialog opens/closes
+  useEffect(() => {
+    if (!open) {
+      setIsAnyInputFocused(false);
+    }
+  }, [open]);
+
+  // JSON validation schema
+  const validateJsonStructure = (data: any) => {
+    const requiredFields = ["name", "nameAr"];
+    const optionalFields = [
+      "description",
+      "descriptionAr",
+      "effectiveFrom",
+      "effectiveTo",
+      "active",
+    ];
+
+    // Check if required fields exist
+    for (const field of requiredFields) {
+      if (
+        !data.hasOwnProperty(field) ||
+        typeof data[field] !== "string" ||
+        data[field].trim() === ""
+      ) {
+        return {
+          isValid: false,
+          message: `Missing or invalid required field: ${field}`,
+        };
+      }
+    }
+
+    // Check if optional fields have correct types when present
+    for (const field of optionalFields) {
+      if (data.hasOwnProperty(field)) {
+        if (field === "active" && typeof data[field] !== "boolean") {
+          return {
+            isValid: false,
+            message: `Field 'active' must be a boolean`,
+          };
+        }
+        if (field !== "active" && typeof data[field] !== "string") {
+          return {
+            isValid: false,
+            message: `Field '${field}' must be a string`,
+          };
+        }
+      }
+    }
+
+    return { isValid: true };
+  };
+
+  const handlePasteJson = async () => {
+    // Don't allow paste if any input is focused
+    if (isAnyInputFocused) {
+      toast({
+        title: "Input Active",
+        description:
+          "Please finish editing the current field before pasting JSON data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+
+      if (!text.trim()) {
+        toast({
+          title: "Empty Clipboard",
+          description: "No data found in clipboard.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const jsonData = JSON.parse(text);
+
+      // Validate JSON structure
+      const validation = validateJsonStructure(jsonData);
+      if (!validation.isValid) {
+        toast({
+          title: "Invalid JSON Structure",
+          description: validation.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Map the JSON data to form fields
+      const formData = {
+        name: jsonData.name || "",
+        nameAr: jsonData.nameAr || "",
+        description: jsonData.description || "",
+        descriptionAr: jsonData.descriptionAr || "",
+        effectiveFrom: jsonData.effectiveFrom || "",
+        effectiveTo: jsonData.effectiveTo || "",
+        isActive: jsonData.active !== undefined ? jsonData.active : true,
+      };
+
+      // Set form values
+      form.reset(formData);
+
+      toast({
+        title: "JSON Data Pasted",
+        description: "Form fields have been populated with the pasted data.",
+      });
+    } catch (error) {
+      console.error("Failed to parse JSON:", error);
+      toast({
+        title: "Invalid JSON",
+        description:
+          "Please ensure you have valid JSON data in your clipboard.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Keyboard event listener for paste functionality
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if dialog is open and no input is focused
+      if (!open || isAnyInputFocused) {
+        return;
+      }
+
+      // Check for Ctrl+V (Windows/Linux) or Cmd+V (Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key === "v") {
+        event.preventDefault();
+        handlePasteJson();
+      }
+    };
+
+    // Add event listener when dialog is open
+    if (open) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    // Cleanup event listener
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, isAnyInputFocused]);
 
   const onSubmit = async (data: PriceListFormValues) => {
     try {
@@ -123,21 +223,13 @@ const AddPriceListDialog = ({
         effectiveFrom: data.effectiveFrom,
         effectiveTo: data.effectiveTo,
         isActive: data.isActive,
-        subActivityPrices:
-          data.subActivityPrices?.map((subActivityPrice) => ({
-            subActivity: subActivityPrice.subActivity,
-            pricingMethod: subActivityPrice.pricingMethod,
-            basePrice: subActivityPrice.basePrice,
-            cost: subActivityPrice.cost,
-            locationPrices: subActivityPrice.locationPrices,
-          })) || [],
       };
 
       await dispatch(actAddPriceList(priceListData)).unwrap();
 
       // Reset form and close modal
       form.reset();
-      onOpenChange(false, "AddPriceList");
+      onOpenChange(false);
 
       toast({
         title: "Price List Created",
@@ -155,35 +247,7 @@ const AddPriceListDialog = ({
 
   const handleFormSubmit = form.handleSubmit(
     (data) => {
-      // Get selected items with their prices for subActivityPrices
-      const selectedSubActivityPrices = selectedSubActivities
-        .filter((item) => item.selected)
-        .map((item) => ({
-          subActivity: item.id,
-          pricingMethod: item.pricingMethod,
-          basePrice: parseFloat(item.price) || 0,
-          cost: parseFloat(item.cost) || 0,
-        }));
-
-      // Check if any sub-activities are selected
-      if (selectedSubActivityPrices.length === 0) {
-        toast({
-          title: "No Sub-Activities Selected",
-          description:
-            "Please select at least one sub-activity to create a price list.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Create the final data with selected sub-activities
-      const finalData = {
-        ...data,
-        subActivityPrices: selectedSubActivityPrices,
-      };
-
-      // Submit the form with the complete data
-      onSubmit(finalData);
+      onSubmit(data);
     },
     (errors) => {
       console.error("Form validation errors:", errors);
@@ -203,10 +267,9 @@ const AddPriceListDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[80vw] max-h-[80dvh] overflow-y-auto">
         <DialogHeader>
-          Add New Bilingual Price List
-          <DialogTitle></DialogTitle>
+          <DialogTitle>Add New Bilingual Price List</DialogTitle>
           <DialogDescription>
             Create a comprehensive price list with English and Arabic support,
             date ranges, and flexible pricing methods.
@@ -226,6 +289,8 @@ const AddPriceListDialog = ({
                       <Input
                         placeholder="Enter price list name in English"
                         {...field}
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -244,6 +309,8 @@ const AddPriceListDialog = ({
                         placeholder="أدخل اسم قائمة الأسعار بالعربية"
                         {...field}
                         dir="rtl"
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -261,6 +328,8 @@ const AddPriceListDialog = ({
                       <Input
                         placeholder="Enter description in English"
                         {...field}
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -279,6 +348,8 @@ const AddPriceListDialog = ({
                         placeholder="أدخل الوصف بالعربية"
                         {...field}
                         dir="rtl"
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -293,7 +364,12 @@ const AddPriceListDialog = ({
                   <FormItem>
                     <FormLabel>Effective From</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} />
+                      <Input
+                        type="datetime-local"
+                        {...field}
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
+                      />
                     </FormControl>
                     <FormDescription>
                       When this price list becomes active
@@ -310,7 +386,12 @@ const AddPriceListDialog = ({
                   <FormItem>
                     <FormLabel>Effective To</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} />
+                      <Input
+                        type="datetime-local"
+                        {...field}
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
+                      />
                     </FormControl>
                     <FormDescription>
                       When this price list expires
@@ -319,124 +400,28 @@ const AddPriceListDialog = ({
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                      <FormLabel>Active Status</FormLabel>
-                      <FormDescription>
-                        Enable this price list immediately
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium mb-2">
-                Select Sub-Activities and Set Pricing
-              </h4>
-              {!subActivitiesAvailable ? (
-                <div className="flex items-center justify-center py-8">
-                  <span className="text-gray-500">
-                    No sub-activities available. Create a price list first to
-                    see available activities.
-                  </span>
-                </div>
-              ) : (
-                <div className="border rounded-md p-3 max-h-[300px] overflow-y-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 px-2 w-8"></th>
-                        <th className="text-left py-2 px-2">Activity</th>
-                        <th className="text-left py-2 px-2 w-32">
-                          Pricing Method
-                        </th>
-                        <th className="text-left py-2 px-2 w-32">
-                          Base Price ($)
-                        </th>
-                        <th className="text-left py-2 px-2 w-32">Cost ($)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedSubActivities.map((item) => (
-                        <tr key={item.id} className="border-b last:border-0">
-                          <td className="py-2 px-2">
-                            <Checkbox
-                              checked={item.selected}
-                              onCheckedChange={(checked) =>
-                                handleCheckboxChange(item.id, checked === true)
-                              }
-                            />
-                          </td>
-                          <td className="py-2 px-2">{item.name}</td>
-                          <td className="py-2 px-2">
-                            <Select
-                              disabled={!item.selected}
-                              value={item.pricingMethod}
-                              onValueChange={(value: TPricingMethod) =>
-                                handlePricingMethodChange(item.id, value)
-                              }
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="perItem">
-                                  Per Item
-                                </SelectItem>
-                                <SelectItem value="perLocation">
-                                  Per Location
-                                </SelectItem>
-                                <SelectItem value="perTrip">
-                                  Per Trip
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          <td className="py-2 px-2">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={item.price}
-                              onChange={(e) =>
-                                handlePriceChange(item.id, e.target.value)
-                              }
-                              disabled={!item.selected}
-                              className="h-8"
-                            />
-                          </td>
-                          <td className="py-2 px-2">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={item.cost}
-                              onChange={(e) =>
-                                handleCostChange(item.id, e.target.value)
-                              }
-                              disabled={!item.selected}
-                              className="h-8"
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              {isEdit ? (
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Active Status</FormLabel>
+                        <FormDescription>
+                          Enable this price list immediately
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              ) : null}
             </div>
 
             <DialogFooter>

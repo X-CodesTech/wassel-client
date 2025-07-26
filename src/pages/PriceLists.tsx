@@ -10,23 +10,88 @@ import {
 import { Button } from "@/components/ui/button";
 
 import { Plus, Edit, Trash, FileText, Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actGetPriceLists, clearError } from "@/store/priceLists";
 import { useLocation } from "wouter";
-import { PriceList, PricingMethod } from "@/services/priceListServices";
-import { SubActivity } from "@/types/types";
+import { PriceList, SubActivityPrice } from "@/services/priceListServices";
 import EditPriceListDialog from "@/components/PriceList/EditPriceListDialog";
 import DeletePriceListDialog from "@/components/PriceList/DeletePriceListDialog";
 import AddPriceListDialog from "@/components/PriceList/AddPriceListDialog";
 
-export type TPriceListModalType =
-  | "AddPriceList"
-  | "EditPriceList"
-  | "DeletePriceList";
+// Guard function to safely extract portalItemNameEn from subActivity
+const getSubActivityName = (
+  subActivity: SubActivityPrice["subActivity"]
+): string => {
+  if (typeof subActivity === "string") {
+    return "Unknown Item";
+  }
+
+  if ("portalItemNameEn" in subActivity) {
+    return subActivity.portalItemNameEn;
+  }
+
+  if (
+    "subActivity" in subActivity &&
+    typeof subActivity.subActivity === "object" &&
+    subActivity.subActivity
+  ) {
+    return subActivity.subActivity.portalItemNameEn || "Unknown Item";
+  }
+
+  return "Unknown Item";
+};
+
+// Guard function to safely extract activity information
+const getSubActivityInfo = (subActivity: SubActivityPrice["subActivity"]) => {
+  if (typeof subActivity === "string") {
+    return null;
+  }
+
+  if (
+    "activity" in subActivity &&
+    subActivity.activity &&
+    typeof subActivity.activity === "object"
+  ) {
+    return subActivity.activity;
+  }
+
+  if (
+    "subActivity" in subActivity &&
+    typeof subActivity.subActivity === "object" &&
+    subActivity.subActivity &&
+    "activity" in subActivity.subActivity
+  ) {
+    return subActivity.subActivity.activity;
+  }
+
+  return null;
+};
+
+const getSamepleItemsPerPricingMethod = (priceList: PriceList) => {
+  const sampleItems = priceList.subActivityPrices?.slice(0, 2);
+  if (sampleItems) {
+    return sampleItems.map((item) => {
+      if (
+        item.pricingMethod === "perLocation" ||
+        item.pricingMethod === "perTrip"
+      ) {
+        return {
+          ...item,
+        };
+      }
+      return {
+        ...item,
+        activityNameEn:
+          getSubActivityInfo(item.subActivity) &&
+          typeof getSubActivityInfo(item.subActivity) === "object"
+            ? (getSubActivityInfo(item.subActivity) as any)?.activityNameEn
+            : undefined,
+      };
+    });
+  }
+  return [];
+};
 
 export default function PriceLists() {
   const dispatch = useAppDispatch();
@@ -49,91 +114,10 @@ export default function PriceLists() {
     null
   );
 
-  // Sub-activities state
-  const [subActivities, setSubActivities] = useState<SubActivity[]>([]);
-  const [selectedSubActivities, setSelectedSubActivities] = useState<
-    {
-      id: string;
-      name: string;
-      price: string;
-      cost: string;
-      selected: boolean;
-      pricingMethod: PricingMethod;
-    }[]
-  >([]);
-
   // Fetch price lists on component mount
   useEffect(() => {
     dispatch(actGetPriceLists());
   }, [dispatch]);
-
-  // Extract sub-activities from price lists response
-  useEffect(() => {
-    if (priceLists.length > 0) {
-      const allSubActivities = new Map<string, SubActivity>();
-
-      priceLists.forEach((priceList) => {
-        if (
-          priceList.subActivityPrices &&
-          Array.isArray(priceList.subActivityPrices)
-        ) {
-          priceList.subActivityPrices.forEach((subActivityPrice) => {
-            const subActivityId =
-              typeof subActivityPrice.subActivity === "string"
-                ? subActivityPrice.subActivity
-                : subActivityPrice.subActivity._id;
-
-            if (typeof subActivityPrice.subActivity !== "string") {
-              // Create a SubActivity object from the embedded sub-activity data
-              const embeddedSubActivity =
-                subActivityPrice.subActivity as unknown as SubActivity;
-              allSubActivities.set(subActivityId, {
-                _id: embeddedSubActivity._id,
-                activity:
-                  typeof embeddedSubActivity.activity === "string"
-                    ? embeddedSubActivity.activity
-                    : embeddedSubActivity.activity?._id!,
-                transactionType: embeddedSubActivity.transactionType,
-                financeEffect: embeddedSubActivity.financeEffect as
-                  | "none"
-                  | "positive"
-                  | "negative",
-                pricingMethod: embeddedSubActivity.pricingMethod as
-                  | "perItem"
-                  | "perLocation"
-                  | "perTrip",
-                portalItemNameEn: embeddedSubActivity.portalItemNameEn,
-                portalItemNameAr: embeddedSubActivity.portalItemNameAr,
-                isUsedByFinance: embeddedSubActivity.isUsedByFinance,
-                isUsedByOps: embeddedSubActivity.isUsedByOps,
-                isInShippingUnit: embeddedSubActivity.isInShippingUnit,
-                isActive: embeddedSubActivity.isActive,
-                isInSpecialRequirement:
-                  embeddedSubActivity.isInSpecialRequirement,
-              });
-            }
-          });
-        }
-      });
-
-      setSubActivities(Array.from(allSubActivities.values()));
-    }
-  }, [priceLists]);
-
-  // Initialize selected sub-activities when sub-activities data loads
-  useEffect(() => {
-    if (subActivities && subActivities.length > 0) {
-      const subActivityOptions = subActivities.map((item) => ({
-        id: item._id!,
-        name: item.portalItemNameEn,
-        price: "0.00",
-        cost: "0.00",
-        selected: false,
-        pricingMethod: "perItem" as PricingMethod,
-      }));
-      setSelectedSubActivities(subActivityOptions);
-    }
-  }, [subActivities]);
 
   // Clear error when component unmounts or error changes
   useEffect(() => {
@@ -146,39 +130,6 @@ export default function PriceLists() {
       dispatch(clearError());
     }
   }, [error, toast, dispatch]);
-
-  // Handle checkbox change for sub-activities
-  const handleCheckboxChange = (id: string, checked: boolean) => {
-    setSelectedSubActivities((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, selected: checked } : item
-      )
-    );
-  };
-
-  // Handle price change for sub-activities
-  const handlePriceChange = (id: string, price: string) => {
-    setSelectedSubActivities((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, price } : item))
-    );
-  };
-
-  // Handle cost change for sub-activities
-  const handleCostChange = (id: string, cost: string) => {
-    setSelectedSubActivities((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, cost } : item))
-    );
-  };
-
-  // Handle pricing method change for sub-activities
-  const handlePricingMethodChange = (
-    id: string,
-    pricingMethod: PricingMethod
-  ) => {
-    setSelectedSubActivities((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, pricingMethod } : item))
-    );
-  };
 
   // Open edit modal
   const openEditModal = (priceList: PriceList) => {
@@ -202,28 +153,12 @@ export default function PriceLists() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Get sub-activity name by ID
-  const getSubActivityName = (subActivityId: string) => {
-    const subActivity = subActivities.find((sa) => sa._id === subActivityId);
-    return subActivity?.portalItemNameEn || "Unknown Activity";
-  };
-
-  const onOpenChange = (open: boolean, modalType?: TPriceListModalType) => {
+  const onOpenChange = (open: boolean) => {
     setModalOpen(open);
     setEditModalOpen(open);
     setDeleteConfirmOpen(open);
     setEditingPriceList(null);
     setDeletingPriceList(null);
-    if (modalType === "AddPriceList") {
-      setSelectedSubActivities((prev) =>
-        prev.map((item) => ({
-          ...item,
-          selected: false,
-          price: "0.00",
-          cost: "0.00",
-        }))
-      );
-    }
   };
 
   if (loading && priceLists.length === 0) {
@@ -300,7 +235,8 @@ export default function PriceLists() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <div className="text-xs sm:text-sm font-medium text-gray-500">
-                      {priceList.subActivityPrices?.length > 0
+                      {priceList.subActivityPrices &&
+                      priceList.subActivityPrices.length > 0
                         ? priceList.subActivityPrices.length + " items"
                         : "No items added yet"}
                     </div>
@@ -317,32 +253,17 @@ export default function PriceLists() {
                       {priceList.subActivityPrices &&
                       priceList.subActivityPrices.length > 0 ? (
                         <>
-                          {priceList.subActivityPrices
-                            .slice(0, 2)
-                            .map((item, index) => (
+                          {getSamepleItemsPerPricingMethod(priceList).map(
+                            (item, index) => (
                               <li
                                 key={index}
                                 className="flex justify-between items-center gap-2 p-2 bg-gray-50 rounded"
                               >
-                                <span className="truncate flex-1 min-w-0">
-                                  {getSubActivityName(
-                                    typeof item.subActivity === "string"
-                                      ? item.subActivity
-                                      : item.subActivity._id
-                                  )}
-                                </span>
-                                <span className="font-medium text-green-600 whitespace-nowrap">
-                                  $
-                                  {item.basePrice?.toFixed(2) ||
-                                    item.cost?.toFixed(2)}
+                                <span className="text-gray-600 text-xs truncate">
+                                  {getSubActivityName(item.subActivity)}
                                 </span>
                               </li>
-                            ))}
-                          {priceList.subActivityPrices.length > 2 && (
-                            <li className="text-blue-600 text-xs text-center py-1">
-                              + {priceList.subActivityPrices.length - 2} more
-                              items
-                            </li>
+                            )
                           )}
                         </>
                       ) : (
@@ -412,12 +333,7 @@ export default function PriceLists() {
       <AddPriceListDialog
         open={modalOpen}
         onOpenChange={onOpenChange}
-        handleCheckboxChange={handleCheckboxChange}
-        handleCostChange={handleCostChange}
-        handlePriceChange={handlePriceChange}
-        handlePricingMethodChange={handlePricingMethodChange}
-        selectedSubActivities={selectedSubActivities}
-        subActivitiesAvailable={subActivities.length > 0}
+        isEdit={editingPriceList?._id ? true : false}
       />
 
       {/* Edit Price List Modal */}

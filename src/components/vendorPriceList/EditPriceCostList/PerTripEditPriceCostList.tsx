@@ -10,7 +10,6 @@ import { useFieldArray, useForm } from "react-hook-form";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SubActivityPrice } from "@/services/vendorServices";
-import { getStructuredAddress } from "@/utils/getStructuredAddress";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import {
   actEditVendorSubActivityPrice,
@@ -20,17 +19,11 @@ import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { actGetLocations } from "@/store/locations";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { List, AutoSizer } from "react-virtualized";
 import { cn } from "@/utils";
+import { AsyncLocationSelect } from "@/components/ui/async-location-select";
 
 const PerTripEditPriceCostList = ({
   selectedSubActivityPrice,
@@ -48,11 +41,6 @@ const PerTripEditPriceCostList = ({
   const vendorId = priceLists?.[0]?.vendor?._id || "";
   const vendorPriceListId = priceListId;
   const subActivityId = selectedSubActivityPrice.subActivity._id || "";
-
-  // Performance optimization states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20); // Show 20 items per page
 
   useEffect(() => {
     if (locations.length === 0) {
@@ -133,31 +121,6 @@ const PerTripEditPriceCostList = ({
     });
   }, [form.watch(), defaultValues]);
 
-  // Memoized filtered and paginated locations
-  const filteredLocations = useMemo(() => {
-    if (!searchTerm) return locations;
-
-    return locations.filter((location) => {
-      const address = getStructuredAddress(location).en.toLowerCase();
-      const searchLower = searchTerm.toLowerCase();
-      return address.includes(searchLower);
-    });
-  }, [locations, searchTerm]);
-
-  const paginatedLocations = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredLocations.slice(startIndex, endIndex);
-  }, [filteredLocations, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(filteredLocations.length / itemsPerPage);
-
-  // Debounced search handler
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
-  }, []);
-
   // Add new trip handler
   const handleAddTrip = useCallback(() => {
     appendLocationPrice({
@@ -209,50 +172,6 @@ const PerTripEditPriceCostList = ({
       });
   };
 
-  // Optimized location dropdown component
-  const LocationDropdown = ({
-    value,
-    onValueChange,
-    placeholder,
-    label,
-  }: {
-    value: string;
-    onValueChange: (value: string) => void;
-    placeholder: string;
-    label: string;
-  }) => (
-    <FormItem>
-      <FormLabel>{label}</FormLabel>
-      <Select value={value} onValueChange={onValueChange}>
-        <FormControl>
-          <SelectTrigger>
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent className="max-h-60">
-          <div className="p-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search locations..."
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
-          <ScrollArea className="h-48">
-            {paginatedLocations.map((location) => (
-              <SelectItem key={location._id} value={location._id}>
-                {getStructuredAddress(location).en}
-              </SelectItem>
-            ))}
-          </ScrollArea>
-        </SelectContent>
-      </Select>
-    </FormItem>
-  );
-
   // Virtualized row renderer
   const rowRenderer = ({
     index,
@@ -283,12 +202,17 @@ const PerTripEditPriceCostList = ({
               control={form.control}
               name={`locationPrices.${index}.fromLocation`}
               render={({ field }) => (
-                <LocationDropdown
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  placeholder="Select from location"
-                  label="From Location"
-                />
+                <FormItem>
+                  <FormLabel>From Location</FormLabel>
+                  <FormControl>
+                    <AsyncLocationSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Select from location"
+                      useAddressString={false}
+                    />
+                  </FormControl>
+                </FormItem>
               )}
             />
 
@@ -296,12 +220,17 @@ const PerTripEditPriceCostList = ({
               control={form.control}
               name={`locationPrices.${index}.toLocation`}
               render={({ field }) => (
-                <LocationDropdown
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  placeholder="Select to location"
-                  label="To Location"
-                />
+                <FormItem>
+                  <FormLabel>To Location</FormLabel>
+                  <FormControl>
+                    <AsyncLocationSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Select to location"
+                      useAddressString={false}
+                    />
+                  </FormControl>
+                </FormItem>
               )}
             />
 

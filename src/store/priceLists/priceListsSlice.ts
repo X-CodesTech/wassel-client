@@ -8,6 +8,7 @@ import {
   actGetPriceListById,
   actDeleteSubActivityFromPriceList,
   actUpdateSubActivityPrice,
+  actAddPriceListSubActivity,
 } from "./act";
 
 interface PriceListsState {
@@ -17,6 +18,7 @@ interface PriceListsState {
   error: string | null;
   deleteSubActivityLoading: boolean;
   updateSubActivityLoading: boolean;
+  addSubActivityLoading: boolean;
 }
 
 const initialState: PriceListsState = {
@@ -26,6 +28,7 @@ const initialState: PriceListsState = {
   error: null,
   deleteSubActivityLoading: false,
   updateSubActivityLoading: false,
+  addSubActivityLoading: false,
 };
 
 const priceListsSlice = createSlice({
@@ -161,7 +164,7 @@ const priceListsSlice = createSlice({
           // Update the selected price list by removing the deleted sub-activity
           if (state.selectedPriceList?._id === action.payload.priceListId) {
             state.selectedPriceList.subActivityPrices =
-              state.selectedPriceList.subActivityPrices.filter(
+              state.selectedPriceList?.subActivityPrices?.filter(
                 (item) => item._id !== action.payload.subActivityId
               );
           }
@@ -172,7 +175,7 @@ const priceListsSlice = createSlice({
           if (priceListIndex !== -1) {
             state.records[priceListIndex].subActivityPrices = state.records[
               priceListIndex
-            ].subActivityPrices.filter(
+            ]?.subActivityPrices?.filter(
               (item) => item._id !== action.payload.subActivityId
             );
           }
@@ -211,6 +214,39 @@ const priceListsSlice = createSlice({
       )
       .addCase(actUpdateSubActivityPrice.rejected, (state, action) => {
         state.updateSubActivityLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Add Sub Activity to Price List
+    builder
+      .addCase(actAddPriceListSubActivity.pending, (state) => {
+        state.addSubActivityLoading = true;
+        state.error = null;
+      })
+      .addCase(
+        actAddPriceListSubActivity.fulfilled,
+        (
+          state,
+          action: PayloadAction<{ data?: PriceList; message?: string }>
+        ) => {
+          state.addSubActivityLoading = false;
+          if (action.payload.data) {
+            // Update the selected price list
+            if (state.selectedPriceList?._id === action.payload.data._id) {
+              state.selectedPriceList = action.payload.data;
+            }
+            // Update the records as well
+            const priceListIndex = state.records.findIndex(
+              (priceList) => priceList._id === action.payload.data!._id
+            );
+            if (priceListIndex !== -1) {
+              state.records[priceListIndex] = action.payload.data;
+            }
+          }
+        }
+      )
+      .addCase(actAddPriceListSubActivity.rejected, (state, action) => {
+        state.addSubActivityLoading = false;
         state.error = action.payload as string;
       });
   },
