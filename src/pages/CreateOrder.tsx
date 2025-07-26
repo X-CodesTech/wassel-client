@@ -312,7 +312,7 @@ export default function CreateOrder() {
         description: "Your order has been created and is being processed.",
       });
       clearOrderData();
-      navigate("/orders");
+      navigate(`/orders/${orderId}`);
     } catch (error: any) {
       toast({
         title: "Error",
