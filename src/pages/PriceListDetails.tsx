@@ -8,35 +8,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
   DollarSign,
@@ -53,8 +24,6 @@ import { z } from "zod";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import {
   actGetPriceListById,
-  actDeletePriceList,
-  actUpdatePriceList,
   clearError,
   clearSelectedPriceList,
 } from "@/store/priceLists";
@@ -63,6 +32,8 @@ import { SubActivityPrice } from "@/services/priceListServices";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import React from "react";
 import DeletePriceListSubActivityDialog from "@/components/DeletePriceListSubActivityDialog";
+import DeleteSubActivityConfirmationDialog from "@/components/PriceList/PriceListSubActivity/DeleteSubActivityConfirmationDialog";
+import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
 
 // Form schema for editing price list
 const editPriceListFormSchema = z.object({
@@ -158,69 +129,13 @@ export default function PriceListDetails() {
     }
   }, [priceList, editDialogOpen, editForm]);
 
-  const handleDelete = async () => {
-    if (priceList?._id) {
-      try {
-        await dispatch(actDeletePriceList(priceList._id)).unwrap();
-        setDeleteDialogOpen(false);
-        toast({
-          title: "Price List Deleted",
-          description: `"${priceList.name}" has been deleted successfully.`,
-        });
-        setLocation("/price-lists");
-      } catch (error) {
-        console.error("Failed to delete price list:", error);
-      }
-    }
-  };
-
   const handleEdit = () => {
     setEditDialogOpen(true);
   };
 
-  const handleEditSubActivity = (subActivityPrice: SubActivityPrice) => {};
-
-  const handleEditSubmit = async (data: EditPriceListFormValues) => {
-    if (!priceList?._id) {
-      toast({
-        title: "Error",
-        description: "Price list ID not found",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const updateData = {
-        id: priceList._id,
-        priceList: {
-          _id: priceList._id,
-          name: data.name,
-          nameAr: data.nameAr,
-          description: data.description || "",
-          descriptionAr: data.descriptionAr || "",
-          effectiveFrom: data.effectiveFrom,
-          effectiveTo: data.effectiveTo,
-          isActive: data.isActive,
-          subActivityPrices: priceList.subActivityPrices || [],
-        },
-      };
-
-      await dispatch(actUpdatePriceList(updateData)).unwrap();
-
-      setEditDialogOpen(false);
-      toast({
-        title: "Price List Updated",
-        description: `"${data.name}" has been updated successfully.`,
-      });
-    } catch (error) {
-      console.error("Failed to update price list:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update price list. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handleEditSubActivity = (subActivityPrice: SubActivityPrice) => {
+    setSelectedSubActivityPrice(subActivityPrice);
+    setEditDialogOpen(true);
   };
 
   const handleDeleteSubActivity = (subActivityPrice: SubActivityPrice) => {
@@ -655,171 +570,18 @@ export default function PriceListDetails() {
       </Card>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the price list "{priceList.name}".
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteSubActivityConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      />
 
       {/* Edit Price List Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Price List</DialogTitle>
-            <DialogDescription>
-              Make changes to the price list details.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...editForm}>
-            <form
-              onSubmit={editForm.handleSubmit(handleEditSubmit)}
-              className="space-y-4"
-            >
-              <FormField
-                control={editForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name (English)</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="nameAr"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name (Arabic)</FormLabel>
-                    <FormControl>
-                      <Input {...field} dir="rtl" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (English)</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="descriptionAr"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Arabic)</FormLabel>
-                    <FormControl>
-                      <Input {...field} dir="rtl" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="effectiveFrom"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Effective From</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="effectiveTo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Effective To</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Active Status</FormLabel>
-                      <FormDescription>
-                        Enable or disable this price list
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setEditDialogOpen(false)}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    "Update Price List"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <EditPriceListSubActivityDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        selectedSubActivityPrice={selectedSubActivityPrice as SubActivityPrice}
+        priceListId={priceList._id || ""}
+      />
 
       {/* Delete Sub-Activity Dialog */}
       {selectedSubActivityPrice && (

@@ -25,7 +25,7 @@ const EditPriceListSubActivityDialog = ({
   selectedSubActivityPrice,
   priceListId,
 }: TEditPriceListSubActivityDialogProps) => {
-  const pricingMethod = selectedSubActivityPrice.pricingMethod;
+  const pricingMethod = selectedSubActivityPrice?.pricingMethod;
 
   const EDIT_PRICE_LIST_SUBACTIVITY_FORM = {
     perItem: (
