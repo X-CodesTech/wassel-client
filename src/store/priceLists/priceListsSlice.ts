@@ -7,6 +7,7 @@ import {
   actDeletePriceList,
   actGetPriceListById,
   actDeleteSubActivityFromPriceList,
+  actUpdateSubActivityPrice,
 } from "./act";
 
 interface PriceListsState {
@@ -15,6 +16,7 @@ interface PriceListsState {
   loading: boolean;
   error: string | null;
   deleteSubActivityLoading: boolean;
+  updateSubActivityLoading: boolean;
 }
 
 const initialState: PriceListsState = {
@@ -23,6 +25,7 @@ const initialState: PriceListsState = {
   loading: false,
   error: null,
   deleteSubActivityLoading: false,
+  updateSubActivityLoading: false,
 };
 
 const priceListsSlice = createSlice({
@@ -177,6 +180,37 @@ const priceListsSlice = createSlice({
       )
       .addCase(actDeleteSubActivityFromPriceList.rejected, (state, action) => {
         state.deleteSubActivityLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // Update Sub Activity Price
+    builder
+      .addCase(actUpdateSubActivityPrice.pending, (state) => {
+        state.updateSubActivityLoading = true;
+        state.error = null;
+      })
+      .addCase(
+        actUpdateSubActivityPrice.fulfilled,
+        (
+          state,
+          action: PayloadAction<{ data: PriceList; message: string }>
+        ) => {
+          state.updateSubActivityLoading = false;
+          // Update the selected price list
+          if (state.selectedPriceList?._id === action.payload.data._id) {
+            state.selectedPriceList = action.payload.data;
+          }
+          // Update the records as well
+          const priceListIndex = state.records.findIndex(
+            (priceList) => priceList._id === action.payload.data._id
+          );
+          if (priceListIndex !== -1) {
+            state.records[priceListIndex] = action.payload.data;
+          }
+        }
+      )
+      .addCase(actUpdateSubActivityPrice.rejected, (state, action) => {
+        state.updateSubActivityLoading = false;
         state.error = action.payload as string;
       });
   },

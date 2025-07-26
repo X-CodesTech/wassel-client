@@ -4,3 +4,4 @@ export { actUpdatePriceList } from "./actUpdatePriceList";
 export { actDeletePriceList } from "./actDeletePriceList";
 export { actGetPriceListById } from "./actGetPriceListById";
 export { actDeleteSubActivityFromPriceList } from "./actDeleteSubActivityFromPriceList";
+export { actUpdateSubActivityPrice } from "./actUpdateSubActivityPrice";

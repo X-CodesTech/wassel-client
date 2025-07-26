@@ -3,7 +3,9 @@ import { apiUrlConstants } from "./apiUrlConstants";
 import http from "./http";
 import { IActivity } from "@/types/ModelTypes";
 export interface LocationPrice {
-  location: string;
+  location?: any;
+  fromLocation?: any;
+  toLocation?: any;
   price: number;
 }
 
@@ -82,6 +84,22 @@ class PriceListService {
   ) {
     return await http.delete(
       `${apiUrlConstants.priceLists}/${priceListId}/sub-activity/${subActivityId}`
+    );
+  }
+
+  async updateSubActivityPrice(
+    priceListId: string,
+    subActivityId: string,
+    data: {
+      basePrice?: number;
+      locationPrices?: LocationPrice[];
+    }
+  ) {
+    return await http.put(
+      `${apiUrlConstants.priceLists}/${priceListId}/sub-activity/${subActivityId}`,
+      {
+        ...data,
+      }
     );
   }
 

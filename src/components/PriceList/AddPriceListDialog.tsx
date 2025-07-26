@@ -399,6 +399,9 @@ const AddPriceListDialog = ({
                                 <SelectItem value="perLocation">
                                   Per Location
                                 </SelectItem>
+                                <SelectItem value="perTrip">
+                                  Per Trip
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </td>
