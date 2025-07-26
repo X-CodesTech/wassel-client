@@ -150,22 +150,7 @@ const AddPriceListSubActivityDialog = ({
       data.pricingMethod === "perLocation" ||
       data.pricingMethod === "perTrip"
     ) {
-      submitData.locationPrices = data.locationPrices?.filter((item) => {
-        if (data.pricingMethod === "perLocation") {
-          return (
-            "location" in item && item.location && item.price && item.price > 0
-          );
-        } else {
-          return (
-            "fromLocation" in item &&
-            "toLocation" in item &&
-            item.fromLocation &&
-            item.toLocation &&
-            item.price &&
-            item.price > 0
-          );
-        }
-      });
+      submitData.locationPrices = data.locationPrices;
     }
 
     dispatch(actAddPriceListSubActivity(submitData))

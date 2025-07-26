@@ -92,9 +92,10 @@ class PriceListService {
   }
 
   async addSubActivityToPriceList(data: TPriceBody<TPriceMethod>) {
+    const { priceListId, subActivityId, ...rest } = data;
     return await http.post<{ message?: string; data?: PriceList }>(
-      `${apiUrlConstants.priceLists}/${data.priceListId}/sub-activity`,
-      { ...data, subActivity: data.subActivityId }
+      `${apiUrlConstants.priceLists}/${priceListId}/sub-activity`,
+      { ...rest, subActivity: subActivityId }
     );
   }
 
