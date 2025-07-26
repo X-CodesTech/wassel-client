@@ -26,6 +26,7 @@ import { z } from "zod";
 import { toast } from "@/hooks/use-toast";
 import { actAddPriceList } from "@/store/priceLists";
 import { PriceList } from "@/services/priceListServices";
+import { useState, useEffect } from "react";
 
 const priceListFormSchema = z.object({
   name: z.string().min(1, "Price list name (English) is required"),
@@ -52,6 +53,8 @@ const AddPriceListDialog = ({
 }: AddPriceListDialogProps) => {
   const dispatch = useAppDispatch();
   const { loading } = useAppSelector((state) => state.priceLists);
+  const [pasteSuccess, setPasteSuccess] = useState(false);
+  const [isAnyInputFocused, setIsAnyInputFocused] = useState(false);
 
   const form = useForm<PriceListFormValues>({
     resolver: zodResolver(priceListFormSchema),
@@ -65,6 +68,155 @@ const AddPriceListDialog = ({
       isActive: true,
     },
   });
+
+  // Reset paste success state when dialog opens/closes
+  useEffect(() => {
+    if (!open) {
+      setPasteSuccess(false);
+      setIsAnyInputFocused(false);
+    }
+  }, [open]);
+
+  // JSON validation schema
+  const validateJsonStructure = (data: any) => {
+    const requiredFields = ["name", "nameAr"];
+    const optionalFields = [
+      "description",
+      "descriptionAr",
+      "effectiveFrom",
+      "effectiveTo",
+      "active",
+    ];
+
+    // Check if required fields exist
+    for (const field of requiredFields) {
+      if (
+        !data.hasOwnProperty(field) ||
+        typeof data[field] !== "string" ||
+        data[field].trim() === ""
+      ) {
+        return {
+          isValid: false,
+          message: `Missing or invalid required field: ${field}`,
+        };
+      }
+    }
+
+    // Check if optional fields have correct types when present
+    for (const field of optionalFields) {
+      if (data.hasOwnProperty(field)) {
+        if (field === "active" && typeof data[field] !== "boolean") {
+          return {
+            isValid: false,
+            message: `Field 'active' must be a boolean`,
+          };
+        }
+        if (field !== "active" && typeof data[field] !== "string") {
+          return {
+            isValid: false,
+            message: `Field '${field}' must be a string`,
+          };
+        }
+      }
+    }
+
+    return { isValid: true };
+  };
+
+  const handlePasteJson = async () => {
+    // Don't allow paste if any input is focused
+    if (isAnyInputFocused) {
+      toast({
+        title: "Input Active",
+        description:
+          "Please finish editing the current field before pasting JSON data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+
+      if (!text.trim()) {
+        toast({
+          title: "Empty Clipboard",
+          description: "No data found in clipboard.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const jsonData = JSON.parse(text);
+
+      // Validate JSON structure
+      const validation = validateJsonStructure(jsonData);
+      if (!validation.isValid) {
+        toast({
+          title: "Invalid JSON Structure",
+          description: validation.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Map the JSON data to form fields
+      const formData = {
+        name: jsonData.name || "",
+        nameAr: jsonData.nameAr || "",
+        description: jsonData.description || "",
+        descriptionAr: jsonData.descriptionAr || "",
+        effectiveFrom: jsonData.effectiveFrom || "",
+        effectiveTo: jsonData.effectiveTo || "",
+        isActive: jsonData.active !== undefined ? jsonData.active : true,
+      };
+
+      // Set form values
+      form.reset(formData);
+
+      setPasteSuccess(true);
+      setTimeout(() => setPasteSuccess(false), 2000);
+
+      toast({
+        title: "JSON Data Pasted",
+        description: "Form fields have been populated with the pasted data.",
+      });
+    } catch (error) {
+      console.error("Failed to parse JSON:", error);
+      toast({
+        title: "Invalid JSON",
+        description:
+          "Please ensure you have valid JSON data in your clipboard.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Keyboard event listener for paste functionality
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if dialog is open and no input is focused
+      if (!open || isAnyInputFocused) {
+        return;
+      }
+
+      // Check for Ctrl+V (Windows/Linux) or Cmd+V (Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key === "v") {
+        event.preventDefault();
+        handlePasteJson();
+      }
+    };
+
+    // Add event listener when dialog is open
+    if (open) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    // Cleanup event listener
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, isAnyInputFocused]);
 
   const onSubmit = async (data: PriceListFormValues) => {
     try {
@@ -122,11 +274,16 @@ const AddPriceListDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          Add New Bilingual Price List
-          <DialogTitle></DialogTitle>
+          <DialogTitle>Add New Bilingual Price List</DialogTitle>
           <DialogDescription>
             Create a comprehensive price list with English and Arabic support,
             date ranges, and flexible pricing methods.
+            {!isAnyInputFocused && (
+              <span className="block mt-2 text-sm text-muted-foreground">
+                💡 Tip: Press Ctrl+V (or Cmd+V on Mac) to paste JSON data from
+                clipboard
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -143,6 +300,8 @@ const AddPriceListDialog = ({
                       <Input
                         placeholder="Enter price list name in English"
                         {...field}
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -161,6 +320,8 @@ const AddPriceListDialog = ({
                         placeholder="أدخل اسم قائمة الأسعار بالعربية"
                         {...field}
                         dir="rtl"
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -178,6 +339,8 @@ const AddPriceListDialog = ({
                       <Input
                         placeholder="Enter description in English"
                         {...field}
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -196,6 +359,8 @@ const AddPriceListDialog = ({
                         placeholder="أدخل الوصف بالعربية"
                         {...field}
                         dir="rtl"
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -210,7 +375,12 @@ const AddPriceListDialog = ({
                   <FormItem>
                     <FormLabel>Effective From</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} />
+                      <Input
+                        type="datetime-local"
+                        {...field}
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
+                      />
                     </FormControl>
                     <FormDescription>
                       When this price list becomes active
@@ -227,7 +397,12 @@ const AddPriceListDialog = ({
                   <FormItem>
                     <FormLabel>Effective To</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} />
+                      <Input
+                        type="datetime-local"
+                        {...field}
+                        onFocus={() => setIsAnyInputFocused(true)}
+                        onBlur={() => setIsAnyInputFocused(false)}
+                      />
                     </FormControl>
                     <FormDescription>
                       When this price list expires
@@ -236,7 +411,7 @@ const AddPriceListDialog = ({
                   </FormItem>
                 )}
               />
-              {!isEdit ? (
+              {isEdit ? (
                 <FormField
                   control={form.control}
                   name="isActive"
