@@ -129,10 +129,6 @@ export default function PriceListDetails() {
     }
   }, [priceList, editDialogOpen, editForm]);
 
-  const handleEdit = () => {
-    setEditDialogOpen(true);
-  };
-
   const handleEditSubActivity = (subActivityPrice: SubActivityPrice) => {
     setSelectedSubActivityPrice(subActivityPrice);
     setEditDialogOpen(true);
@@ -506,24 +502,6 @@ export default function PriceListDetails() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={handleEdit}
-          >
-            <Edit className="h-4 w-4" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            className="flex items-center gap-2 text-red-500 hover:text-red-600"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            <Trash className="h-4 w-4" />
-            Delete
-          </Button>
-        </div>
       </div>
 
       <Card>
@@ -534,7 +512,7 @@ export default function PriceListDetails() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {priceList.subActivityPrices.length === 0 ? (
+          {priceList.subActivityPrices?.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="rounded-full bg-gray-100 p-3 mb-3">
                 <DollarSign className="h-6 w-6 text-gray-400" />
@@ -559,7 +537,7 @@ export default function PriceListDetails() {
                   </tr>
                 </thead>
                 <tbody>
-                  {priceList.subActivityPrices.map((item, index) =>
+                  {priceList.subActivityPrices?.map((item, index) =>
                     renderTableRow(item, index)
                   )}
                 </tbody>
