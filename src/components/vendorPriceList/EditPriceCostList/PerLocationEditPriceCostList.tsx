@@ -1,4 +1,3 @@
-import { AsyncPaginate } from "react-select-async-paginate";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -11,7 +10,6 @@ import { useFieldArray, useForm } from "react-hook-form";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SubActivityPrice } from "@/services/vendorServices";
-import { getStructuredAddress } from "@/utils/getStructuredAddress";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import {
   actEditVendorSubActivityPrice,
@@ -19,20 +17,11 @@ import {
 } from "@/store/vendors/vendorsSlice";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useCallback, useEffect, useMemo } from "react";
 import { cn } from "@/utils";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AutoSizer, List } from "react-virtualized";
-import { actGetLocations } from "@/store/locations";
-import locationServices from "@/services/locationServices";
+import { AsyncLocationSelect } from "@/components/ui/async-location-select";
 
 type TPerLocationEditPriceCostListProps = {
   onOpenChange: (open: boolean) => void;
@@ -47,15 +36,12 @@ const PerLocationEditPriceCostList = ({
 }: TPerLocationEditPriceCostListProps) => {
   const dispatch = useAppDispatch();
   const { priceLists } = useAppSelector((state) => state.vendors);
-  const { records: locations } = useAppSelector((state) => state.locations);
-  const { pagination } = useAppSelector((state) => state.locations);
 
   const vendorId = priceLists?.[0]?.vendor?._id || "";
   const vendorPriceListId = priceListId;
   const subActivityId = selectedSubActivityPrice.subActivity._id || "";
 
   // Performance optimization states
-  const [searchTerm, setSearchTerm] = useState("");
 
   const schema = z.object({
     locationPrices: z.array(
@@ -127,30 +113,6 @@ const PerLocationEditPriceCostList = ({
     });
   }, [form.watch(), defaultValues]);
 
-  // Memoized filtered and paginated locations
-  const filteredLocations = useMemo(() => {
-    if (!searchTerm) return locations;
-
-    return locations.filter((location) => {
-      const address = getStructuredAddress(location).en.toLowerCase();
-      const searchLower = searchTerm.toLowerCase();
-      return address.includes(searchLower);
-    });
-  }, [locations, searchTerm]);
-
-  const paginatedLocations = useMemo(() => {
-    const startIndex = (pagination.page - 1) * pagination.limit;
-    const endIndex = startIndex + pagination.limit;
-    return filteredLocations.slice(startIndex, endIndex);
-  }, [filteredLocations, pagination.page, pagination.limit]);
-
-  const totalPages = Math.ceil(filteredLocations.length / pagination.limit);
-
-  // Debounced search handler
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchTerm(value);
-  }, []);
-
   // Add new location handler
   const handleAddLocation = useCallback(() => {
     appendLocationPrice({
@@ -200,73 +162,6 @@ const PerLocationEditPriceCostList = ({
       });
   };
 
-  // Optimized location dropdown component
-  const LocationDropdown = ({
-    value,
-    onValueChange,
-    placeholder,
-    label,
-  }: {
-    value: string;
-    onValueChange: (value: string) => void;
-    placeholder: string;
-    label: string;
-  }) => {
-    // Find the selected location object
-    const selectedLocation = locations.find((loc) => loc._id === value);
-
-    return (
-      <FormItem>
-        <FormLabel>{label}</FormLabel>
-        <FormControl>
-          <AsyncPaginate
-            styles={{
-              menu: (base) => ({
-                ...base,
-                zIndex: 9999,
-              }),
-              menuList: (base) => ({
-                ...base,
-                zIndex: 9999,
-              }),
-              menuPortal: (base) => ({
-                ...base,
-                zIndex: 9999,
-              }),
-            }}
-            value={
-              selectedLocation
-                ? {
-                    value: selectedLocation._id,
-                    label: getStructuredAddress(selectedLocation).en,
-                  }
-                : null
-            }
-            maxMenuHeight={200}
-            onChange={(option) => onValueChange(option?.value || "")}
-            loadOptions={async (searchInputValue) => {
-              const { data } = await locationServices.getLocations(1, 999999, {
-                search: searchInputValue,
-              });
-
-              return {
-                options: data.locations.map((location: any) => ({
-                  value: location._id,
-                  label: getStructuredAddress(location).en,
-                })),
-                hasMore: data.totalPages > 1,
-              };
-            }}
-            placeholder={placeholder}
-            isClearable
-            isSearchable
-            cacheUniqs={[locations.length]}
-          />
-        </FormControl>
-      </FormItem>
-    );
-  };
-
   // Virtualized row renderer
   const rowRenderer = ({
     index,
@@ -300,12 +195,17 @@ const PerLocationEditPriceCostList = ({
               control={form.control}
               name={`locationPrices.${index}.location`}
               render={({ field }) => (
-                <LocationDropdown
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  placeholder="Select location"
-                  label="Location"
-                />
+                <FormItem>
+                  <FormLabel>Location</FormLabel>
+                  <FormControl>
+                    <AsyncLocationSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Select location"
+                      useAddressString={false}
+                    />
+                  </FormControl>
+                </FormItem>
               )}
             />
 

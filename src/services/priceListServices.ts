@@ -35,7 +35,7 @@ export interface SubActivityPrice {
       }
     | {
         subActivity: SubActivity;
-        locationPrices: LocationPrice[];
+        locationPrices?: LocationPrice[];
         pricingMethod: string;
         _id: string;
       };

@@ -11,6 +11,7 @@ import {
   FormItem,
   FormLabel,
   FormControl,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,14 @@ const PerItemEditPriceListSubActivity = ({
       resolver: zodResolver(schema),
     });
 
+    // Check if form is valid
+    const isFormValid = form.formState.isValid;
+    const hasErrors = Object.keys(form.formState.errors).length > 0;
+
+    // Check if form has changes
+    const hasFormChanges =
+      form.watch("basePrice") !== (selectedSubActivityPrice.basePrice || 0);
+
     const onSubmit = (data: z.infer<typeof schema>) => {
       dispatch(
         actUpdateSubActivityPrice({
@@ -95,13 +104,13 @@ const PerItemEditPriceListSubActivity = ({
 
     return (
       <Form {...form}>
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex gap-4 items-end">
             <FormField
               control={form.control}
               name="basePrice"
               render={({ field }) => (
-                <FormItem className="w-full">
+                <FormItem className="flex-1">
                   <FormLabel>Base Price</FormLabel>
                   <FormControl>
                     <Input
@@ -113,10 +122,25 @@ const PerItemEditPriceListSubActivity = ({
                       }
                     />
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" onClick={form.handleSubmit(onSubmit)}>
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={!isFormValid || hasErrors || !hasFormChanges}
+            >
               Save
             </Button>
           </div>

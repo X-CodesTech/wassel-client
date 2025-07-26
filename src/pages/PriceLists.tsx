@@ -69,31 +69,6 @@ const getSubActivityInfo = (subActivity: SubActivityPrice["subActivity"]) => {
 };
 
 const getSamepleItemsPerPricingMethod = (priceList: PriceList) => {
-  const getLocationsPricingRange = (priceList: PriceList) => {
-    let minPrice: number | null = null;
-    let maxPrice: number | null = null;
-    const locations = priceList.subActivityPrices?.map((item) => {
-      if (
-        item.pricingMethod === "perLocation" ||
-        item.pricingMethod === "perTrip"
-      ) {
-        return item.locationPrices;
-      }
-    });
-
-    locations?.forEach((location) => {
-      location?.forEach((price) => {
-        if (minPrice === null || price.price < minPrice) {
-          minPrice = price.price;
-        } else if (maxPrice === null || price.price > maxPrice) {
-          maxPrice = price.price;
-        }
-      });
-    });
-
-    return `${minPrice} - ${maxPrice}`;
-  };
-
   const sampleItems = priceList.subActivityPrices?.slice(0, 2);
   if (sampleItems) {
     return sampleItems.map((item) => {
@@ -103,7 +78,6 @@ const getSamepleItemsPerPricingMethod = (priceList: PriceList) => {
       ) {
         return {
           ...item,
-          basePrice: getLocationsPricingRange(priceList),
         };
       }
       return {
@@ -113,7 +87,6 @@ const getSamepleItemsPerPricingMethod = (priceList: PriceList) => {
           typeof getSubActivityInfo(item.subActivity) === "object"
             ? (getSubActivityInfo(item.subActivity) as any)?.activityNameEn
             : undefined,
-        basePrice: item.basePrice?.toFixed(2),
       };
     });
   }
@@ -289,17 +262,8 @@ export default function PriceLists() {
                                 <span className="text-gray-600 text-xs truncate">
                                   {getSubActivityName(item.subActivity)}
                                 </span>
-                                <span className="font-medium text-green-600 whitespace-nowrap">
-                                  ${item.basePrice}
-                                </span>
                               </li>
                             )
-                          )}
-                          {priceList.subActivityPrices.length > 2 && (
-                            <li className="text-blue-600 text-xs text-center py-1">
-                              + {priceList.subActivityPrices.length - 2} more
-                              items
-                            </li>
                           )}
                         </>
                       ) : (

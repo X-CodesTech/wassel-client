@@ -1,4 +1,3 @@
-import { AsyncPaginate } from "react-select-async-paginate";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -6,21 +5,20 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { useFieldArray, useForm } from "react-hook-form";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SubActivityPrice, LocationPrice } from "@/services/priceListServices";
-import { getStructuredAddress } from "@/utils/getStructuredAddress";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actUpdateSubActivityPrice } from "@/store/priceLists";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCallback, useEffect, useMemo } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { actGetLocations } from "@/store/locations";
-import locationServices from "@/services/locationServices";
+import { AsyncLocationSelect } from "@/components/ui/async-location-select";
 
 interface PerLocationEditPriceListSubActivityProps {
   selectedSubActivityPrice: SubActivityPrice;
@@ -70,9 +68,6 @@ const PerLocationEditPriceListSubActivity = ({
 
   const subActivityId = getSubActivityId(selectedSubActivityPrice.subActivity);
 
-  // Performance optimization states
-  const [searchTerm, setSearchTerm] = useState("");
-
   const schema = z.object({
     locationPrices: z.array(
       z.object({
@@ -110,10 +105,19 @@ const PerLocationEditPriceListSubActivity = ({
     name: "locationPrices",
   });
 
+  // Watch location prices for validation
+  const locationPrices = form.watch("locationPrices");
+
   // Reset form when selectedSubActivityPrice changes
   useEffect(() => {
     form.reset(defaultValues);
   }, [defaultValues]);
+
+  // Helper function to check if location is selected for perLocation pricing
+  const isLocationSelected = (index: number) => {
+    if (!locationPrices || !locationPrices[index]) return false;
+    return !!locationPrices[index].location;
+  };
 
   // Check if form is valid
   const isFormValid = form.formState.isValid;
@@ -194,142 +198,10 @@ const PerLocationEditPriceListSubActivity = ({
       });
   };
 
-  // Optimized location dropdown component
-  const LocationDropdown = ({
-    value,
-    onValueChange,
-    placeholder,
-    label,
-  }: {
-    value: string;
-    onValueChange: (value: string) => void;
-    placeholder: string;
-    label: string;
-  }) => {
-    // Find the selected location object
-    const selectedLocation = locations.find((loc) => loc._id === value);
-
-    return (
-      <FormItem>
-        <FormLabel>{label}</FormLabel>
-        <FormControl>
-          <AsyncPaginate
-            styles={{
-              menu: (base) => ({
-                ...base,
-                zIndex: 9999,
-              }),
-              menuList: (base) => ({
-                ...base,
-                zIndex: 9999,
-              }),
-              menuPortal: (base) => ({
-                ...base,
-                zIndex: 9999,
-              }),
-            }}
-            value={
-              selectedLocation
-                ? {
-                    value: selectedLocation._id,
-                    label: getStructuredAddress(selectedLocation).en,
-                  }
-                : null
-            }
-            maxMenuHeight={200}
-            onChange={(option) => onValueChange(option?.value || "")}
-            loadOptions={async (searchInputValue) => {
-              const { data } = await locationServices.getLocations(1, 999999, {
-                search: searchInputValue,
-              });
-
-              return {
-                options: data.locations.map((location: any) => ({
-                  value: location._id,
-                  label: getStructuredAddress(location).en,
-                })),
-                hasMore: data.totalPages > 1,
-              };
-            }}
-            placeholder={placeholder}
-            isClearable
-            isSearchable
-            cacheUniqs={[locations.length]}
-          />
-        </FormControl>
-      </FormItem>
-    );
-  };
-
-  // Virtualized row renderer
-  const rowRenderer = ({
-    index,
-    key,
-    style,
-  }: {
-    index: number;
-    key: string;
-    style: React.CSSProperties;
-  }) => {
-    return (
-      <div key={key} style={style} className="mb-4">
-        <div className="border rounded-lg p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Location {index + 1}</h4>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={() => removeLocationPrice(index)}
-            >
-              Remove
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name={`locationPrices.${index}.location`}
-              render={({ field }) => (
-                <LocationDropdown
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  placeholder="Select location"
-                  label="Location"
-                />
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name={`locationPrices.${index}.price`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Price</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0.00"
-                      {...field}
-                      value={field.value}
-                      onChange={(e) =>
-                        field.onChange(parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <Form {...form}>
       {selectedSubActivityPrice.pricingMethod === "perLocation" ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Edit Location Pricing</h3>
             <Button
@@ -337,7 +209,6 @@ const PerLocationEditPriceListSubActivity = ({
               variant="outline"
               size="sm"
               onClick={handleAddLocation}
-              disabled={!isFormValid || hasErrors}
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -345,14 +216,76 @@ const PerLocationEditPriceListSubActivity = ({
             </Button>
           </div>
 
-          <div className="h-96">
-            <ScrollArea className="h-full">
-              {locationPriceFields.map((field, index) => (
-                <div key={field.id}>
-                  {rowRenderer({ index, key: field.id, style: {} })}
-                </div>
-              ))}
-            </ScrollArea>
+          <div className="space-y-4">
+            {locationPriceFields.map((field, index) => (
+              <div
+                key={field.id}
+                className="flex items-center gap-3 p-3 border rounded-lg"
+              >
+                <FormField
+                  control={form.control}
+                  name={`locationPrices.${index}.location`}
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <AsyncLocationSelect
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Clear focus from any active element after location selection
+                            if (document.activeElement instanceof HTMLElement) {
+                              document.activeElement.blur();
+                            }
+                          }}
+                          placeholder="Select location"
+                          useAddressString={true}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`locationPrices.${index}.price`}
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Price</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          {...field}
+                          value={field.value}
+                          onChange={(e) =>
+                            field.onChange(parseFloat(e.target.value) || 0)
+                          }
+                          disabled={!isLocationSelected(index)}
+                          onFocus={(e) => {
+                            if (!isLocationSelected(index)) {
+                              e.target.blur();
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {locationPriceFields.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeLocationPrice(index)}
+                    className="mt-6"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
