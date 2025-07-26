@@ -1,7 +1,7 @@
 import { SubActivity } from "@/types/types";
 import { apiUrlConstants } from "./apiUrlConstants";
 import http from "./http";
-import { IActivity, IPriceList, ISubActivity } from "@/types/ModelTypes";
+import { IActivity } from "@/types/ModelTypes";
 import { TPriceBody, TPriceMethod } from "@/types/vendorPriceListEditTypes";
 export interface LocationPrice {
   location?: any;
@@ -68,9 +68,9 @@ class PriceListService {
   }
 
   async addSubActivityToPriceList(data: TPriceBody<TPriceMethod>) {
-    return await http.post<{ message?: string; data?: IPriceList }>(
+    return await http.post<{ message?: string; data?: PriceList }>(
       `${apiUrlConstants.priceLists}/${data.priceListId}/sub-activity`,
-      data
+      { ...data, subActivity: data.subActivityId }
     );
   }
 

@@ -1,8 +1,7 @@
-import React, { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { AsyncPaginate } from "react-select-async-paginate";
 import { getStructuredAddress } from "@/utils/getStructuredAddress";
-import locationServices from "@/services/locationServices";
-import { LocationsResponse, Location } from "@/types/types";
+import { Location } from "@/types/types";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actGetLocations } from "@/store/locations";
 
@@ -25,6 +24,7 @@ export function AsyncLocationSelect({
 }: AsyncLocationSelectProps) {
   const dispatch = useAppDispatch();
   const { records } = useAppSelector((state) => state.locations);
+  const [currentLabel, setCurrentLabel] = useState<string>("");
 
   // Helper function to check if location matches search term
   const locationMatchesSearch = (location: Location, searchTerm: string) => {
@@ -37,13 +37,11 @@ export function AsyncLocationSelect({
   // Load options function for AsyncPaginate
   const loadOptions = useCallback(
     async (searchInputValue: string) => {
-      // First, filter local options from Redux records
+      // Filter local options from Redux records
       const filteredLocalOptions = records
         .filter((location) => locationMatchesSearch(location, searchInputValue))
         .map((location) => ({
-          value: useAddressString
-            ? getStructuredAddress(location).en
-            : location._id,
+          value: location._id, // Always use _id as value
           label: getStructuredAddress(location).en,
         }));
 
@@ -55,29 +53,32 @@ export function AsyncLocationSelect({
         };
       }
 
-      // If no local options found, perform API search
+      // If no local options found, dispatch to Redux to fetch more locations
       try {
-        const response = await locationServices.getLocations(1, 999999, {
-          search: searchInputValue,
-        });
+        await dispatch(
+          actGetLocations({
+            page: 1,
+            limit: 999999,
+            filters: { search: searchInputValue },
+          })
+        );
 
-        const locationsData: LocationsResponse = response.data;
-
-        // Filter API results as well to ensure proper filtering
-        const filteredApiOptions = locationsData.locations
+        // After dispatch, filter the updated records
+        const updatedRecords = useAppSelector(
+          (state) => state.locations.records
+        );
+        const filteredUpdatedOptions = updatedRecords
           .filter((location) =>
             locationMatchesSearch(location, searchInputValue)
           )
           .map((location) => ({
-            value: useAddressString
-              ? getStructuredAddress(location).en
-              : location._id,
+            value: location._id, // Always use _id as value
             label: getStructuredAddress(location).en,
           }));
 
         return {
-          options: filteredApiOptions,
-          hasMore: locationsData.totalPages > 1,
+          options: filteredUpdatedOptions,
+          hasMore: false,
         };
       } catch (error) {
         console.error("Error loading locations:", error);
@@ -87,7 +88,7 @@ export function AsyncLocationSelect({
         };
       }
     },
-    [records, useAddressString]
+    [records, useAddressString, dispatch]
   );
 
   // Load initial locations only if records are empty
@@ -102,6 +103,120 @@ export function AsyncLocationSelect({
       );
     }
   }, [dispatch, records.length]);
+
+  // Update current label when value or records change
+  useEffect(() => {
+    if (!value) {
+      setCurrentLabel("");
+      return;
+    }
+
+    // First check in local records
+    const localLocation = records.find((location) =>
+      useAddressString
+        ? getStructuredAddress(location).en === value
+        : location._id === value
+    );
+
+    if (localLocation) {
+      setCurrentLabel(getStructuredAddress(localLocation).en);
+      return;
+    }
+
+    // If not found in local records, try to fetch from API
+    const fetchLocationLabel = async () => {
+      try {
+        // If using address string, check if the value is an ID or address string
+        if (useAddressString) {
+          // Check if the value looks like an ID (24 character hex string)
+          const isIdValue = /^[0-9a-fA-F]{24}$/.test(value);
+
+          if (isIdValue) {
+            // Value is an ID but we're in address string mode, try to find the location by ID
+            // First check if it's already in Redux records
+            const existingLocation = records.find((loc) => loc._id === value);
+
+            if (existingLocation) {
+              setCurrentLabel(getStructuredAddress(existingLocation).en);
+            } else {
+              // If not in Redux, dispatch to fetch it
+              try {
+                await dispatch(
+                  actGetLocations({
+                    page: 1,
+                    limit: 999999,
+                    filters: { search: value },
+                  })
+                );
+
+                // Check again in updated records
+                const updatedRecords = useAppSelector(
+                  (state) => state.locations.records
+                );
+                const foundLocation = updatedRecords.find(
+                  (loc) => loc._id === value
+                );
+
+                if (foundLocation) {
+                  setCurrentLabel(getStructuredAddress(foundLocation).en);
+                } else {
+                  setCurrentLabel(value); // Fallback to value if not found
+                }
+              } catch (error) {
+                console.error("Error fetching location for display:", error);
+                setCurrentLabel(value); // Fallback to value on error
+              }
+            }
+          } else {
+            // Value is already an address string
+            setCurrentLabel(value);
+          }
+          return;
+        }
+
+        // For ID-based selection, try to find the location by ID
+        // First check if it's already in Redux records
+        const existingLocation = records.find((loc) => loc._id === value);
+
+        if (existingLocation) {
+          setCurrentLabel(getStructuredAddress(existingLocation).en);
+        } else {
+          // If not in Redux, dispatch to fetch it
+          try {
+            await dispatch(
+              actGetLocations({
+                page: 1,
+                limit: 999999,
+                filters: { search: value },
+              })
+            );
+
+            // Check again in updated records
+            const updatedRecords = useAppSelector(
+              (state) => state.locations.records
+            );
+            const foundLocation = updatedRecords.find(
+              (loc) => loc._id === value
+            );
+
+            if (foundLocation) {
+              setCurrentLabel(getStructuredAddress(foundLocation).en);
+            } else {
+              setCurrentLabel(value); // Fallback to value if not found
+            }
+          } catch (error) {
+            console.error("Error fetching location for display:", error);
+            setCurrentLabel(value); // Fallback to value on error
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching location for display:", error);
+        setCurrentLabel(value); // Fallback to value on error
+      }
+    };
+
+    fetchLocationLabel();
+  }, [value, records, useAddressString, dispatch]);
 
   return (
     <AsyncPaginate
@@ -123,7 +238,7 @@ export function AsyncLocationSelect({
         value
           ? {
               value: value,
-              label: value, // This will be updated when we have the actual location data
+              label: currentLabel || value,
             }
           : null
       }

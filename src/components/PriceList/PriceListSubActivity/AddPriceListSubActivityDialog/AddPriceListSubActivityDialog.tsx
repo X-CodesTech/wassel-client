@@ -33,6 +33,8 @@ import { useEffect, useState } from "react";
 import subActivityServices from "@/services/subActivityServices";
 import { Trash2, Plus } from "lucide-react";
 import { AsyncLocationSelect } from "@/components/ui/async-location-select";
+import { actAddPriceListSubActivity } from "@/store/priceLists/act/actAddPriceListSubActivity";
+import { toast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   subActivity: z.string().min(1, "Sub activity is required"),
@@ -45,6 +47,7 @@ const formSchema = z.object({
         fromLocation: z.string().optional(),
         toLocation: z.string().optional(),
         price: z.number().min(0, "Price must be positive"),
+        pricingMethod: z.enum(["perItem", "perLocation", "perTrip"]),
       })
     )
     .optional(),
@@ -62,7 +65,9 @@ const AddPriceListSubActivityDialog = ({
   onOpenChange,
 }: TAddPriceListSubActivityDialogProps) => {
   const dispatch = useAppDispatch();
-  const { selectedPriceList } = useAppSelector((state) => state.priceLists);
+  const { selectedPriceList, addSubActivityLoading } = useAppSelector(
+    (state) => state.priceLists
+  );
   const priceListId = selectedPriceList?._id;
   const [subActivities, setSubActivities] = useState<
     SubActivityResponse["data"]
@@ -123,10 +128,12 @@ const AddPriceListSubActivityDialog = ({
 
     // Reset location prices based on new pricing method
     if (pricingMethod === "perLocation") {
-      form.setValue("locationPrices", [{ location: "", price: 0 }]);
+      form.setValue("locationPrices", [
+        { location: "", price: 0, pricingMethod },
+      ]);
     } else if (pricingMethod === "perTrip") {
       form.setValue("locationPrices", [
-        { fromLocation: "", toLocation: "", price: 0 },
+        { fromLocation: "", toLocation: "", price: 0, pricingMethod },
       ]);
     } else {
       form.setValue("locationPrices", []);
@@ -134,22 +141,82 @@ const AddPriceListSubActivityDialog = ({
   }, [pricingMethod, form]);
 
   const handleSubmit = (data: TFormSchema) => {
-    dispatch(
-      actAddPriceListSubActivity({
-        priceListId,
-        subActivityId: data.subActivity,
-        pricingMethod: data.pricingMethod,
+    // Prepare the data based on pricing method
+    const submitData: any = {
+      pricingMethod: data.pricingMethod,
+      priceListId: priceListId || "",
+      subActivityId: data.subActivity,
+    };
+
+    // Add pricing method specific data
+    if (data.pricingMethod === "perItem") {
+      submitData.basePrice = data.basePrice;
+    } else if (
+      data.pricingMethod === "perLocation" ||
+      data.pricingMethod === "perTrip"
+    ) {
+      submitData.locationPrices = data.locationPrices?.filter((item) => {
+        if (data.pricingMethod === "perLocation") {
+          return item.location && item.price > 0;
+        } else {
+          return item.fromLocation && item.toLocation && item.price > 0;
+        }
+      });
+    }
+
+    dispatch(actAddPriceListSubActivity(submitData))
+      .unwrap()
+      .then((response) => {
+        if (response.data) {
+          toast({
+            title: "Success",
+            description: "Sub-activity added to price list successfully",
+          });
+          onOpenChange(false);
+          // Reset form
+          form.reset();
+        }
       })
-    );
+      .catch((error) => {
+        if (error.message) {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to add sub activity to price list",
+            variant: "destructive",
+          });
+        }
+      });
   };
+
+  // Reset form when modal is closed
+  useEffect(() => {
+    if (!open) {
+      form.reset();
+    }
+  }, [open, form]);
 
   const onSubmit = form.handleSubmit(handleSubmit);
 
   const addLocationPrice = () => {
     if (pricingMethod === "perLocation") {
-      appendLocationPrice({ location: "", price: 0 });
+      appendLocationPrice({
+        location: "",
+        pricingMethod,
+        price: 0,
+      });
     } else if (pricingMethod === "perTrip") {
-      appendLocationPrice({ fromLocation: "", toLocation: "", price: 0 });
+      appendLocationPrice({
+        fromLocation: "",
+        toLocation: "",
+        price: 0,
+        pricingMethod,
+      });
     }
   };
 
@@ -503,8 +570,11 @@ const AddPriceListSubActivityDialog = ({
           </Form>
         </DialogDescription>
         <DialogFooter>
-          <Button onClick={onSubmit} disabled={!isFormValid()}>
-            Add
+          <Button
+            onClick={onSubmit}
+            disabled={!isFormValid() || addSubActivityLoading}
+          >
+            {addSubActivityLoading ? "Adding..." : "Add"}
           </Button>
         </DialogFooter>
       </DialogContent>

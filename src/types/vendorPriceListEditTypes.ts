@@ -13,7 +13,7 @@ export type TPriceMethod = "perLocation" | "perTrip" | "perItem";
 interface IMultipleOptions {
   pricingMethod: TPriceMethod;
   priceListId: string;
-  subActivityId?: string;
+  subActivityId: string;
 }
 
 export interface IPerLocation extends IMultipleOptions {
@@ -28,7 +28,7 @@ export interface IPerTrip extends IMultipleOptions {
 
 export interface IPerItem extends IMultipleOptions {
   pricingMethod: "perItem";
-  cost: number;
+  basePrice: number;
 }
 
 export type TPriceBody<T extends TPriceMethod> = T extends "perItem"
