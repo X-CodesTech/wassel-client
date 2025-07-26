@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAppSelector } from "@/hooks/useAppSelector";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -61,6 +61,7 @@ const AddPriceListSubActivityDialog = ({
   open,
   onOpenChange,
 }: TAddPriceListSubActivityDialogProps) => {
+  const dispatch = useAppDispatch();
   const { selectedPriceList } = useAppSelector((state) => state.priceLists);
   const priceListId = selectedPriceList?._id;
   const [subActivities, setSubActivities] = useState<
@@ -133,8 +134,13 @@ const AddPriceListSubActivityDialog = ({
   }, [pricingMethod, form]);
 
   const handleSubmit = (data: TFormSchema) => {
-    console.log(data);
-    onOpenChange(false);
+    dispatch(
+      actAddPriceListSubActivity({
+        priceListId,
+        subActivityId: data.subActivity,
+        pricingMethod: data.pricingMethod,
+      })
+    );
   };
 
   const onSubmit = form.handleSubmit(handleSubmit);
