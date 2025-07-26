@@ -96,17 +96,20 @@ const priceListsSlice = createSlice({
       })
       .addCase(
         actUpdatePriceList.fulfilled,
-        (state, action: PayloadAction<PriceList>) => {
+        (
+          state,
+          action: PayloadAction<{ data: PriceList; message: string }>
+        ) => {
           state.loading = false;
           const index = state.records.findIndex(
-            (priceList) => priceList._id === action.payload._id
+            (priceList) => priceList._id === action.payload.data._id
           );
           if (index !== -1) {
-            state.records[index] = action.payload;
+            state.records[index] = action.payload.data;
           }
           // Update selected price list if it's the same one
-          if (state.selectedPriceList?._id === action.payload._id) {
-            state.selectedPriceList = action.payload;
+          if (state.selectedPriceList?._id === action.payload.data._id) {
+            state.selectedPriceList = action.payload.data;
           }
         }
       )
