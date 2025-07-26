@@ -263,7 +263,11 @@ export default function PriceLists() {
       )}
 
       {/* Add Price List Modal */}
-      <AddPriceListDialog open={modalOpen} onOpenChange={onOpenChange} />
+      <AddPriceListDialog
+        open={modalOpen}
+        onOpenChange={onOpenChange}
+        isEdit={editingPriceList?._id ? true : false}
+      />
 
       {/* Edit Price List Modal */}
       <EditPriceListDialog
