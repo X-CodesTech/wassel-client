@@ -26,6 +26,27 @@ interface PerTripEditPriceListSubActivityProps {
   priceListId: string;
 }
 
+// per‐trip schema for edit
+const perTripEditSchema = z
+  .object({
+    pricingMethod: z.literal("perTrip"),
+    locationPrices: z
+      .array(
+        z
+          .object({
+            fromLocation: z.string().min(1, "From location is required"),
+            toLocation: z.string().min(1, "To location is required"),
+            pricingMethod: z.literal("perTrip"),
+            price: z.number().min(0, "Price must be positive"),
+          })
+          .strict()
+      )
+      .min(1, "At least one trip price is required"),
+  })
+  .strict();
+
+type TPerTripEditSchema = z.infer<typeof perTripEditSchema>;
+
 const PerTripEditPriceListSubActivity = ({
   selectedSubActivityPrice,
   onOpenChange,
@@ -67,32 +88,24 @@ const PerTripEditPriceListSubActivity = ({
     }
   }, [dispatch, locations?.length]);
 
-  const schema = z.object({
-    locationPrices: z.array(
-      z.object({
-        fromLocation: z.string().min(1, "From location is required"),
-        toLocation: z.string().min(1, "To location is required"),
-        price: z.number().min(0, "Price must be positive"),
-      })
-    ),
-  });
-
   // Memoized default values to prevent unnecessary re-renders
   const defaultValues = useMemo(
     () => ({
+      pricingMethod: "perTrip" as const,
       locationPrices:
         selectedSubActivityPrice.locationPrices?.map((locationPrice) => ({
           fromLocation: getLocationId(locationPrice.fromLocation),
           toLocation: getLocationId(locationPrice.toLocation),
+          pricingMethod: "perTrip" as const,
           price: locationPrice.price,
         })) || [],
     }),
     [selectedSubActivityPrice.locationPrices]
   );
 
-  const form = useForm<z.infer<typeof schema>>({
+  const form = useForm<TPerTripEditSchema>({
     defaultValues,
-    resolver: zodResolver(schema),
+    resolver: zodResolver(perTripEditSchema),
     mode: "all", // Enable real-time validation
     reValidateMode: "onChange",
   });
@@ -155,11 +168,12 @@ const PerTripEditPriceListSubActivity = ({
     appendLocationPrice({
       fromLocation: "",
       toLocation: "",
+      pricingMethod: "perTrip" as const,
       price: 0,
     });
   }, [appendLocationPrice]);
 
-  const onSubmit = (data: z.infer<typeof schema>) => {
+  const onSubmit = (data: TPerTripEditSchema) => {
     // Transform the data to match the expected API structure
     const transformedLocationPrices: LocationPrice[] = data.locationPrices.map(
       (lp) => ({
@@ -215,6 +229,7 @@ const PerTripEditPriceListSubActivity = ({
               variant="outline"
               size="sm"
               onClick={handleAddTrip}
+              disabled={!isFormValid || hasErrors}
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />

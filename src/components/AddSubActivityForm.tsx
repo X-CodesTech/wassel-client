@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Activity } from "@/types/types";
-import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { useAppSelector } from "@/hooks/useAppSelector";
 import { subActivityServices } from "@/services";
 
 // Form validation schema matching the new design
@@ -60,12 +60,9 @@ export default function AddSubActivityForm({
   parentActivity,
   onClose,
 }: AddSubActivityFormProps) {
-  const dispatch = useAppDispatch();
-  const {
-    records: transactionTypes,
-    loading: transactionTypesLoading,
-    error: transactionTypesError,
-  } = useAppSelector((state) => state.transactionTypes);
+  const { records: transactionTypes } = useAppSelector(
+    (state) => state.transactionTypes
+  );
 
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);

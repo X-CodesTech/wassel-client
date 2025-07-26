@@ -589,7 +589,6 @@ export default function PriceListDetails() {
       <AddPriceListSubActivityDialog
         open={addItemDialogOpen}
         onOpenChange={setAddItemDialogOpen}
-        subActivities={priceList.subActivityPrices}
       />
     </div>
   );

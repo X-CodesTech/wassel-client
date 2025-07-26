@@ -22,6 +22,16 @@ interface PerItemEditPriceListSubActivityProps {
   priceListId: string;
 }
 
+// per‐item schema for edit
+const perItemEditSchema = z
+  .object({
+    pricingMethod: z.literal("perItem"),
+    basePrice: z.number().min(0, "Base price must be positive"),
+  })
+  .strict();
+
+type TPerItemEditSchema = z.infer<typeof perItemEditSchema>;
+
 const PerItemEditPriceListSubActivity = ({
   selectedSubActivityPrice,
   onOpenChange,
@@ -48,15 +58,13 @@ const PerItemEditPriceListSubActivity = ({
   const pricingMethod = selectedSubActivityPrice.pricingMethod;
 
   if (pricingMethod === "perItem") {
-    const schema = z.object({
-      basePrice: z.number().min(0, "Base price must be positive"),
-    });
-
-    const form = useForm<z.infer<typeof schema>>({
+    const form = useForm<TPerItemEditSchema>({
       defaultValues: {
+        pricingMethod: "perItem" as const,
         basePrice: selectedSubActivityPrice.basePrice || 0,
       },
-      resolver: zodResolver(schema),
+      resolver: zodResolver(perItemEditSchema),
+      mode: "all",
     });
 
     // Check if form is valid
@@ -67,7 +75,7 @@ const PerItemEditPriceListSubActivity = ({
     const hasFormChanges =
       form.watch("basePrice") !== (selectedSubActivityPrice.basePrice || 0);
 
-    const onSubmit = (data: z.infer<typeof schema>) => {
+    const onSubmit = (data: TPerItemEditSchema) => {
       dispatch(
         actUpdateSubActivityPrice({
           priceListId,

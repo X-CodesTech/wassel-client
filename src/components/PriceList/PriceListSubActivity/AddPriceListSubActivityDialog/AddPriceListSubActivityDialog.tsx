@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import {
   Form,
@@ -35,25 +34,7 @@ import { Trash2, Plus } from "lucide-react";
 import { AsyncLocationSelect } from "@/components/ui/async-location-select";
 import { actAddPriceListSubActivity } from "@/store/priceLists/act/actAddPriceListSubActivity";
 import { toast } from "@/hooks/use-toast";
-
-const formSchema = z.object({
-  subActivity: z.string().min(1, "Sub activity is required"),
-  pricingMethod: z.enum(["perItem", "perLocation", "perTrip"]),
-  basePrice: z.number().min(0, "Base price must be positive"),
-  locationPrices: z
-    .array(
-      z.object({
-        location: z.string().optional(),
-        fromLocation: z.string().optional(),
-        toLocation: z.string().optional(),
-        price: z.number().min(0, "Price must be positive"),
-        pricingMethod: z.enum(["perItem", "perLocation", "perTrip"]),
-      })
-    )
-    .optional(),
-});
-
-type TFormSchema = z.infer<typeof formSchema>;
+import { formSchema, TFormSchema } from "../validation";
 
 type TAddPriceListSubActivityDialogProps = {
   open: boolean;
@@ -78,10 +59,10 @@ const AddPriceListSubActivityDialog = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       subActivity: "",
-      pricingMethod: "perItem",
+      pricingMethod: "perItem" as const,
       basePrice: 0,
-      locationPrices: [],
     },
+    mode: "all",
   });
 
   const pricingMethod = form.watch("pricingMethod");
@@ -126,17 +107,31 @@ const AddPriceListSubActivityDialog = ({
     // Reset sub activity when pricing method changes
     form.setValue("subActivity", "");
 
-    // Reset location prices based on new pricing method
-    if (pricingMethod === "perLocation") {
+    // Reset form based on new pricing method to match the discriminated union schema
+    if (pricingMethod === "perItem") {
+      // perItem should only have basePrice, no locationPrices
+      form.setValue("basePrice", 0);
+      // Remove locationPrices field entirely for perItem
+      form.unregister("locationPrices");
+    } else if (pricingMethod === "perLocation") {
+      // perLocation should have locationPrices with location field
       form.setValue("locationPrices", [
-        { location: "", price: 0, pricingMethod },
+        { location: "", price: 0, pricingMethod: "perLocation" as const },
       ]);
+      // Remove basePrice field for perLocation
+      form.unregister("basePrice");
     } else if (pricingMethod === "perTrip") {
+      // perTrip should have locationPrices with fromLocation and toLocation fields
       form.setValue("locationPrices", [
-        { fromLocation: "", toLocation: "", price: 0, pricingMethod },
+        {
+          fromLocation: "",
+          toLocation: "",
+          price: 0,
+          pricingMethod: "perTrip" as const,
+        },
       ]);
-    } else {
-      form.setValue("locationPrices", []);
+      // Remove basePrice field for perTrip
+      form.unregister("basePrice");
     }
   }, [pricingMethod, form]);
 
@@ -157,9 +152,18 @@ const AddPriceListSubActivityDialog = ({
     ) {
       submitData.locationPrices = data.locationPrices?.filter((item) => {
         if (data.pricingMethod === "perLocation") {
-          return item.location && item.price > 0;
+          return (
+            "location" in item && item.location && item.price && item.price > 0
+          );
         } else {
-          return item.fromLocation && item.toLocation && item.price > 0;
+          return (
+            "fromLocation" in item &&
+            "toLocation" in item &&
+            item.fromLocation &&
+            item.toLocation &&
+            item.price &&
+            item.price > 0
+          );
         }
       });
     }
@@ -207,61 +211,42 @@ const AddPriceListSubActivityDialog = ({
     if (pricingMethod === "perLocation") {
       appendLocationPrice({
         location: "",
-        pricingMethod,
+        pricingMethod: "perLocation" as const,
         price: 0,
       });
     } else if (pricingMethod === "perTrip") {
       appendLocationPrice({
         fromLocation: "",
         toLocation: "",
+        pricingMethod: "perTrip" as const,
         price: 0,
-        pricingMethod,
       });
     }
+    form.trigger();
   };
 
   // Helper function to check if location is selected for perLocation pricing
   const isLocationSelected = (index: number) => {
     if (!locationPrices || !locationPrices[index]) return false;
-    return !!locationPrices[index].location;
+    const item = locationPrices[index];
+    if ("location" in item) {
+      return !!item.location;
+    }
+    return false;
   };
 
   // Helper function to check if both locations are selected for perTrip pricing
   const isTripLocationsSelected = (index: number) => {
     if (!locationPrices || !locationPrices[index]) return false;
-    return !!(
-      locationPrices[index].fromLocation && locationPrices[index].toLocation
-    );
-  };
-
-  // Check if form is valid
-  const isFormValid = () => {
-    const values = form.getValues();
-
-    // Check if sub activity is selected
-    if (!values.subActivity) return false;
-
-    // Check pricing method specific validation
-    if (values.pricingMethod === "perItem") {
-      return values.basePrice >= 0;
-    } else if (values.pricingMethod === "perLocation") {
-      // Check if at least one location has both location and price
-      return (
-        locationPrices &&
-        locationPrices.some((item) => item.location && item.price > 0)
-      );
-    } else if (values.pricingMethod === "perTrip") {
-      // Check if at least one trip has both locations and price
-      return (
-        locationPrices &&
-        locationPrices.some(
-          (item) => item.fromLocation && item.toLocation && item.price > 0
-        )
-      );
+    const item = locationPrices[index];
+    if ("fromLocation" in item && "toLocation" in item) {
+      return !!item.fromLocation && !!item.toLocation;
     }
-
     return false;
   };
+
+  const isFormValid =
+    Object.keys(form.formState.errors).length === 0 && form.formState.isValid;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -389,6 +374,7 @@ const AddPriceListSubActivityDialog = ({
                         type="button"
                         variant="outline"
                         size="sm"
+                        disabled={!isFormValid || addSubActivityLoading}
                         onClick={addLocationPrice}
                         className="flex items-center gap-2"
                       >
@@ -429,7 +415,6 @@ const AddPriceListSubActivityDialog = ({
                                         useAddressString={true}
                                       />
                                     </FormControl>
-                                    <FormMessage />
                                   </FormItem>
                                 )}
                               />
@@ -514,7 +499,6 @@ const AddPriceListSubActivityDialog = ({
                                         useAddressString={true}
                                       />
                                     </FormControl>
-                                    <FormMessage />
                                   </FormItem>
                                 )}
                               />
@@ -544,7 +528,6 @@ const AddPriceListSubActivityDialog = ({
                                         }}
                                       />
                                     </FormControl>
-                                    <FormMessage />
                                   </FormItem>
                                 )}
                               />
@@ -572,7 +555,7 @@ const AddPriceListSubActivityDialog = ({
         <DialogFooter>
           <Button
             onClick={onSubmit}
-            disabled={!isFormValid() || addSubActivityLoading}
+            disabled={!isFormValid || addSubActivityLoading}
           >
             {addSubActivityLoading ? "Adding..." : "Add"}
           </Button>

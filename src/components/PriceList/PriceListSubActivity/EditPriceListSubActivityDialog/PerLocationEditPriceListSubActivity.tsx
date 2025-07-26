@@ -26,6 +26,26 @@ interface PerLocationEditPriceListSubActivityProps {
   priceListId: string;
 }
 
+// per‐location schema for edit
+const perLocationEditSchema = z
+  .object({
+    pricingMethod: z.literal("perLocation"),
+    locationPrices: z
+      .array(
+        z
+          .object({
+            location: z.string().min(1, "Location is required"),
+            pricingMethod: z.literal("perLocation"),
+            price: z.number().min(0, "Price must be positive"),
+          })
+          .strict()
+      )
+      .min(1, "At least one location price is required"),
+  })
+  .strict();
+
+type TPerLocationEditSchema = z.infer<typeof perLocationEditSchema>;
+
 const PerLocationEditPriceListSubActivity = ({
   selectedSubActivityPrice,
   onOpenChange,
@@ -68,30 +88,23 @@ const PerLocationEditPriceListSubActivity = ({
 
   const subActivityId = getSubActivityId(selectedSubActivityPrice.subActivity);
 
-  const schema = z.object({
-    locationPrices: z.array(
-      z.object({
-        location: z.string().min(1, "Location is required"),
-        price: z.number().min(0, "Price must be positive"),
-      })
-    ),
-  });
-
   // Memoized default values to prevent unnecessary re-renders
   const defaultValues = useMemo(
     () => ({
+      pricingMethod: "perLocation" as const,
       locationPrices:
         selectedSubActivityPrice.locationPrices?.map((locationPrice) => ({
           location: getLocationId(locationPrice.location),
+          pricingMethod: "perLocation" as const,
           price: locationPrice.price,
         })) || [],
     }),
     [selectedSubActivityPrice.locationPrices]
   );
 
-  const form = useForm<z.infer<typeof schema>>({
+  const form = useForm<TPerLocationEditSchema>({
     defaultValues,
-    resolver: zodResolver(schema),
+    resolver: zodResolver(perLocationEditSchema),
     mode: "all", // Enable real-time validation
     reValidateMode: "onChange",
   });
@@ -150,11 +163,12 @@ const PerLocationEditPriceListSubActivity = ({
   const handleAddLocation = useCallback(() => {
     appendLocationPrice({
       location: "",
+      pricingMethod: "perLocation" as const,
       price: 0,
     });
   }, [appendLocationPrice]);
 
-  const onSubmit = (data: z.infer<typeof schema>) => {
+  const onSubmit = (data: TPerLocationEditSchema) => {
     // Transform the data to match the expected API structure
     const transformedLocationPrices: LocationPrice[] = data.locationPrices.map(
       (lp) => ({
@@ -208,6 +222,7 @@ const PerLocationEditPriceListSubActivity = ({
               type="button"
               variant="outline"
               size="sm"
+              disabled={!isFormValid || hasErrors}
               onClick={handleAddLocation}
               className="flex items-center gap-2"
             >
