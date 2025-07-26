@@ -1,12 +1,15 @@
 import { SubActivity } from "@/types/types";
 import { apiUrlConstants } from "./apiUrlConstants";
 import http from "./http";
+import { IActivity } from "@/types/ModelTypes";
 export interface LocationPrice {
-  location: string;
+  location?: any;
+  fromLocation?: any;
+  toLocation?: any;
   price: number;
 }
 
-export type PricingMethod = "perItem" | "perLocation";
+export type PricingMethod = "perItem" | "perLocation" | "perTrip";
 
 export interface SubActivityPrice {
   _id?: string;
@@ -15,7 +18,7 @@ export interface SubActivityPrice {
     | {
         _id: string;
         transactionType: any;
-        activity: any;
+        activity: IActivity;
         financeEffect: string;
         pricingMethod: string;
         portalItemNameEn: string;
@@ -81,6 +84,22 @@ class PriceListService {
   ) {
     return await http.delete(
       `${apiUrlConstants.priceLists}/${priceListId}/sub-activity/${subActivityId}`
+    );
+  }
+
+  async updateSubActivityPrice(
+    priceListId: string,
+    subActivityId: string,
+    data: {
+      basePrice?: number;
+      locationPrices?: LocationPrice[];
+    }
+  ) {
+    return await http.put(
+      `${apiUrlConstants.priceLists}/${priceListId}/sub-activity/${subActivityId}`,
+      {
+        ...data,
+      }
     );
   }
 

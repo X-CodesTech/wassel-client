@@ -8,16 +8,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   DollarSign,
@@ -28,10 +18,12 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import {
   actGetPriceListById,
-  actDeletePriceList,
   clearError,
   clearSelectedPriceList,
 } from "@/store/priceLists";
@@ -40,6 +32,21 @@ import { SubActivityPrice } from "@/services/priceListServices";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import React from "react";
 import DeletePriceListSubActivityDialog from "@/components/DeletePriceListSubActivityDialog";
+import DeleteSubActivityConfirmationDialog from "@/components/PriceList/PriceListSubActivity/DeleteSubActivityConfirmationDialog";
+import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
+
+// Form schema for editing price list
+const editPriceListFormSchema = z.object({
+  name: z.string().min(1, "Price list name (English) is required"),
+  nameAr: z.string().min(1, "Price list name (Arabic) is required"),
+  description: z.string().optional(),
+  descriptionAr: z.string().optional(),
+  effectiveFrom: z.string().min(1, "Effective from date is required"),
+  effectiveTo: z.string().min(1, "Effective to date is required"),
+  isActive: z.boolean(),
+});
+
+type EditPriceListFormValues = z.infer<typeof editPriceListFormSchema>;
 
 export default function PriceListDetails() {
   const [match, params] = useRoute<{ id: string }>("/price-lists/:id");
@@ -47,6 +54,7 @@ export default function PriceListDetails() {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [deleteSubActivityDialogOpen, setDeleteSubActivityDialogOpen] =
     useState(false);
@@ -58,6 +66,20 @@ export default function PriceListDetails() {
     loading,
     error,
   } = useAppSelector((state) => state.priceLists);
+
+  // Initialize edit form
+  const editForm = useForm<EditPriceListFormValues>({
+    resolver: zodResolver(editPriceListFormSchema),
+    defaultValues: {
+      name: "",
+      nameAr: "",
+      description: "",
+      descriptionAr: "",
+      effectiveFrom: "",
+      effectiveTo: "",
+      isActive: true,
+    },
+  });
 
   // Fetch price list data when component mounts
   useEffect(() => {
@@ -86,29 +108,34 @@ export default function PriceListDetails() {
     }
   }, [error, toast, dispatch]);
 
-  const handleDelete = async () => {
-    if (priceList?._id) {
-      try {
-        await dispatch(actDeletePriceList(priceList._id)).unwrap();
-        setDeleteDialogOpen(false);
-        toast({
-          title: "Price List Deleted",
-          description: `"${priceList.name}" has been deleted successfully.`,
-        });
-        setLocation("/price-lists");
-      } catch (error) {
-        console.error("Failed to delete price list:", error);
-      }
+  // Populate edit form when price list data is available
+  useEffect(() => {
+    if (priceList && editDialogOpen) {
+      // Format dates for datetime-local input (YYYY-MM-DDTHH:mm)
+      const formatDateForInput = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toISOString().slice(0, 16);
+      };
+
+      editForm.reset({
+        name: priceList.name,
+        nameAr: priceList.nameAr,
+        description: priceList.description || "",
+        descriptionAr: priceList.descriptionAr || "",
+        effectiveFrom: formatDateForInput(priceList.effectiveFrom),
+        effectiveTo: formatDateForInput(priceList.effectiveTo),
+        isActive: priceList.isActive,
+      });
     }
-  };
+  }, [priceList, editDialogOpen, editForm]);
 
   const handleEdit = () => {
-    // For now, we'll just show a toast message
-    // In the future, this could navigate to an edit page
-    toast({
-      title: "Edit Feature",
-      description: "Edit functionality will be implemented soon.",
-    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubActivity = (subActivityPrice: SubActivityPrice) => {
+    setSelectedSubActivityPrice(subActivityPrice);
+    setEditDialogOpen(true);
   };
 
   const handleDeleteSubActivity = (subActivityPrice: SubActivityPrice) => {
@@ -402,7 +429,7 @@ export default function PriceListDetails() {
                 variant="outline"
                 size="icon"
                 className="text-blue-500"
-                onClick={handleEdit}
+                onClick={() => handleEditSubActivity(item)}
               >
                 <Edit className="w-3 h-3" />
               </Button>
@@ -543,34 +570,18 @@ export default function PriceListDetails() {
       </Card>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the price list "{priceList.name}".
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteSubActivityConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      />
+
+      {/* Edit Price List Dialog */}
+      <EditPriceListSubActivityDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        selectedSubActivityPrice={selectedSubActivityPrice as SubActivityPrice}
+        priceListId={priceList._id || ""}
+      />
 
       {/* Delete Sub-Activity Dialog */}
       {selectedSubActivityPrice && (
