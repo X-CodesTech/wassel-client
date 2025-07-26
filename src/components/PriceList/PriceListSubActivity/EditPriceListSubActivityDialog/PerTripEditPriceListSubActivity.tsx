@@ -169,8 +169,6 @@ const PerTripEditPriceListSubActivity = ({
     return filteredLocations.slice(startIndex, endIndex);
   }, [filteredLocations, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredLocations.length / itemsPerPage);
-
   // Debounced search handler
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);

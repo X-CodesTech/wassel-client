@@ -26,7 +26,6 @@ import { z } from "zod";
 import { toast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actUpdatePriceList } from "@/store/priceLists";
-import { ISubActivity } from "@/types/ModelTypes";
 
 // Form schema for price list
 const priceListFormSchema = z.object({
@@ -136,10 +135,6 @@ const EditPriceListDialog = ({
       });
     }
   );
-
-  const getSubActivityName = (subActivity: ISubActivity) => {
-    return subActivity?.portalItemNameEn || "Unknown Activity";
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -279,42 +274,6 @@ const EditPriceListDialog = ({
                   </FormItem>
                 )}
               />
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium mb-2">
-                Current Sub-Activities and Pricing
-              </h4>
-              <div className="border rounded-md p-3 max-h-[300px] overflow-y-auto">
-                {priceList &&
-                priceList.subActivityPrices &&
-                priceList.subActivityPrices.length > 0 ? (
-                  <div className="space-y-2">
-                    {priceList.subActivityPrices.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between items-center p-2 bg-gray-50 rounded"
-                      >
-                        <span className="text-sm">
-                          {getSubActivityName(item.subActivity as ISubActivity)}
-                        </span>
-                        <div className="flex gap-4">
-                          <span className="font-medium text-green-600">
-                            Price: ${item.basePrice?.toFixed(2) || "0.00"}
-                          </span>
-                          <span className="font-medium text-blue-600">
-                            Cost: ${item.cost?.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-600">
-                    No sub-activities configured for this price list.
-                  </p>
-                )}
-              </div>
             </div>
 
             <DialogFooter>
