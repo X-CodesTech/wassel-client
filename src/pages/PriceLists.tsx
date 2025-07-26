@@ -180,7 +180,8 @@ export default function PriceLists() {
 
             if (typeof subActivityPrice.subActivity !== "string") {
               // Create a SubActivity object from the embedded sub-activity data
-              const embeddedSubActivity = subActivityPrice.subActivity;
+              const embeddedSubActivity =
+                subActivityPrice.subActivity as unknown as SubActivity;
               allSubActivities.set(subActivityId, {
                 _id: embeddedSubActivity._id,
                 activity: embeddedSubActivity.activity?._id || "",
@@ -717,7 +718,8 @@ export default function PriceLists() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Bilingual Price List</DialogTitle>
+            Add New Bilingual Price List
+            <DialogTitle></DialogTitle>
             <DialogDescription>
               Create a comprehensive price list with English and Arabic support,
               date ranges, and flexible pricing methods.

@@ -47,27 +47,27 @@ export default function SideNav({ collapsed, onToggleCollapse }: SideNavProps) {
       icon: <List className="h-5 w-5" />,
       active: location === "/orders",
     },
-    {
-      name: "Shipments",
-      href: "/shipments",
-      icon: <Package className="h-5 w-5" />,
-      active: location === "/shipments",
-    },
-    {
-      name: "Shipment list",
-      href: "/shipment-list",
-      icon: <List className="h-5 w-5" />,
-      active: location === "/shipment-list",
-    },
+    // {
+    //   name: "Shipments",
+    //   href: "/shipments",
+    //   icon: <Package className="h-5 w-5" />,
+    //   active: location === "/shipments",
+    // },
+    // {
+    //   name: "Shipment list",
+    //   href: "/shipment-list",
+    //   icon: <List className="h-5 w-5" />,
+    //   active: location === "/shipment-list",
+    // },
   ];
 
   const settingsItems = [
-    {
-      name: "Users",
-      href: "/users",
-      icon: <Users className="h-5 w-5" />,
-      active: location === "/users",
-    },
+    // {
+    //   name: "Users",
+    //   href: "/users",
+    //   icon: <Users className="h-5 w-5" />,
+    //   active: location === "/users",
+    // },
     {
       name: "Pricelists",
       href: "/price-lists",

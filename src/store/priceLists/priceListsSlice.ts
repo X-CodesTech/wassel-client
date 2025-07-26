@@ -75,9 +75,12 @@ const priceListsSlice = createSlice({
       })
       .addCase(
         actAddPriceList.fulfilled,
-        (state, action: PayloadAction<PriceList>) => {
+        (
+          state,
+          action: PayloadAction<{ data: PriceList; message: string }>
+        ) => {
           state.loading = false;
-          state.records.push(action.payload);
+          state.records.push(action.payload.data);
         }
       )
       .addCase(actAddPriceList.rejected, (state, action) => {

@@ -1,6 +1,7 @@
 import { SubActivity } from "@/types/types";
 import { apiUrlConstants } from "./apiUrlConstants";
 import http from "./http";
+import { IActivity } from "@/types/ModelTypes";
 export interface LocationPrice {
   location: string;
   price: number;
@@ -15,7 +16,7 @@ export interface SubActivityPrice {
     | {
         _id: string;
         transactionType: any;
-        activity: any;
+        activity: IActivity;
         financeEffect: string;
         pricingMethod: string;
         portalItemNameEn: string;
