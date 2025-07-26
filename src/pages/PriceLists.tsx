@@ -14,10 +14,111 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actGetPriceLists, clearError } from "@/store/priceLists";
 import { useLocation } from "wouter";
-import { PriceList } from "@/services/priceListServices";
+import { PriceList, SubActivityPrice } from "@/services/priceListServices";
 import EditPriceListDialog from "@/components/PriceList/EditPriceListDialog";
 import DeletePriceListDialog from "@/components/PriceList/DeletePriceListDialog";
 import AddPriceListDialog from "@/components/PriceList/AddPriceListDialog";
+
+// Guard function to safely extract portalItemNameEn from subActivity
+const getSubActivityName = (
+  subActivity: SubActivityPrice["subActivity"]
+): string => {
+  if (typeof subActivity === "string") {
+    return "Unknown Item";
+  }
+
+  if ("portalItemNameEn" in subActivity) {
+    return subActivity.portalItemNameEn;
+  }
+
+  if (
+    "subActivity" in subActivity &&
+    typeof subActivity.subActivity === "object" &&
+    subActivity.subActivity
+  ) {
+    return subActivity.subActivity.portalItemNameEn || "Unknown Item";
+  }
+
+  return "Unknown Item";
+};
+
+// Guard function to safely extract activity information
+const getSubActivityInfo = (subActivity: SubActivityPrice["subActivity"]) => {
+  if (typeof subActivity === "string") {
+    return null;
+  }
+
+  if (
+    "activity" in subActivity &&
+    subActivity.activity &&
+    typeof subActivity.activity === "object"
+  ) {
+    return subActivity.activity;
+  }
+
+  if (
+    "subActivity" in subActivity &&
+    typeof subActivity.subActivity === "object" &&
+    subActivity.subActivity &&
+    "activity" in subActivity.subActivity
+  ) {
+    return subActivity.subActivity.activity;
+  }
+
+  return null;
+};
+
+const getSamepleItemsPerPricingMethod = (priceList: PriceList) => {
+  const getLocationsPricingRange = (priceList: PriceList) => {
+    let minPrice: number | null = null;
+    let maxPrice: number | null = null;
+    const locations = priceList.subActivityPrices?.map((item) => {
+      if (
+        item.pricingMethod === "perLocation" ||
+        item.pricingMethod === "perTrip"
+      ) {
+        return item.locationPrices;
+      }
+    });
+
+    locations?.forEach((location) => {
+      location?.forEach((price) => {
+        if (minPrice === null || price.price < minPrice) {
+          minPrice = price.price;
+        } else if (maxPrice === null || price.price > maxPrice) {
+          maxPrice = price.price;
+        }
+      });
+    });
+
+    return `${minPrice} - ${maxPrice}`;
+  };
+
+  const sampleItems = priceList.subActivityPrices?.slice(0, 2);
+  if (sampleItems) {
+    return sampleItems.map((item) => {
+      if (
+        item.pricingMethod === "perLocation" ||
+        item.pricingMethod === "perTrip"
+      ) {
+        return {
+          ...item,
+          basePrice: getLocationsPricingRange(priceList),
+        };
+      }
+      return {
+        ...item,
+        activityNameEn:
+          getSubActivityInfo(item.subActivity) &&
+          typeof getSubActivityInfo(item.subActivity) === "object"
+            ? (getSubActivityInfo(item.subActivity) as any)?.activityNameEn
+            : undefined,
+        basePrice: item.basePrice?.toFixed(2),
+      };
+    });
+  }
+  return [];
+};
 
 export default function PriceLists() {
   const dispatch = useAppDispatch();
@@ -161,7 +262,8 @@ export default function PriceLists() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <div className="text-xs sm:text-sm font-medium text-gray-500">
-                      {priceList.subActivityPrices?.length > 0
+                      {priceList.subActivityPrices &&
+                      priceList.subActivityPrices.length > 0
                         ? priceList.subActivityPrices.length + " items"
                         : "No items added yet"}
                     </div>
@@ -178,20 +280,21 @@ export default function PriceLists() {
                       {priceList.subActivityPrices &&
                       priceList.subActivityPrices.length > 0 ? (
                         <>
-                          {priceList.subActivityPrices
-                            .slice(0, 2)
-                            .map((item, index) => (
+                          {getSamepleItemsPerPricingMethod(priceList).map(
+                            (item, index) => (
                               <li
                                 key={index}
                                 className="flex justify-between items-center gap-2 p-2 bg-gray-50 rounded"
                               >
+                                <span className="text-gray-600 text-xs truncate">
+                                  {getSubActivityName(item.subActivity)}
+                                </span>
                                 <span className="font-medium text-green-600 whitespace-nowrap">
-                                  $
-                                  {item.basePrice?.toFixed(2) ||
-                                    item.cost?.toFixed(2)}
+                                  ${item.basePrice}
                                 </span>
                               </li>
-                            ))}
+                            )
+                          )}
                           {priceList.subActivityPrices.length > 2 && (
                             <li className="text-blue-600 text-xs text-center py-1">
                               + {priceList.subActivityPrices.length - 2} more

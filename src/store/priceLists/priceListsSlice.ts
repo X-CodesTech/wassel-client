@@ -161,7 +161,7 @@ const priceListsSlice = createSlice({
           // Update the selected price list by removing the deleted sub-activity
           if (state.selectedPriceList?._id === action.payload.priceListId) {
             state.selectedPriceList.subActivityPrices =
-              state.selectedPriceList.subActivityPrices.filter(
+              state.selectedPriceList?.subActivityPrices?.filter(
                 (item) => item._id !== action.payload.subActivityId
               );
           }
@@ -172,7 +172,7 @@ const priceListsSlice = createSlice({
           if (priceListIndex !== -1) {
             state.records[priceListIndex].subActivityPrices = state.records[
               priceListIndex
-            ].subActivityPrices.filter(
+            ]?.subActivityPrices?.filter(
               (item) => item._id !== action.payload.subActivityId
             );
           }

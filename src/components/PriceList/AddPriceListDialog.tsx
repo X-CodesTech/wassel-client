@@ -53,7 +53,6 @@ const AddPriceListDialog = ({
 }: AddPriceListDialogProps) => {
   const dispatch = useAppDispatch();
   const { loading } = useAppSelector((state) => state.priceLists);
-  const [pasteSuccess, setPasteSuccess] = useState(false);
   const [isAnyInputFocused, setIsAnyInputFocused] = useState(false);
 
   const form = useForm<PriceListFormValues>({
@@ -72,7 +71,6 @@ const AddPriceListDialog = ({
   // Reset paste success state when dialog opens/closes
   useEffect(() => {
     if (!open) {
-      setPasteSuccess(false);
       setIsAnyInputFocused(false);
     }
   }, [open]);
@@ -173,9 +171,6 @@ const AddPriceListDialog = ({
 
       // Set form values
       form.reset(formData);
-
-      setPasteSuccess(true);
-      setTimeout(() => setPasteSuccess(false), 2000);
 
       toast({
         title: "JSON Data Pasted",
@@ -278,12 +273,6 @@ const AddPriceListDialog = ({
           <DialogDescription>
             Create a comprehensive price list with English and Arabic support,
             date ranges, and flexible pricing methods.
-            {!isAnyInputFocused && (
-              <span className="block mt-2 text-sm text-muted-foreground">
-                💡 Tip: Press Ctrl+V (or Cmd+V on Mac) to paste JSON data from
-                clipboard
-              </span>
-            )}
           </DialogDescription>
         </DialogHeader>
 

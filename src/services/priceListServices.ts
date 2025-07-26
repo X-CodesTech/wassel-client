@@ -54,6 +54,7 @@ export interface PriceList {
   effectiveFrom: string; // ISO date string
   effectiveTo: string; // ISO date string
   isActive: boolean;
+  subActivityPrices?: SubActivityPrice[];
 }
 
 class PriceListService {
