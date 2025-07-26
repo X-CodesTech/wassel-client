@@ -18,6 +18,7 @@ import { PriceList, SubActivityPrice } from "@/services/priceListServices";
 import EditPriceListDialog from "@/components/PriceList/EditPriceListDialog";
 import DeletePriceListDialog from "@/components/PriceList/DeletePriceListDialog";
 import AddPriceListDialog from "@/components/PriceList/AddPriceListDialog";
+import Pagination from "@/components/Pagination";
 
 // Guard function to safely extract portalItemNameEn from subActivity
 const getSubActivityName = (
@@ -98,6 +99,7 @@ export default function PriceLists() {
   const [, setLocation] = useLocation();
   const {
     records: priceLists,
+    pagination,
     loading,
     error,
   } = useAppSelector((state) => state.priceLists);
@@ -116,7 +118,12 @@ export default function PriceLists() {
 
   // Fetch price lists on component mount
   useEffect(() => {
-    dispatch(actGetPriceLists());
+    dispatch(
+      actGetPriceLists({
+        page: 1,
+        limit: 10,
+      })
+    );
   }, [dispatch]);
 
   // Clear error when component unmounts or error changes
@@ -217,94 +224,95 @@ export default function PriceLists() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6">
           {/* Price list cards */}
-          {priceLists.map((priceList) => (
-            <Card
-              key={priceList._id}
-              className="overflow-hidden hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1 flex flex-col h-[380px] sm:h-[360px] lg:h-[340px] cursor-pointer"
-              onClick={() => handleCardClick(priceList)}
-            >
-              <CardHeader className="pb-3 px-4 sm:px-6">
-                <CardTitle className="text-base sm:text-lg line-clamp-1">
-                  {priceList.name}
-                </CardTitle>
-                <CardDescription className="line-clamp-2 h-10 text-xs sm:text-sm">
-                  {priceList.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow overflow-hidden px-4 sm:px-6">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <div className="text-xs sm:text-sm font-medium text-gray-500">
-                      {priceList.subActivityPrices &&
-                      priceList.subActivityPrices.length > 0
-                        ? priceList.subActivityPrices.length + " items"
-                        : "No items added yet"}
+          {priceLists &&
+            priceLists?.map((priceList) => (
+              <Card
+                key={priceList._id}
+                className="overflow-hidden hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1 flex flex-col h-[380px] sm:h-[360px] lg:h-[340px] cursor-pointer"
+                onClick={() => handleCardClick(priceList)}
+              >
+                <CardHeader className="pb-3 px-4 sm:px-6">
+                  <CardTitle className="text-base sm:text-lg line-clamp-1">
+                    {priceList.name}
+                  </CardTitle>
+                  <CardDescription className="line-clamp-2 h-10 text-xs sm:text-sm">
+                    {priceList.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow overflow-hidden px-4 sm:px-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs sm:text-sm font-medium text-gray-500">
+                        {priceList.subActivityPrices &&
+                        priceList.subActivityPrices.length > 0
+                          ? priceList.subActivityPrices.length + " items"
+                          : "No items added yet"}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {formatDate(priceList.effectiveFrom)} -{" "}
+                        {formatDate(priceList.effectiveTo)}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-400">
-                      {formatDate(priceList.effectiveFrom)} -{" "}
-                      {formatDate(priceList.effectiveTo)}
+                    <div className="border-t pt-3">
+                      <div className="flex justify-between text-xs sm:text-sm mb-2">
+                        <span className="font-medium">Sample Items:</span>
+                      </div>
+                      <ul className="text-xs sm:text-sm text-gray-600 space-y-2">
+                        {priceList.subActivityPrices &&
+                        priceList.subActivityPrices.length > 0 ? (
+                          <>
+                            {getSamepleItemsPerPricingMethod(priceList).map(
+                              (item, index) => (
+                                <li
+                                  key={index}
+                                  className="flex justify-between items-center gap-2 p-2 bg-gray-50 rounded"
+                                >
+                                  <span className="text-gray-600 text-xs truncate">
+                                    {getSubActivityName(item.subActivity)}
+                                  </span>
+                                </li>
+                              )
+                            )}
+                          </>
+                        ) : (
+                          <li className="text-gray-400 italic text-xs text-center py-4">
+                            No items added yet
+                          </li>
+                        )}
+                      </ul>
                     </div>
                   </div>
-                  <div className="border-t pt-3">
-                    <div className="flex justify-between text-xs sm:text-sm mb-2">
-                      <span className="font-medium">Sample Items:</span>
-                    </div>
-                    <ul className="text-xs sm:text-sm text-gray-600 space-y-2">
-                      {priceList.subActivityPrices &&
-                      priceList.subActivityPrices.length > 0 ? (
-                        <>
-                          {getSamepleItemsPerPricingMethod(priceList).map(
-                            (item, index) => (
-                              <li
-                                key={index}
-                                className="flex justify-between items-center gap-2 p-2 bg-gray-50 rounded"
-                              >
-                                <span className="text-gray-600 text-xs truncate">
-                                  {getSubActivityName(item.subActivity)}
-                                </span>
-                              </li>
-                            )
-                          )}
-                        </>
-                      ) : (
-                        <li className="text-gray-400 italic text-xs text-center py-4">
-                          No items added yet
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between pt-2 pb-4 mt-auto border-t px-4 sm:px-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto text-xs sm:text-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openEditModal(priceList);
-                  }}
-                  disabled={loading}
-                >
-                  <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto text-xs sm:text-sm text-red-500 hover:text-red-600 hover:border-red-300"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openDeleteConfirmation(priceList);
-                  }}
-                  disabled={loading}
-                >
-                  <Trash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Delete
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                </CardContent>
+                <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between pt-2 pb-4 mt-auto border-t px-4 sm:px-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto text-xs sm:text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(priceList);
+                    }}
+                    disabled={loading}
+                  >
+                    <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto text-xs sm:text-sm text-red-500 hover:text-red-600 hover:border-red-300"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDeleteConfirmation(priceList);
+                    }}
+                    disabled={loading}
+                  >
+                    <Trash className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    Delete
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
 
           {/* Add price list card */}
           {priceLists.length > 0 && (
@@ -328,6 +336,24 @@ export default function PriceLists() {
           )}
         </div>
       )}
+
+      <Pagination
+        pageLimit={pagination?.itemsPerPage ?? 10}
+        totalResults={pagination?.totalItems ?? 0}
+        onLimitChange={(limit) => {
+          dispatch(actGetPriceLists({ page: 1, limit: limit ?? 10 }));
+        }}
+        onPageChange={(page) => {
+          dispatch(
+            actGetPriceLists({
+              page: page ?? 1,
+              limit: pagination?.itemsPerPage ?? 10,
+            })
+          );
+        }}
+        currentPage={pagination?.currentPage ?? 1}
+        totalPages={pagination?.totalPages ?? 1}
+      />
 
       {/* Add Price List Modal */}
       <AddPriceListDialog

@@ -13,6 +13,16 @@ import {
 
 interface PriceListsState {
   records: PriceList[];
+  pagination: {
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+    itemsPerPage: number;
+    nextPage: number | null;
+    prevPage: number | null;
+    totalItems: number;
+    totalPages: number;
+  } | null;
   selectedPriceList: PriceList | null;
   loading: boolean;
   error: string | null;
@@ -23,6 +33,7 @@ interface PriceListsState {
 
 const initialState: PriceListsState = {
   records: [],
+  pagination: null,
   selectedPriceList: null,
   loading: false,
   error: null,
@@ -52,6 +63,7 @@ const priceListsSlice = createSlice({
       .addCase(actGetPriceLists.fulfilled, (state, action) => {
         state.loading = false;
         state.records = action.payload.data;
+        state.pagination = action.payload.pagination;
       })
       .addCase(actGetPriceLists.rejected, (state, action) => {
         state.loading = false;

@@ -3,6 +3,7 @@ import { apiUrlConstants } from "./apiUrlConstants";
 import http from "./http";
 import { IActivity } from "@/types/ModelTypes";
 import { TPriceBody, TPriceMethod } from "@/types/vendorPriceListEditTypes";
+import { AxiosResponse } from "axios";
 export interface LocationPrice {
   location?: any;
   fromLocation?: any;
@@ -59,8 +60,31 @@ export interface PriceList {
 }
 
 class PriceListService {
-  async getPriceLists() {
-    return await http.get(apiUrlConstants.priceLists);
+  async getPriceLists(
+    page?: number,
+    limit?: number
+  ): Promise<
+    AxiosResponse<{
+      data: PriceList[];
+      message?: string;
+      pagination: {
+        currentPage: number;
+        hasNextPage: boolean;
+        hasPrevPage: boolean;
+        itemsPerPage: number;
+        nextPage: number | null;
+        prevPage: number | null;
+        totalItems: number;
+        totalPages: number;
+      };
+    }>
+  > {
+    return await http.get(apiUrlConstants.priceLists, {
+      params: {
+        page,
+        limit,
+      },
+    });
   }
 
   async createPriceList(priceList: PriceList) {
