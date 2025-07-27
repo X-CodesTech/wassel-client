@@ -1,40 +1,36 @@
-import { vendorServices } from "@/services";
+import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/hooks/use-toast";
+import { useAppSelector } from "@/hooks/useAppSelector";
+import { customerServices } from "@/services";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  FileSpreadsheet,
   Import,
   Loader2,
   LucideDownloadCloud,
   Upload,
-  FileSpreadsheet,
   X,
 } from "lucide-react";
 import { useReducer, useState } from "react";
-import { Button } from "./ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog";
-import { Input } from "./ui/input";
-import { toast } from "@/hooks/use-toast";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "./ui/form";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  vendorPriceListUploadSchema,
-  VendorPriceListUploadData,
-} from "@/utils/validationSchemas";
-import { useAppDispatch } from "@/hooks/useAppSelector";
-import { actGetVendorPriceLists } from "@/store/vendors";
+import { z } from "zod";
 
 type TLoading = "idle" | "pending" | "fulfilled" | "rejected";
 
@@ -99,30 +95,26 @@ const reducer = (state: typeof initialState, action: any) => {
   }
 };
 
-export default function VendorPriceListActions({
-  vendorId,
-  vendorName,
-}: {
-  vendorId: string;
-  vendorName: string;
-}) {
-  const storeDispatch = useAppDispatch();
-
+const CustomerDetailsPriceListActions = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState<string>("");
 
-  const form = useForm({
+  const { selectedCustomer } = useAppSelector((state) => state.customers);
+  const customerId = selectedCustomer?._id!;
+  const customerName = selectedCustomer?.custName;
+
+  const schema = z.object({
+    priceListFile: z.instanceof(File),
+  });
+
+  type TCustomerPriceListUploadData = z.infer<typeof schema>;
+
+  const form = useForm<TCustomerPriceListUploadData>({
     defaultValues: {
       priceListFile: undefined,
-      name: "",
-      nameAr: "",
-      description: "",
-      descriptionAr: "",
-      effectiveFrom: "",
-      effectiveTo: "",
     },
-    resolver: zodResolver(vendorPriceListUploadSchema),
+    resolver: zodResolver(schema),
   });
 
   const handleDrag = (e: React.DragEvent) => {
@@ -168,85 +160,24 @@ export default function VendorPriceListActions({
   };
 
   const clearFile = () => {
-    form.setValue("priceListFile", undefined);
+    form.setValue("priceListFile", undefined as any);
     setSelectedFileName("");
   };
 
-  const onSubmit = async (data: VendorPriceListUploadData) => {
-    dispatch({ type: "importing/loading", payload: "pending" });
-    try {
-      const formData = new FormData();
-
-      // Append the file
-      if (data.priceListFile && data.priceListFile[0]) {
-        formData.append("file", data.priceListFile[0]);
-      }
-
-      // Append required fields
-      formData.append("name", typeof data.name === "string" ? data.name : "");
-      formData.append(
-        "nameAr",
-        typeof data.nameAr === "string" ? data.nameAr : ""
-      );
-
-      // Append optional fields if provided
-      if (data.description) {
-        formData.append("description", data.description);
-      }
-      if (data.descriptionAr) {
-        formData.append("descriptionAr", data.descriptionAr);
-      }
-
-      // Append required date fields
-      formData.append(
-        "effectiveFrom",
-        typeof data.effectiveFrom === "string" ? data.effectiveFrom : ""
-      );
-      if (data.effectiveTo) {
-        formData.append("effectiveTo", data.effectiveTo);
-      }
-
-      await vendorServices.uploadVendorPriceListFromExcel(vendorId, formData);
-      dispatch({ type: "importing/loading", payload: "fulfilled" });
-      dispatch({ type: "importing/modalOpen", payload: false });
-      toast({
-        title: "Success",
-        description: "Price list imported successfully",
-      });
-      storeDispatch(actGetVendorPriceLists(vendorId))
-        .unwrap()
-        .then(() => {
-          dispatch({ type: "importing/modalOpen", payload: false });
-        });
-      // Reset form
-      form.reset();
-      setSelectedFileName("");
-    } catch (error) {
-      dispatch({ type: "importing/loading", payload: "rejected" });
-      dispatch({ type: "importing/error", payload: error });
-      toast({
-        title: "Error",
-        description: "Failed to import price list",
-      });
-    }
-  };
-
-  const handleImportPriceList = () => {
-    dispatch({ type: "importing/modalOpen", payload: true });
-  };
+  const handleImportPriceList = () => {};
 
   const handleExportPriceList = async (isActive: boolean) => {
     if (state.exporting.loading === "pending") return;
     dispatch({ type: "exporting/loading", payload: "pending" });
     try {
-      const response = await vendorServices.exportVendorPriceListAsExcel({
-        id: vendorId,
+      const response = await customerServices.exportCustomerPriceList({
+        customerId,
         isActive,
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${vendorName}-${
+      a.download = `${customerName}-${
         isActive ? "active" : "inactive"
       }-price-list.xlsx`;
       a.click();
@@ -259,6 +190,10 @@ export default function VendorPriceListActions({
         description: "Failed to export price list",
       });
     }
+  };
+
+  const onSubmit = async (data: TCustomerPriceListUploadData) => {
+    console.log(data);
   };
 
   return (
@@ -400,4 +335,6 @@ export default function VendorPriceListActions({
       </Dialog>
     </>
   );
-}
+};
+
+export default CustomerDetailsPriceListActions;

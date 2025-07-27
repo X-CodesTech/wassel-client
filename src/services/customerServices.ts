@@ -5,7 +5,7 @@ import {
   CustomerResponse,
   CustomerImportResponse,
 } from "@/types/types";
-import { AxiosResponse } from "axios";
+import { Axios, AxiosResponse } from "axios";
 import { TPriceMethod } from "@/types/vendorPriceListEditTypes";
 
 export type CustomerPriceListResponse = {
@@ -172,6 +172,46 @@ const customerServices = {
   ): Promise<AxiosResponse<{ data: CustomerPriceListResponse[] }>> => {
     return await http.get(
       `${apiUrlConstants.customerPriceLists}/customer/${customerId}`
+    );
+  },
+
+  /**
+   * Export customer price list to excel
+   */
+  exportCustomerPriceList: async ({
+    customerId,
+    isActive = true,
+  }: {
+    customerId: string;
+    isActive?: boolean;
+  }): Promise<AxiosResponse<Blob>> => {
+    return await http.get(
+      `${apiUrlConstants.customerPriceLists}/customer/${customerId}/export`,
+      {
+        responseType: "blob",
+        params: {
+          isActive,
+        },
+      }
+    );
+  },
+
+  /**
+   * Upload customer price list from excel
+   * requires socket connection to retrieve the progress of the upload
+   */
+  uploadCustomerPriceList: async (
+    customerId: string,
+    payload: FormData
+  ): Promise<AxiosResponse<{ data: CustomerPriceListResponse }>> => {
+    return await http.post(
+      `${apiUrlConstants.customerPriceLists}/customer/${customerId}/upload`,
+      payload,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
     );
   },
 };

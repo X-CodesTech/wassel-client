@@ -148,6 +148,23 @@ const CustomerPriceListTable = ({
   priceList: CustomerPriceListResponse["priceList"];
 }) => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [dialog, setDialog] = useState<"delete" | "edit" | null>(null);
+  const [selectedSubActivityPrice, setSelectedSubActivityPrice] =
+    useState<TSubActivityPrice | null>(null);
+
+  const handleDialog = (
+    open: boolean,
+    type?: "delete" | "edit",
+    subActivityPrice?: TSubActivityPrice
+  ) => {
+    if (!open) {
+      setDialog(null);
+      setSelectedSubActivityPrice(null);
+    } else {
+      setDialog(type || null);
+      setSelectedSubActivityPrice(subActivityPrice || null);
+    }
+  };
 
   const toggleExpanded = (key: string) => {
     const newExpanded = new Set(expandedRows);
