@@ -138,8 +138,6 @@ const customersSlice = createSlice({
 
       const priceList = state.selectedCustomer?.priceLists[priceListIndex!];
 
-      // priceLists[0].priceList.subActivityPrices[1].subActivity._id
-
       const subActivityIndex = priceList?.priceList.subActivityPrices.findIndex(
         (sa) => sa.subActivity._id === subActivityId
       );
