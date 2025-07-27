@@ -44,6 +44,7 @@ const EditPriceListSubActivityDialog = ({
         selectedSubActivityPrice={selectedSubActivityPrice}
         onOpenChange={onOpenChange}
         priceListId={priceListId}
+        isCustomerPriceList={isCustomerPriceList}
       />
     ),
     perLocation: (
@@ -51,6 +52,7 @@ const EditPriceListSubActivityDialog = ({
         selectedSubActivityPrice={selectedSubActivityPrice}
         onOpenChange={onOpenChange}
         priceListId={priceListId}
+        isCustomerPriceList={isCustomerPriceList}
       />
     ),
   };

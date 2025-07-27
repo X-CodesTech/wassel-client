@@ -14,6 +14,7 @@ import {
 } from "@/services/customerServices";
 import { actAddCustomerPriceListSubActivity } from "./act/actAddCustomerPriceListSubActivity";
 import { actDeleteCustomerPriceListSubActivity } from "./act/actDeleteCustomerPriceListSubActivity.ts";
+import { TUpdatePriceListSubActivityPriceResponse } from "@/types/priceListServices.type.ts";
 
 interface ICustomersState {
   records: Customer[];
@@ -127,7 +128,10 @@ const customersSlice = createSlice({
       action: PayloadAction<{
         priceListId: string;
         subActivityId: string;
-        data: Partial<SubActivityPrice>;
+        data:
+          | Partial<SubActivityPrice>
+          | TUpdatePriceListSubActivityPriceResponse["data"];
+        fullUpdate?: boolean;
       }>
     ) => {
       const { priceListId, subActivityId, data } = action.payload;
@@ -142,8 +146,14 @@ const customersSlice = createSlice({
         (sa) => sa.subActivity._id === subActivityId
       );
 
-      const subActivity =
+      let subActivity =
         priceList?.priceList.subActivityPrices[subActivityIndex!];
+
+      if (action.payload.fullUpdate) {
+        state.selectedCustomer!.priceLists[
+          priceListIndex!
+        ].priceList.subActivityPrices = data;
+      }
 
       if (subActivity) {
         state.selectedCustomer!.priceLists[

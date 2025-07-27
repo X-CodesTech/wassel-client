@@ -19,11 +19,14 @@ import { useCallback, useEffect, useMemo } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { actGetLocations } from "@/store/locations";
 import { AsyncLocationSelect } from "@/components/ui/async-location-select";
+import { actGetCustomer } from "@/store/customers/customersSlice";
+import { useParams } from "wouter";
 
 interface PerLocationEditPriceListSubActivityProps {
   selectedSubActivityPrice: SubActivityPrice;
   onOpenChange: (open: boolean) => void;
   priceListId: string;
+  isCustomerPriceList?: boolean;
 }
 
 // per‐location schema for edit
@@ -50,10 +53,12 @@ const PerLocationEditPriceListSubActivity = ({
   selectedSubActivityPrice,
   onOpenChange,
   priceListId,
+  isCustomerPriceList = false,
 }: PerLocationEditPriceListSubActivityProps) => {
   const dispatch = useAppDispatch();
   const { records: locations } = useAppSelector((state) => state.locations);
   const { toast } = useToast();
+  const { id } = useParams();
 
   // Load locations if not already loaded
   useEffect(() => {
@@ -203,7 +208,11 @@ const PerLocationEditPriceListSubActivity = ({
           });
         }
       })
-      .then(() => {
+      .then((response) => {
+        if (isCustomerPriceList) {
+          dispatch(actGetCustomer(id!));
+        }
+
         toast({
           title: "Success",
           description: "Price list updated successfully",

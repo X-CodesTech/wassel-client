@@ -15,7 +15,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { updateCustomerPriceListSubActivity } from "@/store/customers/customersSlice";
+import {
+  actGetCustomer,
+  updateCustomerPriceListSubActivity,
+} from "@/store/customers/customersSlice";
+import { useParams } from "wouter";
 
 interface PerItemEditPriceListSubActivityProps {
   selectedSubActivityPrice: SubActivityPrice;
@@ -41,6 +45,7 @@ const PerItemEditPriceListSubActivity = ({
   isCustomerPriceList = false,
 }: PerItemEditPriceListSubActivityProps) => {
   const dispatch = useAppDispatch();
+  const { id } = useParams();
   const { toast } = useToast();
 
   const getSubActivityId = (subActivity: any): string => {
@@ -106,15 +111,7 @@ const PerItemEditPriceListSubActivity = ({
         })
         .then(() => {
           if (isCustomerPriceList) {
-            dispatch(
-              updateCustomerPriceListSubActivity({
-                priceListId,
-                subActivityId,
-                data: {
-                  basePrice: data.basePrice,
-                },
-              })
-            );
+            dispatch(actGetCustomer(id!));
           }
 
           toast({

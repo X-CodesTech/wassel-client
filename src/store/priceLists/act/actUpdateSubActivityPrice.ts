@@ -1,8 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import priceListServices, {
-  PricingMethod,
-  LocationPrice,
-} from "@/services/priceListServices";
+import priceListServices, { LocationPrice } from "@/services/priceListServices";
 
 interface UpdateSubActivityPriceParams {
   priceListId: string;

@@ -4,6 +4,8 @@ import http from "./http";
 import { IActivity } from "@/types/ModelTypes";
 import { TPriceBody, TPriceMethod } from "@/types/vendorPriceListEditTypes";
 import { AxiosResponse } from "axios";
+import { TUpdatePriceListSubActivityPriceResponse } from "@/types/priceListServices.type";
+
 export interface LocationPrice {
   location?: any;
   fromLocation?: any;
@@ -129,7 +131,7 @@ class PriceListService {
       basePrice?: number;
       locationPrices?: LocationPrice[];
     }
-  ) {
+  ): Promise<AxiosResponse<TUpdatePriceListSubActivityPriceResponse>> {
     return await http.put(
       `${apiUrlConstants.priceLists}/${priceListId}/sub-activity/${subActivityId}`,
       {
