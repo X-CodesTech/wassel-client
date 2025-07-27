@@ -161,7 +161,7 @@ const AddCustomerDetailsSubActivityDialog = ({
     dispatch(actAddCustomerPriceListSubActivity(submitData))
       .unwrap()
       .then((response) => {
-        if (response.data) {
+        if (response._id) {
           toast({
             title: "Success",
             description: "Sub-activity added to price list successfully",

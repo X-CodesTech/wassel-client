@@ -103,6 +103,7 @@ const CustomerDetailsPriceList = () => {
       <AddPriceListSubActivityDialog
         open={dialog === "add" && !!selectedPriceList}
         onOpenChange={(open) => handleDialog({ open })}
+        isCustomerPriceList={true}
       />
     </>
   );

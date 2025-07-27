@@ -8,10 +8,12 @@ import {
 import { actGetCustomers } from "./act/actGetCustomers";
 import { actImportCustomers } from "./act/actImportCustomers";
 import { actGetCustomer } from "./act/actGetCustomer";
-import { CustomerPriceListResponse } from "@/services/customerServices";
+import {
+  CustomerPriceListResponse,
+  SubActivityPrice,
+} from "@/services/customerServices";
 import { actAddCustomerPriceListSubActivity } from "./act/actAddCustomerPriceListSubActivity";
 import { actDeleteCustomerPriceListSubActivity } from "./act/actDeleteCustomerPriceListSubActivity.ts";
-import { current } from "@reduxjs/toolkit";
 
 interface ICustomersState {
   records: Customer[];
@@ -74,6 +76,29 @@ const customersSlice = createSlice({
     clearCustomersData: (state) => {
       state.records = [];
       state.pagination = initialState.pagination;
+    },
+    removePriceListSubActivity: (state, action: PayloadAction<string>) => {
+      const priceListId = action.payload;
+
+      if (state.selectedCustomer) {
+        state.selectedCustomer.priceLists =
+          state.selectedCustomer.priceLists.filter(
+            (priceList) => priceList.priceList._id !== priceListId
+          );
+      }
+    },
+    addPriceListSubActivity: (
+      state,
+      action: PayloadAction<{
+        priceListId: string;
+        subActivityPrices: SubActivityPrice[];
+      }>
+    ) => {
+      if (state.selectedCustomer) {
+        state.selectedCustomer.priceLists.find(
+          (priceList) => priceList.priceList._id === action.payload.priceListId
+        )!.priceList.subActivityPrices = action.payload.subActivityPrices;
+      }
     },
   },
   extraReducers: (builder) => {
@@ -187,6 +212,8 @@ export const {
   clearCustomersData,
   setSelectedCustomer,
   clearSelectedCustomer,
+  addPriceListSubActivity,
+  removePriceListSubActivity,
 } = customersSlice.actions;
 
 export {
