@@ -220,22 +220,22 @@ const PerTripEditPriceListSubActivity = ({
 
   return (
     <Form {...form}>
-      <div className="flex flex-col h-[70dvh] gap-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Edit Trip Pricing</h3>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAddTrip}
-            disabled={!isFormValid || hasErrors}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Trip
-          </Button>
-        </div>
-        <div className="flex-2 overflow-y-auto">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Edit Trip Pricing</h3>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAddTrip}
+          disabled={!isFormValid || hasErrors}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Add Trip
+        </Button>
+      </div>
+      <div className="flex flex-col gap-6 flex-1">
+        <div className="flex-1 overflow-y-auto">
           {selectedSubActivityPrice.pricingMethod === "perTrip" ? (
             <div className="space-y-6">
               <div className="space-y-4">

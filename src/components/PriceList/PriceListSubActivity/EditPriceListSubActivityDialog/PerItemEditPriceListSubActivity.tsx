@@ -112,8 +112,8 @@ const PerItemEditPriceListSubActivity = ({
 
     return (
       <Form {...form}>
-        <div className="space-y-6">
-          <div className="flex gap-4 items-end">
+        <div className="space-y-6 flex-1 flex flex-col justify-between">
+          <div className="flex gap-4 items-end my-auto">
             <FormField
               control={form.control}
               name="basePrice"

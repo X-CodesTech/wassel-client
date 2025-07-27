@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
 } from "@/components/ui/dialog";
+import { cn } from "@/utils";
 
 type TEditPriceListSubActivityDialogProps = {
   open: boolean;
@@ -57,13 +58,16 @@ const EditPriceListSubActivityDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[80vw] max-h-[80dvh]">
+      <DialogContent
+        className={cn(
+          "max-w-[80vw] h-[80dvh] flex flex-col",
+          pricingMethod === "perItem" && "max-w-[60vw] h-[30dvh]"
+        )}
+      >
         <DialogHeader>
           <DialogTitle>Edit Sub-Activity Price List</DialogTitle>
         </DialogHeader>
-        <DialogDescription className="max-h-[70dvh] overflow-y-auto">
-          {FormToRender}
-        </DialogDescription>
+        {FormToRender}
       </DialogContent>
     </Dialog>
   );
