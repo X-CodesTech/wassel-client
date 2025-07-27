@@ -7,23 +7,16 @@ import {
 import { ErrorComponent } from "@/components/ErrorComponents";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import { clearSelectedCustomer } from "@/store/customers";
 import { actGetCustomer } from "@/store/customers/customersSlice";
 import { useEffect } from "react";
-import { useLocation, useParams } from "wouter";
+import { useParams } from "wouter";
 
 export default function CustomerDetails() {
   const dispatch = useAppDispatch();
   const { id } = useParams();
-  const [, setLocation] = useLocation();
   const { selectedCustomer, loading, error } = useAppSelector(
     (state) => state.customers
   );
-
-  const handleBack = () => {
-    dispatch(clearSelectedCustomer());
-    setLocation("/customers");
-  };
 
   useEffect(() => {
     dispatch(actGetCustomer(id));
@@ -55,13 +48,20 @@ export default function CustomerDetails() {
 
   return (
     <div className="space-y-6">
-      <CustomerDetailsLayoutHeader
-        selectedCustomer={selectedCustomer!}
-        handleBack={handleBack}
-      />
-      <CustomerInfo customer={selectedCustomer!} />
-      <CustomerInfoTable customer={selectedCustomer!} />
-      <CustomerDetailsPriceList />
+      {selectedCustomer && (
+        <CustomerDetailsLayoutHeader
+          customerName={selectedCustomer?.custName}
+          customerAccount={selectedCustomer?.custAccount}
+          companyChainId={selectedCustomer?.companyChainId ?? ""}
+        />
+      )}
+      {selectedCustomer && (
+        <>
+          <CustomerInfo customer={selectedCustomer} />
+          <CustomerInfoTable customer={selectedCustomer} />
+          <CustomerDetailsPriceList />
+        </>
+      )}
     </div>
   );
 }
