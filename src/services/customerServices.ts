@@ -6,6 +6,7 @@ import {
   CustomerResponse,
   CustomerImportResponse,
 } from "@/types/types";
+import { AxiosResponse } from "axios";
 
 const customerServices = {
   /**
@@ -37,6 +38,15 @@ const customerServices = {
   importCustomers: async (): Promise<CustomerImportResponse> => {
     const response = await http.get(`${apiUrlConstants.customers}/import`);
     return response.data;
+  },
+
+  /**
+   * Get customer details
+   */
+  getCustomerDetails: async (
+    custAccount: string
+  ): Promise<AxiosResponse<{ data: Customer }>> => {
+    return await http.get(`${apiUrlConstants.customers}/${custAccount}`);
   },
 };
 

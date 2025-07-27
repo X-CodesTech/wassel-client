@@ -287,10 +287,11 @@ export interface VendorResponse {
 export interface Customer {
   _id: string;
   blocked: boolean;
-  companyChainId: string;
+  companyChainId?: string;
   createdDate: string;
   custAccount: string;
   custName: string;
+  updatedAt: string;
 }
 
 export interface CustomerPriceItem {

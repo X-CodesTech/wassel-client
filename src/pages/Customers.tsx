@@ -22,8 +22,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useCustomers } from "@/hooks/useCustomers";
 import { CustomerFilters } from "@/types/types";
 import Pagination from "@/components/Pagination";
+import { useAppDispatch } from "@/hooks/useAppSelector";
+import { setSelectedCustomer } from "@/store/customers";
 
 export default function Customers() {
+  const dispatch = useAppDispatch();
+
+  const [isImporting, setIsImporting] = useState(false);
+  const [isImportSuccess, setIsImportSuccess] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const {
@@ -86,10 +92,13 @@ export default function Customers() {
   const handleRefresh = async () => {
     try {
       // First import customers from third party provider
+      setIsImporting(true);
       await importCustomers();
 
       // Then refresh the customers list
-      getCustomers(filters);
+      await getCustomers(filters);
+      setIsImportSuccess(true);
+      setIsImporting(false);
 
       toast({
         title: "Success",
@@ -251,7 +260,7 @@ export default function Customers() {
       )}
 
       {/* Import Statistics */}
-      {importStats && (
+      {importStats && isImportSuccess && (
         <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded mb-6">
           <div className="flex justify-between items-center">
             <div className="flex-1">
@@ -284,7 +293,7 @@ export default function Customers() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.location.reload()}
+              onClick={() => setIsImportSuccess(false)}
               className="text-green-700 hover:text-green-900"
             >
               ×
@@ -294,7 +303,7 @@ export default function Customers() {
       )}
 
       {/* Loading State */}
-      {loading === "pending" && (
+      {(loading === "pending" || isImporting) && (
         <Card className="col-span-full">
           <CardContent className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
             <div className="rounded-full bg-blue-100 p-4 mb-4">
@@ -326,13 +335,21 @@ export default function Customers() {
       )}
 
       {/* Customers Grid */}
-      {loading === "fulfilled" && customers?.length > 0 && (
+      {loading === "fulfilled" && customers?.length > 0 && !isImporting && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {customers.map((customer) => (
+          {customers?.map((customer) => (
             <Card
               key={customer.custAccount}
-              className="overflow-hidden hover:shadow-md transition-shadow flex flex-col h-[320px]"
-              // onClick={() => setLocation(`/customers/${customer.custAccount}`)}
+              className="overflow-hidden hover:shadow-md transition-shadow flex flex-col h-[320px] cursor-pointer"
+              onClick={() => {
+                dispatch(
+                  setSelectedCustomer({
+                    ...customer,
+                    updatedAt: customer.updatedAt || customer.createdDate,
+                  })
+                );
+                setLocation(`/customers/${customer._id}`);
+              }}
             >
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2">
@@ -412,6 +429,7 @@ export default function Customers() {
 
       {/* Pagination Controls */}
       {loading === "fulfilled" &&
+        !isImporting &&
         customers.length > 0 &&
         pagination.totalPages > 1 && (
           <Pagination

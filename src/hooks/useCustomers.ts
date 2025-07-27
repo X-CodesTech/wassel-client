@@ -20,12 +20,12 @@ export const useCustomers = () => {
     pagination,
   } = useAppSelector((state) => state.customers);
 
-  const getCustomers = (filters: CustomerFilters = {}) => {
-    dispatch(actGetCustomers(filters));
+  const getCustomers = async (filters: CustomerFilters = {}) => {
+    return await dispatch(actGetCustomers(filters)).unwrap();
   };
 
-  const importCustomers = () => {
-    dispatch(actImportCustomers());
+  const importCustomers = async () => {
+    return await dispatch(actImportCustomers()).unwrap();
   };
 
   const clearError = () => {

@@ -1,5 +1,5 @@
 import { isString, TLoading } from "@/types";
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
   Customer,
   CustomerResponse,
@@ -7,9 +7,11 @@ import {
 } from "@/types/types";
 import { actGetCustomers } from "./act/actGetCustomers";
 import { actImportCustomers } from "./act/actImportCustomers";
+import { actGetCustomer } from "./act/actGetCustomer";
 
 interface ICustomersState {
   records: Customer[];
+  selectedCustomer: Customer | null;
   loading: TLoading;
   error: null | string;
   importLoading: TLoading;
@@ -25,6 +27,7 @@ interface ICustomersState {
 
 const initialState: ICustomersState = {
   records: [],
+  selectedCustomer: null,
   loading: "idle",
   error: null,
   importLoading: "idle",
@@ -42,6 +45,12 @@ const customersSlice = createSlice({
   name: "customers",
   initialState,
   reducers: {
+    setSelectedCustomer: (state, action: PayloadAction<Customer>) => {
+      state.selectedCustomer = action.payload;
+    },
+    clearSelectedCustomer: (state) => {
+      state.selectedCustomer = null;
+    },
     clearCustomersError: (state) => {
       state.error = null;
     },
@@ -88,12 +97,34 @@ const customersSlice = createSlice({
         state.importError = action.payload;
       }
     });
+
+    // Get Customer Details
+    builder.addCase(actGetCustomer.pending, (state) => {
+      state.loading = "pending";
+      state.error = null;
+    });
+    builder.addCase(actGetCustomer.fulfilled, (state, action) => {
+      state.loading = "fulfilled";
+      const customer: Customer = action.payload.data;
+      state.selectedCustomer = customer;
+    });
+    builder.addCase(actGetCustomer.rejected, (state, action) => {
+      state.loading = "rejected";
+      if (isString(action.payload)) {
+        state.error = action.payload;
+      }
+    });
   },
 });
 
-export const { clearCustomersError, clearImportError, clearCustomersData } =
-  customersSlice.actions;
+export const {
+  clearCustomersError,
+  clearImportError,
+  clearCustomersData,
+  setSelectedCustomer,
+  clearSelectedCustomer,
+} = customersSlice.actions;
 
-export { actGetCustomers, actImportCustomers };
+export { actGetCustomers, actImportCustomers, actGetCustomer };
 
 export default customersSlice.reducer;
