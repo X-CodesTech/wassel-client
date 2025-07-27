@@ -8,7 +8,10 @@ import { ErrorComponent } from "@/components/ErrorComponents";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { clearSelectedCustomer } from "@/store/customers";
-import { actGetCustomer } from "@/store/customers/customersSlice";
+import {
+  actGetCustomer,
+  actGetCustomerPriceLists,
+} from "@/store/customers/customersSlice";
 import { useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 
@@ -27,7 +30,7 @@ export default function CustomerDetails() {
 
   useEffect(() => {
     if (id) {
-      dispatch(actGetCustomer(id));
+      dispatch(actGetCustomer(id)).unwrap();
     }
 
     return () => {

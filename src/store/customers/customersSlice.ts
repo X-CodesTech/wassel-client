@@ -4,14 +4,18 @@ import {
   Customer,
   CustomerResponse,
   CustomerImportResponse,
+  CustomerPriceItem,
 } from "@/types/types";
 import { actGetCustomers } from "./act/actGetCustomers";
 import { actImportCustomers } from "./act/actImportCustomers";
 import { actGetCustomer } from "./act/actGetCustomer";
+import { CustomerPriceListResponse } from "@/services/customerServices";
 
 interface ICustomersState {
   records: Customer[];
-  selectedCustomer: Customer | null;
+  selectedCustomer:
+    | (Customer & { priceLists: CustomerPriceListResponse[] })
+    | null;
   loading: TLoading;
   error: null | string;
   importLoading: TLoading;
@@ -46,7 +50,7 @@ const customersSlice = createSlice({
   initialState,
   reducers: {
     setSelectedCustomer: (state, action: PayloadAction<Customer>) => {
-      state.selectedCustomer = action.payload;
+      state.selectedCustomer = { ...action.payload, priceLists: [] };
     },
     clearSelectedCustomer: (state) => {
       state.selectedCustomer = null;
@@ -105,8 +109,8 @@ const customersSlice = createSlice({
     });
     builder.addCase(actGetCustomer.fulfilled, (state, action) => {
       state.loading = "fulfilled";
-      const customer: Customer = action.payload.data;
-      state.selectedCustomer = customer;
+      const response = action.payload;
+      state.selectedCustomer = response.data;
     });
     builder.addCase(actGetCustomer.rejected, (state, action) => {
       state.loading = "rejected";

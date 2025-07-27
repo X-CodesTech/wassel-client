@@ -7,6 +7,7 @@ export const apiUrlConstants = {
   transactionTypes: "/api/v1/transaction-types",
   locations: "/api/v1/locations",
   customers: "/api/v1/customers",
+  customerPriceLists: "/api/v1/customer-price-lists",
   priceLists: "/api/v1/price-lists",
   vendors: "/api/v1/vendors",
   vendorPriceLists: "/api/v1/vendor-price-lists",

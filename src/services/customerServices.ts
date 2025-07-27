@@ -1,13 +1,128 @@
 import http from "./http";
 import { apiUrlConstants } from "./apiUrlConstants";
 import {
-  Customer,
   CustomerFilters,
   CustomerResponse,
   CustomerImportResponse,
 } from "@/types/types";
 import { AxiosResponse } from "axios";
+import { TPriceMethod } from "@/types/vendorPriceListEditTypes";
 
+export type CustomerPriceListResponse = {
+  _id: string;
+  customer: Customer;
+  priceList: PriceList;
+  isActive: boolean;
+  effectiveFrom: Date;
+  effectiveTo: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+};
+
+export type Customer = {
+  _id: string;
+  custAccount: string;
+  custName: string;
+};
+
+export type PriceList = {
+  _id: string;
+  name: string;
+  nameAr: string;
+  description: string;
+  descriptionAr: string;
+  isActive: boolean;
+  isDefault: boolean;
+  effectiveFrom: Date;
+  effectiveTo: Date;
+  subActivityPrices: SubActivityPrice[];
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+};
+
+export type SubActivityPrice = {
+  subActivity: SubActivity;
+  basePrice?: number;
+  pricingMethod: TPriceMethod;
+  _id: string;
+  locationPrices: LocationPrice[];
+};
+
+export type LocationPrice = {
+  location?: Location;
+  price: number;
+  pricingMethod: TPriceMethod;
+  _id: string;
+  fromLocation?: Location;
+  toLocation?: Location;
+};
+
+export type Location = {
+  _id: string;
+  country: string;
+  countryAr: string;
+  area: string;
+  areaAr: string;
+  city: string;
+  cityAr: string;
+  village: string;
+  villageAr: string;
+  isActive: boolean;
+  __v: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type SubActivity = {
+  _id: string;
+  transactionType: TransactionType;
+  activity: Activity;
+  financeEffect: string;
+  pricingMethod: TPriceMethod;
+  portalItemNameEn: string;
+  portalItemNameAr: string;
+  isUsedByFinance: boolean;
+  isUsedByOps: boolean;
+  isInShippingUnit: boolean;
+  isActive: boolean;
+  isInSpecialRequirement: boolean;
+  __v: number;
+  createdAt: Date;
+  updatedAt: Date;
+  id: string;
+};
+
+export type Activity = {
+  _id: string;
+  actSrl: string;
+  activityTransactionType: string;
+  activityNameEn: string;
+  activityNameAr: string;
+  activityCode: string;
+  portalActivityNameEn: string;
+  portalActivityNameAr: string;
+  isWithItems: boolean;
+  isOpsActive: boolean;
+  isPortalActive: boolean;
+  isInOrderScreen: boolean;
+  isInShippingUnit: boolean;
+  isActive: boolean;
+  isInSpecialRequirement: boolean;
+  __v: number;
+  createdAt: Date;
+  updatedAt: Date;
+  id: string;
+};
+
+export type TransactionType = {
+  _id: string;
+  name: string;
+  __v: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
 const customerServices = {
   /**
    * Get customers with pagination, search, and sorting
@@ -47,6 +162,17 @@ const customerServices = {
     custAccount: string
   ): Promise<AxiosResponse<{ data: Customer }>> => {
     return await http.get(`${apiUrlConstants.customers}/${custAccount}`);
+  },
+
+  /**
+   * Get customer price list
+   */
+  getCustomerPriceList: async (
+    customerId: string
+  ): Promise<AxiosResponse<{ data: CustomerPriceListResponse[] }>> => {
+    return await http.get(
+      `${apiUrlConstants.customerPriceLists}/customer/${customerId}`
+    );
   },
 };
 

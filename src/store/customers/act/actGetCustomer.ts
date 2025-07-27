@@ -6,8 +6,13 @@ export const actGetCustomer = createAsyncThunk(
   "customers/actGetCustomer",
   async (custAccount: string, { rejectWithValue }) => {
     try {
-      const response = await customerServices.getCustomerDetails(custAccount);
-      return response.data;
+      const customer = await customerServices.getCustomerDetails(custAccount);
+      const priceLists = await customerServices.getCustomerPriceList(
+        customer.data.data._id
+      );
+      return {
+        data: { ...customer.data.data, priceLists: priceLists.data.data },
+      };
     } catch (error) {
       return rejectWithValue(axiosErrorHandler(error));
     }
