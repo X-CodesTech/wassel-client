@@ -28,6 +28,8 @@ import { useOrders } from "@/hooks/useOrders";
 import { useLocation } from "wouter";
 import { CustomerDropdown } from "@/components/CustomerDropdown";
 import { LocationDropdown } from "@/components/LocationDropdown";
+import { DraftRestorationDialog } from "@/components/DraftRestorationDialog";
+import { useCreateOrderStorage } from "@/hooks/useCreateOrderStorage";
 import {
   Package,
   MapPin,
@@ -40,6 +42,7 @@ import {
   AlertCircle,
   Plus,
   Trash2,
+  Save,
 } from "lucide-react";
 import {
   Accordion,
@@ -61,6 +64,12 @@ import {
 import { SpecialRequirementsDropdown } from "@/components/SpecialRequirementsDropdown";
 import subActivityServices from "@/services/subActivityServices";
 import activitieServices from "@/services/activitieServices";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type Step = 1 | 2 | 3;
 
@@ -76,6 +85,13 @@ export default function CreateOrder() {
   const [truckTypes, setTruckTypes] = useState<any[]>([]);
   const [truckTypesLoading, setTruckTypesLoading] = useState(false);
 
+  // Local storage management
+  const { saveDraft, loadDraft, clearDraft, hasDraft } =
+    useCreateOrderStorage();
+  const [showDraftDialog, setShowDraftDialog] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
   const {
     loading,
     error,
@@ -87,6 +103,14 @@ export default function CreateOrder() {
     clearOrderError,
   } = useOrders();
 
+  // Check for existing draft on component mount
+  useEffect(() => {
+    if (!draftRestored && hasDraft()) {
+      setShowDraftDialog(true);
+    }
+  }, [draftRestored, hasDraft]);
+
+  // Load special requirements
   useEffect(() => {
     setSpecialReqLoading(true);
     subActivityServices
@@ -238,6 +262,8 @@ export default function CreateOrder() {
       const response = await createBasicOrder(data);
       setOrderId(response.data._id);
       setCurrentStep(2);
+      // Update draft with new order ID
+      autoSaveDraft();
       toast({
         title: "Step 1 Completed",
         description: "Basic order information saved successfully.",
@@ -266,6 +292,8 @@ export default function CreateOrder() {
       clearOrderError();
       await addPickupDeliveryInfo(orderId, data);
       setCurrentStep(3);
+      // Update draft with progress
+      autoSaveDraft();
       toast({
         title: "Step 2 Completed",
         description: "Pickup and delivery information saved successfully.",
@@ -311,6 +339,8 @@ export default function CreateOrder() {
         title: "Order Created Successfully",
         description: "Your order has been created and is being processed.",
       });
+      // Clear draft on successful order creation
+      clearDraft();
       clearOrderData();
       navigate(`/orders/${orderId}`);
     } catch (error: any) {
@@ -336,6 +366,122 @@ export default function CreateOrder() {
     }
   };
 
+  // Handle draft restoration
+  const handleRestoreDraft = () => {
+    const draft = loadDraft();
+    if (draft) {
+      if (draft.step1) {
+        step1Form.reset(draft.step1);
+      }
+      if (draft.step2) {
+        step2Form.reset(draft.step2);
+        // Restore field arrays
+        if (draft.step2.pickupInfo) {
+          step2Form.setValue("pickupInfo", draft.step2.pickupInfo);
+        }
+        if (draft.step2.deliveryInfo) {
+          step2Form.setValue("deliveryInfo", draft.step2.deliveryInfo);
+        }
+      }
+      if (draft.step3) {
+        step3Form.reset(draft.step3);
+      }
+      if (draft.currentStep) {
+        setCurrentStep(draft.currentStep as Step);
+      }
+      if (draft.orderId) {
+        setOrderId(draft.orderId);
+      }
+      setDraftRestored(true);
+      setLastSaved(new Date(draft.timestamp));
+      toast({
+        title: "Draft Restored",
+        description: "Your draft order has been restored successfully.",
+      });
+    }
+    setShowDraftDialog(false);
+  };
+
+  // Handle discard draft
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftRestored(true);
+    setShowDraftDialog(false);
+    toast({
+      title: "Draft Discarded",
+      description: "Starting with a fresh order form.",
+    });
+  };
+
+  // Auto-save draft
+  const autoSaveDraft = () => {
+    const draftData: any = {
+      currentStep,
+      timestamp: Date.now(),
+    };
+
+    if (currentStep >= 1) {
+      draftData.step1 = step1Form.getValues();
+    }
+    if (currentStep >= 2) {
+      draftData.step2 = step2Form.getValues();
+    }
+    if (currentStep >= 3) {
+      draftData.step3 = step3Form.getValues();
+    }
+    if (orderId) {
+      draftData.orderId = orderId;
+    }
+
+    saveDraft(draftData);
+    setLastSaved(new Date());
+  };
+
+  // Auto-save on form changes
+  useEffect(() => {
+    const step1Subscription = step1Form.watch(() => {
+      if (currentStep === 1) {
+        autoSaveDraft();
+      }
+    });
+
+    const step2Subscription = step2Form.watch(() => {
+      if (currentStep === 2) {
+        autoSaveDraft();
+      }
+    });
+
+    const step3Subscription = step3Form.watch(() => {
+      if (currentStep === 3) {
+        autoSaveDraft();
+      }
+    });
+
+    return () => {
+      step1Subscription.unsubscribe();
+      step2Subscription.unsubscribe();
+      step3Subscription.unsubscribe();
+    };
+  }, [currentStep, step1Form, step2Form, step3Form, orderId, saveDraft]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl/Cmd + S to save draft
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault();
+        autoSaveDraft();
+        toast({
+          title: "Draft Saved",
+          description: "Your progress has been saved.",
+        });
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [autoSaveDraft, toast]);
+
   // Clear order data when component unmounts
   useEffect(() => {
     return () => {
@@ -343,36 +489,68 @@ export default function CreateOrder() {
     };
   }, []); // Empty dependency array to run only on unmount
 
-  const renderStepIndicator = () => (
-    <div className="flex items-center justify-center mb-8">
-      <div className="flex items-center space-x-4">
-        {[1, 2, 3].map((step) => (
-          <div key={step} className="flex items-center">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                currentStep >= step
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-gray-100 text-gray-400 border-gray-300"
-              }`}
-            >
-              {currentStep > step ? (
-                <CheckCircle className="w-6 h-6" />
-              ) : (
-                <span className="font-semibold">{step}</span>
-              )}
-            </div>
-            {step < 3 && (
-              <div
-                className={`w-16 h-1 mx-2 ${
-                  currentStep > step ? "bg-blue-600" : "bg-gray-300"
-                }`}
-              />
-            )}
+  // Warn user before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (lastSaved) {
+        event.preventDefault();
+        event.returnValue =
+          "You have unsaved changes. Are you sure you want to leave?";
+        return event.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [lastSaved]);
+
+  const renderStepIndicator = () => {
+    const progressPercentage = ((currentStep - 1) / 2) * 100;
+
+    return (
+      <div className="mb-8">
+        <div className="flex items-center justify-center mb-4">
+          <div className="flex items-center space-x-4">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex items-center">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                    currentStep >= step
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-gray-100 text-gray-400 border-gray-300"
+                  }`}
+                >
+                  {currentStep > step ? (
+                    <CheckCircle className="w-6 h-6" />
+                  ) : (
+                    <span className="font-semibold">{step}</span>
+                  )}
+                </div>
+                {step < 3 && (
+                  <div
+                    className={`w-16 h-1 mx-2 ${
+                      currentStep > step ? "bg-blue-600" : "bg-gray-300"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+          <div
+            className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-in-out"
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
+        <div className="text-center text-sm text-gray-600">
+          {Math.round(progressPercentage)}% Complete
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderStepTitle = () => {
     const titles = {
@@ -387,29 +565,111 @@ export default function CreateOrder() {
     <div className="w-full space-y-6 p-6">
       <title>Create Order | Wassel</title>
 
+      {/* Draft Restoration Dialog */}
+      <DraftRestorationDialog
+        isOpen={showDraftDialog}
+        onRestore={handleRestoreDraft}
+        onDiscard={handleDiscardDraft}
+        draftInfo={(() => {
+          const draft = loadDraft();
+          return draft && draft.currentStep
+            ? {
+                currentStep: draft.currentStep,
+                timestamp: draft.timestamp,
+              }
+            : undefined;
+        })()}
+      />
+
       {/* Header */}
-      <div className="flex items-center space-x-4 mb-8">
-        <div className="bg-blue-600 text-white p-3 rounded-lg">
-          <Package className="h-6 w-6" />
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-4">
+          <div className="bg-blue-600 text-white p-3 rounded-lg">
+            <Package className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Create New Order
+            </h1>
+            <p className="text-muted-foreground">
+              Complete the form below to create a new order
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Create New Order
-          </h1>
-          <p className="text-muted-foreground">
-            Complete the form below to create a new order
-          </p>
+
+        {/* Save Status and Manual Save Button */}
+        <div className="flex items-center space-x-4">
+          {lastSaved && (
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Save className="h-4 w-4" />
+              <span>Last saved: {lastSaved.toLocaleTimeString()}</span>
+            </div>
+          )}
+          <div className="flex items-center space-x-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={autoSaveDraft}
+                    className="flex items-center space-x-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>Save Draft</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Save your progress (Ctrl/Cmd + S)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {lastSaved && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        clearDraft();
+                        setLastSaved(null);
+                        setDraftRestored(false);
+                        toast({
+                          title: "Draft Cleared",
+                          description: "All saved progress has been cleared.",
+                        });
+                      }}
+                      className="flex items-center space-x-2 text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Clear Draft</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Clear all saved progress and start fresh</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Step Indicator */}
       {renderStepIndicator()}
 
-      {/* Step Title */}
+      {/* Step Title and Progress */}
       <div className="text-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-900">
           {renderStepTitle()}
         </h2>
+        {draftRestored && (
+          <p className="text-sm text-blue-600 mt-2">
+            ✓ Draft restored - continuing from where you left off
+          </p>
+        )}
       </div>
 
       {/* Error Display */}
@@ -418,6 +678,21 @@ export default function CreateOrder() {
           <div className="flex items-center">
             <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
             <span className="text-red-800">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-save Status */}
+      {lastSaved && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Save className="h-5 w-5 text-green-600 mr-2" />
+              <span className="text-green-800">
+                Your progress is automatically saved. You can safely refresh the
+                page or come back later.
+              </span>
+            </div>
           </div>
         </div>
       )}

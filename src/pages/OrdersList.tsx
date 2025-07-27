@@ -187,16 +187,20 @@ export default function OrdersList() {
 
   // Helper function to format location
   const formatLocation = (location: any) => {
-    return `${location.country}, ${location.area}, ${location.city}`;
+    if (!location) return "N/A";
+    return `${location.country || "N/A"}, ${location.area || "N/A"}, ${
+      location.city || "N/A"
+    }`;
   };
 
   // Helper function to format special requirements
   const formatSpecialRequirements = (requirements: any[]) => {
+    if (!requirements || !Array.isArray(requirements)) return [];
     return requirements.map(
       (req) =>
-        `${req.quantity} x ${req.subActivity.portalItemNameEn}${
-          req.note ? ` - ${req.note}` : ""
-        }`
+        `${req.quantity || 0} x ${
+          req.subActivity?.portalItemNameEn || "Unknown"
+        }${req.note ? ` - ${req.note}` : ""}`
     );
   };
 
@@ -252,7 +256,7 @@ export default function OrdersList() {
             <div>
               <p className="font-medium text-gray-700">Customer:</p>
               <p className="text-gray-900 break-words">
-                {order.billingAccount.custName}
+                {order.billingAccount?.custName || "N/A"}
               </p>
             </div>
             <div>
@@ -347,9 +351,9 @@ export default function OrdersList() {
                   <TableCell className="font-medium">Billing Account</TableCell>
                   <TableCell
                     className="max-w-xs truncate"
-                    title={order.billingAccount.custName}
+                    title={order.billingAccount?.custName || "N/A"}
                   >
-                    {order.billingAccount.custName}
+                    {order.billingAccount?.custName || "N/A"}
                   </TableCell>
                   <TableCell className="font-medium">Email</TableCell>
                   <TableCell
@@ -365,7 +369,7 @@ export default function OrdersList() {
         </Card>
 
         {/* Pickup Points */}
-        {order.pickupInfo.map((pickup, index) => (
+        {(order.pickupInfo || []).map((pickup, index) => (
           <Card key={`pickup-${index}`}>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -430,7 +434,7 @@ export default function OrdersList() {
                       Pickup coordinator name:
                     </p>
                     <p className="text-gray-900">
-                      {pickup.pickupCoordinator.requesterName}
+                      {pickup.pickupCoordinator?.requesterName || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -438,7 +442,7 @@ export default function OrdersList() {
                       Pickup coordinator mobile 1:
                     </p>
                     <p className="text-gray-900">
-                      {pickup.pickupCoordinator.requesterMobile1}
+                      {pickup.pickupCoordinator?.requesterMobile1 || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -446,13 +450,13 @@ export default function OrdersList() {
                       Pickup coordinator mobile 2:
                     </p>
                     <p className="text-gray-900">
-                      {pickup.pickupCoordinator.requesterMobile2 || "N/A"}
+                      {pickup.pickupCoordinator?.requesterMobile2 || "N/A"}
                     </p>
                   </div>
                   <div>
                     <p className="font-medium text-gray-700">Email:</p>
                     <p className="text-gray-900 break-all">
-                      {pickup.pickupCoordinator.emailAddress}
+                      {pickup.pickupCoordinator?.emailAddress || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -470,7 +474,7 @@ export default function OrdersList() {
         ))}
 
         {/* Delivery Points */}
-        {order.deliveryInfo.map((delivery, index) => (
+        {(order.deliveryInfo || []).map((delivery, index) => (
           <Card key={`delivery-${index}`}>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -537,7 +541,7 @@ export default function OrdersList() {
                       Delivery coordinator name:
                     </p>
                     <p className="text-gray-900">
-                      {delivery.deliveryCoordinator.requesterName}
+                      {delivery.deliveryCoordinator?.requesterName || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -545,7 +549,7 @@ export default function OrdersList() {
                       Delivery coordinator mobile 1:
                     </p>
                     <p className="text-gray-900">
-                      {delivery.deliveryCoordinator.requesterMobile1}
+                      {delivery.deliveryCoordinator?.requesterMobile1 || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -553,13 +557,13 @@ export default function OrdersList() {
                       Delivery coordinator mobile 2:
                     </p>
                     <p className="text-gray-900">
-                      {delivery.deliveryCoordinator.requesterMobile2 || "N/A"}
+                      {delivery.deliveryCoordinator?.requesterMobile2 || "N/A"}
                     </p>
                   </div>
                   <div>
                     <p className="font-medium text-gray-700">Email:</p>
                     <p className="text-gray-900 break-all">
-                      {delivery.deliveryCoordinator.emailAddress}
+                      {delivery.deliveryCoordinator?.emailAddress || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -590,13 +594,15 @@ export default function OrdersList() {
                 <div>
                   <p className="font-medium text-gray-700">Shipping units:</p>
                   <p className="text-gray-900">
-                    {order.shippingDetails.shippingUnits.activityNameEn}
+                    {order.shippingDetails.shippingUnits?.activityNameEn ||
+                      "N/A"}
                   </p>
                 </div>
                 <div>
                   <p className="font-medium text-gray-700">Type of truck:</p>
                   <p className="text-gray-900">
-                    {order.shippingDetails.typeOfTruck.portalItemNameEn}
+                    {order.shippingDetails.typeOfTruck?.portalItemNameEn ||
+                      "N/A"}
                   </p>
                 </div>
                 <div>
@@ -656,18 +662,28 @@ export default function OrdersList() {
                   <p className="font-medium text-gray-700">Total Price:</p>
                   <p className="text-gray-900 text-lg font-semibold">
                     $
-                    {order.truckTypeMatches.reduce(
-                      (sum, item) => sum + item.price,
+                    {(order.truckTypeMatches || []).reduce(
+                      (sum, item) => sum + (item.price || 0),
                       0
                     ) +
-                      order.specialRequirementsPrices.pickupSpecialRequirements.reduce(
+                      (
+                        order.specialRequirementsPrices
+                          ?.pickupSpecialRequirements || []
+                      ).reduce(
                         (sum, item) =>
-                          sum + item.basePrice + item.locationPrice,
+                          sum +
+                          (item.basePrice || 0) +
+                          (item.locationPrice || 0),
                         0
                       ) +
-                      order.specialRequirementsPrices.deliverySpecialRequirements.reduce(
+                      (
+                        order.specialRequirementsPrices
+                          ?.deliverySpecialRequirements || []
+                      ).reduce(
                         (sum, item) =>
-                          sum + item.basePrice + item.locationPrice,
+                          sum +
+                          (item.basePrice || 0) +
+                          (item.locationPrice || 0),
                         0
                       )}
                   </p>
@@ -676,18 +692,18 @@ export default function OrdersList() {
                   <p className="font-medium text-gray-700">Total Cost:</p>
                   <p className="text-gray-900 text-lg font-semibold">
                     $
-                    {order.truckTypeMatches.reduce(
-                      (sum, item) => sum + item.cost,
+                    {(order.truckTypeMatches || []).reduce(
+                      (sum, item) => sum + (item.cost || 0),
                       0
                     ) +
-                      order.specialRequirementsPrices.pickupSpecialRequirements.reduce(
-                        (sum, item) => sum + item.cost,
-                        0
-                      ) +
-                      order.specialRequirementsPrices.deliverySpecialRequirements.reduce(
-                        (sum, item) => sum + item.cost,
-                        0
-                      )}
+                      (
+                        order.specialRequirementsPrices
+                          ?.pickupSpecialRequirements || []
+                      ).reduce((sum, item) => sum + (item.cost || 0), 0) +
+                      (
+                        order.specialRequirementsPrices
+                          ?.deliverySpecialRequirements || []
+                      ).reduce((sum, item) => sum + (item.cost || 0), 0)}
                   </p>
                 </div>
                 <div>
@@ -763,7 +779,7 @@ export default function OrdersList() {
                 </div>
 
                 {/* Truck Type Matches Rows */}
-                {order.truckTypeMatches.map((item, index) => (
+                {(order.truckTypeMatches || []).map((item, index) => (
                   <div key={`truck-${index}`} className="p-4 border-b">
                     <div className="grid grid-cols-12 gap-4 text-sm">
                       <span
@@ -781,10 +797,12 @@ export default function OrdersList() {
                       </span>
                       <span
                         className="col-span-2 truncate"
-                        title={`${item.locationDetails.fromLocation} → ${item.locationDetails.toLocation}`}
+                        title={`${
+                          item.locationDetails?.fromLocation || "N/A"
+                        } → ${item.locationDetails?.toLocation || "N/A"}`}
                       >
-                        {item.locationDetails.fromLocation} →{" "}
-                        {item.locationDetails.toLocation}
+                        {item.locationDetails?.fromLocation || "N/A"} →{" "}
+                        {item.locationDetails?.toLocation || "N/A"}
                       </span>
                       <span className="col-span-1">-</span>
                       <span className="col-span-3">
@@ -841,124 +859,126 @@ export default function OrdersList() {
                 ))}
 
                 {/* Pickup Special Requirements Rows */}
-                {order.specialRequirementsPrices.pickupSpecialRequirements.map(
-                  (item, index) => (
-                    <div key={`pickup-sr-${index}`} className="p-4 border-b">
-                      <div className="grid grid-cols-12 gap-4 text-sm">
-                        <span
-                          className="col-span-1 text-blue-600 cursor-pointer hover:underline"
-                          title="Click to view customer price line"
-                          onClick={() => navigate("/pricelists/PL-002")}
-                        >
-                          PL-002
-                        </span>
-                        <span
-                          className="col-span-2 truncate"
-                          title={item.subActivityName}
-                        >
-                          {item.subActivityName}
-                        </span>
-                        <span className="col-span-2">-</span>
-                        <span className="col-span-1">-</span>
-                        <span className="col-span-3">
-                          <div className="relative w-full h-20">
-                            {/* Gradient Bar */}
-                            <div className="w-full h-2 bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full mt-2"></div>
+                {(
+                  order.specialRequirementsPrices?.pickupSpecialRequirements ||
+                  []
+                ).map((item, index) => (
+                  <div key={`pickup-sr-${index}`} className="p-4 border-b">
+                    <div className="grid grid-cols-12 gap-4 text-sm">
+                      <span
+                        className="col-span-1 text-blue-600 cursor-pointer hover:underline"
+                        title="Click to view customer price line"
+                        onClick={() => navigate("/pricelists/PL-002")}
+                      >
+                        PL-002
+                      </span>
+                      <span
+                        className="col-span-2 truncate"
+                        title={item.subActivityName}
+                      >
+                        {item.subActivityName}
+                      </span>
+                      <span className="col-span-2">-</span>
+                      <span className="col-span-1">-</span>
+                      <span className="col-span-3">
+                        <div className="relative w-full h-20">
+                          {/* Gradient Bar */}
+                          <div className="w-full h-2 bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full mt-2"></div>
 
-                            {/* Central Reference Line */}
-                            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-20 bg-blue-600"></div>
-                            <div className="absolute top-20 left-1/2 transform -translate-x-1/2 text-xs font-bold text-blue-600">
-                              $1,500
-                            </div>
-
-                            {/* Vendor Markers */}
-                            <div className="absolute top-0 left-[25%] transform -translate-x-1/2 w-0.5 h-16 bg-gray-800"></div>
-                            <div className="absolute top-16 left-[25%] transform -translate-x-1/2 text-xs text-center min-w-[70px]">
-                              <div className="text-xs font-medium">20%</div>
-                              <div className="text-xs">$1,200</div>
-                              <div className="text-xs font-bold">WSL</div>
-                            </div>
-
-                            <div className="absolute top-0 left-[75%] transform -translate-x-1/2 w-0.5 h-16 bg-gray-800"></div>
-                            <div className="absolute top-16 left-[75%] transform -translate-x-1/2 text-xs text-center min-w-[70px]">
-                              <div className="text-xs font-medium">-20%</div>
-                              <div className="text-xs">$1,800</div>
-                              <div className="text-xs font-bold">ABK</div>
-                            </div>
+                          {/* Central Reference Line */}
+                          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-20 bg-blue-600"></div>
+                          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 text-xs font-bold text-blue-600">
+                            $1,500
                           </div>
-                        </span>
-                        <span className="col-span-2">
-                          <select className="w-full p-1 text-xs border rounded">
-                            <option value="">Select Vendor</option>
-                            <option value="vendor1">Wassel</option>
-                            <option value="vendor2">Vendor 2</option>
-                          </select>
-                        </span>
-                        <span className="col-span-1">${item.cost}</span>
-                      </div>
+
+                          {/* Vendor Markers */}
+                          <div className="absolute top-0 left-[25%] transform -translate-x-1/2 w-0.5 h-16 bg-gray-800"></div>
+                          <div className="absolute top-16 left-[25%] transform -translate-x-1/2 text-xs text-center min-w-[70px]">
+                            <div className="text-xs font-medium">20%</div>
+                            <div className="text-xs">$1,200</div>
+                            <div className="text-xs font-bold">WSL</div>
+                          </div>
+
+                          <div className="absolute top-0 left-[75%] transform -translate-x-1/2 w-0.5 h-16 bg-gray-800"></div>
+                          <div className="absolute top-16 left-[75%] transform -translate-x-1/2 text-xs text-center min-w-[70px]">
+                            <div className="text-xs font-medium">-20%</div>
+                            <div className="text-xs">$1,800</div>
+                            <div className="text-xs font-bold">ABK</div>
+                          </div>
+                        </div>
+                      </span>
+                      <span className="col-span-2">
+                        <select className="w-full p-1 text-xs border rounded">
+                          <option value="">Select Vendor</option>
+                          <option value="vendor1">Wassel</option>
+                          <option value="vendor2">Vendor 2</option>
+                        </select>
+                      </span>
+                      <span className="col-span-1">${item.cost}</span>
                     </div>
-                  )
-                )}
+                  </div>
+                ))}
 
                 {/* Delivery Special Requirements Rows */}
-                {order.specialRequirementsPrices.deliverySpecialRequirements.map(
-                  (item, index) => (
-                    <div key={`delivery-sr-${index}`} className="p-4 border-b">
-                      <div className="grid grid-cols-12 gap-4 text-sm">
-                        <span
-                          className="col-span-1 text-blue-600 cursor-pointer hover:underline"
-                          title="Click to view customer price line"
-                          onClick={() => navigate("/pricelists/PL-003")}
-                        >
-                          PL-003
-                        </span>
-                        <span
-                          className="col-span-2 truncate"
-                          title={item.subActivityName}
-                        >
-                          {item.subActivityName}
-                        </span>
-                        <span className="col-span-2">-</span>
-                        <span className="col-span-1">-</span>
-                        <span className="col-span-3">
-                          <div className="relative w-full h-20">
-                            {/* Gradient Bar */}
-                            <div className="w-full h-2 bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full mt-2"></div>
+                {(
+                  order.specialRequirementsPrices
+                    ?.deliverySpecialRequirements || []
+                ).map((item, index) => (
+                  <div key={`delivery-sr-${index}`} className="p-4 border-b">
+                    <div className="grid grid-cols-12 gap-4 text-sm">
+                      <span
+                        className="col-span-1 text-blue-600 cursor-pointer hover:underline"
+                        title="Click to view customer price line"
+                        onClick={() => navigate("/pricelists/PL-003")}
+                      >
+                        PL-003
+                      </span>
+                      <span
+                        className="col-span-2 truncate"
+                        title={item.subActivityName}
+                      >
+                        {item.subActivityName}
+                      </span>
+                      <span className="col-span-2">-</span>
+                      <span className="col-span-1">-</span>
+                      <span className="col-span-3">
+                        <div className="relative w-full h-20">
+                          {/* Gradient Bar */}
+                          <div className="w-full h-2 bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full mt-2"></div>
 
-                            {/* Central Reference Line */}
-                            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-20 bg-blue-600"></div>
-                            <div className="absolute top-20 left-1/2 transform -translate-x-1/2 text-xs font-bold text-blue-600">
-                              $1,800
-                            </div>
-
-                            {/* Vendor Markers */}
-                            <div className="absolute top-0 left-[30%] transform -translate-x-1/2 w-0.5 h-16 bg-gray-800"></div>
-                            <div className="absolute top-16 left-[30%] transform -translate-x-1/2 text-xs text-center min-w-[70px]">
-                              <div className="text-xs font-medium">28%</div>
-                              <div className="text-xs">$1,300</div>
-                              <div className="text-xs font-bold">WSL</div>
-                            </div>
-
-                            <div className="absolute top-0 left-[80%] transform -translate-x-1/2 w-0.5 h-16 bg-gray-800"></div>
-                            <div className="absolute top-16 left-[80%] transform -translate-x-1/2 text-xs text-center min-w-[70px]">
-                              <div className="text-xs font-medium">-33%</div>
-                              <div className="text-xs">$2,400</div>
-                              <div className="text-xs font-bold">LSK</div>
-                            </div>
+                          {/* Central Reference Line */}
+                          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-20 bg-blue-600"></div>
+                          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 text-xs font-bold text-blue-600">
+                            $1,800
                           </div>
-                        </span>
-                        <span className="col-span-2">
-                          <select className="w-full p-1 text-xs border rounded">
-                            <option value="">Select Vendor</option>
-                            <option value="vendor1">Wassel</option>
-                            <option value="vendor2">Vendor 2</option>
-                          </select>
-                        </span>
-                        <span className="col-span-1">${item.cost}</span>
-                      </div>
+
+                          {/* Vendor Markers */}
+                          <div className="absolute top-0 left-[30%] transform -translate-x-1/2 w-0.5 h-16 bg-gray-800"></div>
+                          <div className="absolute top-16 left-[30%] transform -translate-x-1/2 text-xs text-center min-w-[70px]">
+                            <div className="text-xs font-medium">28%</div>
+                            <div className="text-xs">$1,300</div>
+                            <div className="text-xs font-bold">WSL</div>
+                          </div>
+
+                          <div className="absolute top-0 left-[80%] transform -translate-x-1/2 w-0.5 h-16 bg-gray-800"></div>
+                          <div className="absolute top-16 left-[80%] transform -translate-x-1/2 text-xs text-center min-w-[70px]">
+                            <div className="text-xs font-medium">-33%</div>
+                            <div className="text-xs">$2,400</div>
+                            <div className="text-xs font-bold">LSK</div>
+                          </div>
+                        </div>
+                      </span>
+                      <span className="col-span-2">
+                        <select className="w-full p-1 text-xs border rounded">
+                          <option value="">Select Vendor</option>
+                          <option value="vendor1">Wassel</option>
+                          <option value="vendor2">Vendor 2</option>
+                        </select>
+                      </span>
+                      <span className="col-span-1">${item.cost}</span>
                     </div>
-                  )
-                )}
+                  </div>
+                ))}
               </div>
 
               {/* IPO Summary */}
@@ -970,18 +990,28 @@ export default function OrdersList() {
                       Selling price:{" "}
                       <span className="font-medium text-gray-900">
                         $
-                        {order.truckTypeMatches.reduce(
-                          (sum, item) => sum + item.price,
+                        {(order.truckTypeMatches || []).reduce(
+                          (sum, item) => sum + (item.price || 0),
                           0
                         ) +
-                          order.specialRequirementsPrices.pickupSpecialRequirements.reduce(
+                          (
+                            order.specialRequirementsPrices
+                              ?.pickupSpecialRequirements || []
+                          ).reduce(
                             (sum, item) =>
-                              sum + item.basePrice + item.locationPrice,
+                              sum +
+                              (item.basePrice || 0) +
+                              (item.locationPrice || 0),
                             0
                           ) +
-                          order.specialRequirementsPrices.deliverySpecialRequirements.reduce(
+                          (
+                            order.specialRequirementsPrices
+                              ?.deliverySpecialRequirements || []
+                          ).reduce(
                             (sum, item) =>
-                              sum + item.basePrice + item.locationPrice,
+                              sum +
+                              (item.basePrice || 0) +
+                              (item.locationPrice || 0),
                             0
                           )}
                       </span>
@@ -990,18 +1020,18 @@ export default function OrdersList() {
                       Cost:{" "}
                       <span className="font-medium text-gray-900">
                         $
-                        {order.truckTypeMatches.reduce(
-                          (sum, item) => sum + item.cost,
+                        {(order.truckTypeMatches || []).reduce(
+                          (sum, item) => sum + (item.cost || 0),
                           0
                         ) +
-                          order.specialRequirementsPrices.pickupSpecialRequirements.reduce(
-                            (sum, item) => sum + item.cost,
-                            0
-                          ) +
-                          order.specialRequirementsPrices.deliverySpecialRequirements.reduce(
-                            (sum, item) => sum + item.cost,
-                            0
-                          )}
+                          (
+                            order.specialRequirementsPrices
+                              ?.pickupSpecialRequirements || []
+                          ).reduce((sum, item) => sum + (item.cost || 0), 0) +
+                          (
+                            order.specialRequirementsPrices
+                              ?.deliverySpecialRequirements || []
+                          ).reduce((sum, item) => sum + (item.cost || 0), 0)}
                       </span>
                     </p>
                     <p className="text-sm text-gray-600">
@@ -1009,33 +1039,43 @@ export default function OrdersList() {
                       <span className="font-medium text-gray-900">
                         {(() => {
                           const totalPrice =
-                            order.truckTypeMatches.reduce(
-                              (sum, item) => sum + item.price,
+                            (order.truckTypeMatches || []).reduce(
+                              (sum, item) => sum + (item.price || 0),
                               0
                             ) +
-                            order.specialRequirementsPrices.pickupSpecialRequirements.reduce(
+                            (
+                              order.specialRequirementsPrices
+                                ?.pickupSpecialRequirements || []
+                            ).reduce(
                               (sum, item) =>
-                                sum + item.basePrice + item.locationPrice,
+                                sum +
+                                (item.basePrice || 0) +
+                                (item.locationPrice || 0),
                               0
                             ) +
-                            order.specialRequirementsPrices.deliverySpecialRequirements.reduce(
+                            (
+                              order.specialRequirementsPrices
+                                ?.deliverySpecialRequirements || []
+                            ).reduce(
                               (sum, item) =>
-                                sum + item.basePrice + item.locationPrice,
+                                sum +
+                                (item.basePrice || 0) +
+                                (item.locationPrice || 0),
                               0
                             );
                           const totalCost =
-                            order.truckTypeMatches.reduce(
-                              (sum, item) => sum + item.cost,
+                            (order.truckTypeMatches || []).reduce(
+                              (sum, item) => sum + (item.cost || 0),
                               0
                             ) +
-                            order.specialRequirementsPrices.pickupSpecialRequirements.reduce(
-                              (sum, item) => sum + item.cost,
-                              0
-                            ) +
-                            order.specialRequirementsPrices.deliverySpecialRequirements.reduce(
-                              (sum, item) => sum + item.cost,
-                              0
-                            );
+                            (
+                              order.specialRequirementsPrices
+                                ?.pickupSpecialRequirements || []
+                            ).reduce((sum, item) => sum + (item.cost || 0), 0) +
+                            (
+                              order.specialRequirementsPrices
+                                ?.deliverySpecialRequirements || []
+                            ).reduce((sum, item) => sum + (item.cost || 0), 0);
                           return totalPrice > 0
                             ? (
                                 ((totalPrice - totalCost) / totalPrice) *
