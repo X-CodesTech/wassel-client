@@ -19,7 +19,7 @@ export default function CustomerDetails() {
   );
 
   useEffect(() => {
-    dispatch(actGetCustomer(id));
+    dispatch(actGetCustomer(id!));
   }, [dispatch]);
 
   if (loading === "pending") {
