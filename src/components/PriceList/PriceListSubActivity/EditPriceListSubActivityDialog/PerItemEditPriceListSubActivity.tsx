@@ -15,11 +15,17 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  actGetCustomer,
+  updateCustomerPriceListSubActivity,
+} from "@/store/customers/customersSlice";
+import { useParams } from "wouter";
 
 interface PerItemEditPriceListSubActivityProps {
   selectedSubActivityPrice: SubActivityPrice;
   onOpenChange: (open: boolean) => void;
   priceListId: string;
+  isCustomerPriceList?: boolean;
 }
 
 // per‐item schema for edit
@@ -36,8 +42,10 @@ const PerItemEditPriceListSubActivity = ({
   selectedSubActivityPrice,
   onOpenChange,
   priceListId,
+  isCustomerPriceList = false,
 }: PerItemEditPriceListSubActivityProps) => {
   const dispatch = useAppDispatch();
+  const { id } = useParams();
   const { toast } = useToast();
 
   const getSubActivityId = (subActivity: any): string => {
@@ -102,6 +110,10 @@ const PerItemEditPriceListSubActivity = ({
           }
         })
         .then(() => {
+          if (isCustomerPriceList) {
+            dispatch(actGetCustomer(id!));
+          }
+
           toast({
             title: "Success",
             description: "Price list updated successfully",

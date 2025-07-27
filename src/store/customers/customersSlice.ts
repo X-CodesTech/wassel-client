@@ -1,5 +1,5 @@
 import { isString, TLoading } from "@/types";
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, current, PayloadAction } from "@reduxjs/toolkit";
 import {
   Customer,
   CustomerResponse,
@@ -8,10 +8,13 @@ import {
 import { actGetCustomers } from "./act/actGetCustomers";
 import { actImportCustomers } from "./act/actImportCustomers";
 import { actGetCustomer } from "./act/actGetCustomer";
-import { CustomerPriceListResponse } from "@/services/customerServices";
+import {
+  CustomerPriceListResponse,
+  SubActivityPrice,
+} from "@/services/customerServices";
 import { actAddCustomerPriceListSubActivity } from "./act/actAddCustomerPriceListSubActivity";
 import { actDeleteCustomerPriceListSubActivity } from "./act/actDeleteCustomerPriceListSubActivity.ts";
-import { current } from "@reduxjs/toolkit";
+import { TUpdatePriceListSubActivityPriceResponse } from "@/types/priceListServices.type.ts";
 
 interface ICustomersState {
   records: Customer[];
@@ -74,6 +77,92 @@ const customersSlice = createSlice({
     clearCustomersData: (state) => {
       state.records = [];
       state.pagination = initialState.pagination;
+    },
+    removePriceListSubActivity: (
+      state,
+      action: PayloadAction<{
+        priceListId: string;
+        subActivityId: string;
+      }>
+    ) => {
+      const { priceListId, subActivityId } = action.payload;
+
+      if (state.selectedCustomer) {
+        const priceListIndex = state.selectedCustomer.priceLists.findIndex(
+          (priceList) => priceList.priceList._id === priceListId
+        );
+
+        if (priceListIndex !== -1) {
+          state.selectedCustomer.priceLists[
+            priceListIndex
+          ].priceList.subActivityPrices = state.selectedCustomer.priceLists[
+            priceListIndex
+          ].priceList.subActivityPrices.filter(
+            (subActivity) => subActivity._id !== subActivityId
+          );
+        }
+
+        if (
+          state.selectedCustomer.priceLists[priceListIndex].priceList
+            .subActivityPrices.length === 0
+        ) {
+          state.selectedCustomer.priceLists.splice(priceListIndex, 1);
+        }
+      }
+    },
+    addPriceListSubActivity: (
+      state,
+      action: PayloadAction<{
+        priceListId: string;
+        subActivityPrices: SubActivityPrice[];
+      }>
+    ) => {
+      if (state.selectedCustomer) {
+        state.selectedCustomer.priceLists.find(
+          (priceList) => priceList.priceList._id === action.payload.priceListId
+        )!.priceList.subActivityPrices = action.payload.subActivityPrices;
+      }
+    },
+    updateCustomerPriceListSubActivity: (
+      state,
+      action: PayloadAction<{
+        priceListId: string;
+        subActivityId: string;
+        data:
+          | Partial<SubActivityPrice>
+          | TUpdatePriceListSubActivityPriceResponse["data"];
+        fullUpdate?: boolean;
+      }>
+    ) => {
+      const { priceListId, subActivityId, data } = action.payload;
+
+      const priceListIndex = state.selectedCustomer?.priceLists.findIndex(
+        (priceList) => priceList.priceList._id === priceListId
+      );
+
+      const priceList = state.selectedCustomer?.priceLists[priceListIndex!];
+
+      const subActivityIndex = priceList?.priceList.subActivityPrices.findIndex(
+        (sa) => sa.subActivity._id === subActivityId
+      );
+
+      let subActivity =
+        priceList?.priceList.subActivityPrices[subActivityIndex!];
+
+      if (action.payload.fullUpdate) {
+        state.selectedCustomer!.priceLists[
+          priceListIndex!
+        ].priceList.subActivityPrices = data;
+      }
+
+      if (subActivity) {
+        state.selectedCustomer!.priceLists[
+          priceListIndex!
+        ].priceList.subActivityPrices[subActivityIndex!] = {
+          ...subActivity,
+          ...data,
+        };
+      }
     },
   },
   extraReducers: (builder) => {
@@ -187,6 +276,9 @@ export const {
   clearCustomersData,
   setSelectedCustomer,
   clearSelectedCustomer,
+  addPriceListSubActivity,
+  removePriceListSubActivity,
+  updateCustomerPriceListSubActivity,
 } = customersSlice.actions;
 
 export {

@@ -19,11 +19,17 @@ import { useEffect, useMemo, useCallback } from "react";
 import { actGetLocations } from "@/store/locations";
 import { Plus, Trash2 } from "lucide-react";
 import { AsyncLocationSelect } from "@/components/ui/async-location-select";
+import {
+  actGetCustomer,
+  updateCustomerPriceListSubActivity,
+} from "@/store/customers/customersSlice";
+import { useParams } from "wouter";
 
 interface PerTripEditPriceListSubActivityProps {
   selectedSubActivityPrice: SubActivityPrice;
   onOpenChange: (open: boolean) => void;
   priceListId: string;
+  isCustomerPriceList?: boolean;
 }
 
 // per‐trip schema for edit
@@ -51,10 +57,12 @@ const PerTripEditPriceListSubActivity = ({
   selectedSubActivityPrice,
   onOpenChange,
   priceListId,
+  isCustomerPriceList = false,
 }: PerTripEditPriceListSubActivityProps) => {
   const dispatch = useAppDispatch();
   const { records: locations } = useAppSelector((state) => state.locations);
   const { toast } = useToast();
+  const { id } = useParams();
 
   const getSubActivityId = (subActivity: any): string => {
     if (typeof subActivity === "string") {
@@ -209,7 +217,11 @@ const PerTripEditPriceListSubActivity = ({
           });
         }
       })
-      .then(() => {
+      .then((response) => {
+        if (isCustomerPriceList) {
+          dispatch(actGetCustomer(id!));
+        }
+
         toast({
           title: "Success",
           description: "Price list updated successfully",

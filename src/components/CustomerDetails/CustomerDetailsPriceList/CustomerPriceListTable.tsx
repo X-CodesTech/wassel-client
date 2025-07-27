@@ -14,6 +14,7 @@ import React, { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DeleteCustomerDetailsSubActivityDialog from "./CustomerDetailsDialogs/DeleteCustomerDetailsSubActivityDialog";
+import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
 
 type TPriceList = CustomerPriceListResponse["priceList"];
 type TSubActivityPrice = TPriceList["subActivityPrices"][number];
@@ -23,7 +24,7 @@ type TLocation = TLocationPrice["location"];
 const formatFromToAddress = (locationPrice: TLocationPrice) => {
   const formatFullAddress = (
     location: TLocation | undefined,
-    isArabic: boolean = false,
+    isArabic: boolean = false
   ) => {
     if (!location) return isArabic ? "غير متوفر" : "N/A";
 
@@ -71,7 +72,7 @@ const formatFromToAddress = (locationPrice: TLocationPrice) => {
 
 const renderCostRange = (
   cost: number | undefined,
-  locationPrices: TLocationPrice[],
+  locationPrices: TLocationPrice[]
 ) => {
   if (cost) {
     return cost.toLocaleString();
@@ -149,14 +150,16 @@ const CustomerPriceListTable = ({
   priceList: CustomerPriceListResponse["priceList"];
 }) => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [dialog, setDialog] = useState<"deleteSubActivity" | null>(null);
+  const [dialog, setDialog] = useState<
+    "deleteSubActivity" | "editSubActivity" | null
+  >(null);
   const [selectedSubActivityPrice, setSelectedSubActivityPrice] =
     useState<TSubActivityPrice | null>(null);
 
   const handleDialog = (
     open: boolean,
-    type?: "deleteSubActivity",
-    subActivityPrice?: TSubActivityPrice,
+    type?: "deleteSubActivity" | "editSubActivity",
+    subActivityPrice?: TSubActivityPrice
   ) => {
     if (!open) {
       setDialog(null);
@@ -233,7 +236,7 @@ const CustomerPriceListTable = ({
                           <TableCell className="text-center">
                             <Badge
                               className={getPricingMethodColor(
-                                locationPrice.pricingMethod,
+                                locationPrice.pricingMethod
                               )}
                             >
                               {
@@ -291,15 +294,15 @@ const CustomerPriceListTable = ({
           <TableCell className="font-medium text-center">
             {typeof item.subActivity.activity === "string"
               ? item.subActivity.activity
-              : item.subActivity.activity.activityNameEn}
+              : item.subActivity?.activity?.activityNameEn}
           </TableCell>
           <TableCell className="font-medium text-center">
             <Badge
               className={getTransactionTypeColor(
-                item.subActivity.transactionType.name,
+                item.subActivity?.transactionType?.name
               )}
             >
-              {item.subActivity.transactionType.name}
+              {item.subActivity?.transactionType?.name}
             </Badge>
           </TableCell>
           <TableCell className="font-medium text-center">
@@ -323,7 +326,9 @@ const CustomerPriceListTable = ({
                 variant="outline"
                 size="icon"
                 className="text-blue-500"
-                onClick={() => {}}
+                onClick={() => {
+                  handleDialog(true, "editSubActivity", item);
+                }}
               >
                 <Edit className="w-3 h-3" />
               </Button>
@@ -363,7 +368,7 @@ const CustomerPriceListTable = ({
               </TableHeader>
               <TableBody>
                 {priceList.subActivityPrices?.map((item, index) =>
-                  renderTableRow(item, index),
+                  renderTableRow(item, index)
                 )}
               </TableBody>
             </Table>
@@ -376,6 +381,14 @@ const CustomerPriceListTable = ({
         onOpenChange={handleDialog}
         priceList={priceList}
         subActivityId={selectedSubActivityPrice?._id!}
+      />
+
+      <EditPriceListSubActivityDialog
+        open={dialog === "editSubActivity"}
+        onOpenChange={handleDialog}
+        selectedSubActivityPrice={selectedSubActivityPrice!}
+        priceListId={priceList._id!}
+        isCustomerPriceList={true}
       />
     </>
   );

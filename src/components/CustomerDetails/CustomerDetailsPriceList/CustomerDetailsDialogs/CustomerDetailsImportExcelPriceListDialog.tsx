@@ -19,31 +19,36 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileSpreadsheet, X, Loader2, Upload } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { customerServices } from "@/services";
+import { useAppSelector } from "@/hooks/useAppSelector";
 
 const schema = z.object({
-  priceListFile: z.instanceof(File),
+  priceListFile: z.instanceof(File).optional(),
 });
 
-type TCustomerPriceListUploadData = z.infer<typeof schema>;
-
-type TLoading = "idle" | "pending" | "fulfilled" | "rejected";
+export type TCustomerPriceListUploadData = z.infer<typeof schema>;
 
 type TCustomerDetailsImportExcelPriceListDialog = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  disabled: boolean;
-  loading: TLoading;
+  dialogDispatch: React.Dispatch<any>;
+  dialogState: any;
 };
 
 const CustomerDetailsImportExcelPriceListDialog = ({
   open,
   onOpenChange,
-  disabled,
-  loading,
+  dialogDispatch,
+  dialogState,
 }: TCustomerDetailsImportExcelPriceListDialog) => {
+  const dispatch = dialogDispatch;
+  const state = dialogState;
+  const { selectedCustomer } = useAppSelector((state) => state.customers);
+  const customerId = selectedCustomer?._id!;
+
   const [dragActive, setDragActive] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState<string>("");
 
@@ -78,7 +83,7 @@ const CustomerDetailsImportExcelPriceListDialog = ({
         file.name.endsWith(".xlsx") ||
         file.name.endsWith(".xls")
       ) {
-        form.setValue("priceListFile", e.dataTransfer.files as any);
+        form.setValue("priceListFile", file);
         setSelectedFileName(file.name);
       } else {
         toast({
@@ -92,17 +97,49 @@ const CustomerDetailsImportExcelPriceListDialog = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      form.setValue("priceListFile", file);
       setSelectedFileName(file.name);
     }
   };
 
   const clearFile = () => {
-    form.setValue("priceListFile", undefined as any);
+    form.setValue("priceListFile", undefined);
     setSelectedFileName("");
   };
 
   const onSubmit = async (data: TCustomerPriceListUploadData) => {
-    console.log(data);
+    dispatch({ type: "importing/loading", payload: "pending" });
+    try {
+      const formData = new FormData();
+
+      // Append the file
+      if (data.priceListFile) {
+        formData.append("priceListFile", data.priceListFile);
+      }
+
+      await customerServices.importCustomerPriceList({
+        customerId,
+        formData,
+      });
+
+      dispatch({ type: "importing/loading", payload: "fulfilled" });
+      dispatch({ type: "importing/modalOpen", payload: false });
+      toast({
+        title: "Success",
+        description: "Price list imported successfully",
+      });
+
+      // Reset form
+      form.reset();
+      setSelectedFileName("");
+    } catch (error) {
+      dispatch({ type: "importing/loading", payload: "rejected" });
+      dispatch({ type: "importing/error", payload: error });
+      toast({
+        title: "Error",
+        description: "Failed to import price list",
+      });
+    }
   };
 
   return (
@@ -172,7 +209,6 @@ const CustomerDetailsImportExcelPriceListDialog = ({
                                   accept=".xlsx,.xls"
                                   className="hidden"
                                   onChange={(e) => {
-                                    field.onChange(e.target.files);
                                     handleFileChange(e);
                                   }}
                                 />
@@ -195,10 +231,14 @@ const CustomerDetailsImportExcelPriceListDialog = ({
           <DialogFooter>
             <Button
               type="submit"
-              disabled={loading === "pending" || !form.formState.isValid}
+              disabled={
+                state.loading === "pending" ||
+                !form.watch("priceListFile") ||
+                state.disabled
+              }
               onClick={form.handleSubmit(onSubmit)}
             >
-              {loading === "pending" ? (
+              {state.loading === "pending" ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Upload className="h-4 w-4 mr-2" />

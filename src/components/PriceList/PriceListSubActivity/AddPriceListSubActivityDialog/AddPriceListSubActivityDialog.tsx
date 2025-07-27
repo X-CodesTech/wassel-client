@@ -35,15 +35,21 @@ import { AsyncLocationSelect } from "@/components/ui/async-location-select";
 import { actAddPriceListSubActivity } from "@/store/priceLists/act/actAddPriceListSubActivity";
 import { toast } from "@/hooks/use-toast";
 import { formSchema, TFormSchema } from "../validation";
+import { addPriceListSubActivity } from "@/store/customers";
 
 type TAddPriceListSubActivityDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isCustomerPriceList?: boolean;
+  priceListId?: string;
+  selectedCustomerPriceListId?: string;
 };
 
 const AddPriceListSubActivityDialog = ({
   open,
   onOpenChange,
+  isCustomerPriceList = false,
+  selectedCustomerPriceListId = "",
 }: TAddPriceListSubActivityDialogProps) => {
   const dispatch = useAppDispatch();
   const { selectedPriceList, addSubActivityLoading } = useAppSelector(
@@ -156,6 +162,15 @@ const AddPriceListSubActivityDialog = ({
     dispatch(actAddPriceListSubActivity(submitData))
       .unwrap()
       .then((response) => {
+        if (isCustomerPriceList) {
+          dispatch(
+            addPriceListSubActivity({
+              priceListId: response.data._id!,
+              subActivityPrices: response.data.subActivityPrices,
+            })
+          );
+        }
+
         if (response.data) {
           toast({
             title: "Success",

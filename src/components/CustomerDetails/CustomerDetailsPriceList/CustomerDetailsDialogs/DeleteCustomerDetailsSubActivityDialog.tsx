@@ -3,7 +3,10 @@ import {
   AlertDialogFooter,
 } from "@/components/ui/alert-dialog";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import { actDeleteCustomerPriceListSubActivity } from "@/store/customers";
+import {
+  actDeleteCustomerPriceListSubActivity,
+  removePriceListSubActivity,
+} from "@/store/customers";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -13,6 +16,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { CustomerPriceListResponse } from "@/services/customerServices";
+import { toast } from "@/hooks/use-toast";
 
 type TDeleteCustomerDetailsSubActivityDialog = {
   open: boolean;
@@ -28,18 +32,46 @@ const DeleteCustomerDetailsSubActivityDialog = ({
   subActivityId,
 }: TDeleteCustomerDetailsSubActivityDialog) => {
   const dispatch = useAppDispatch();
-  const { selectedCustomer } = useAppSelector((state) => state.customers);
   const { loading: deletePriceListLoading } = useAppSelector(
-    (state) => state.customers,
+    (state) => state.customers
   );
 
-  const handleConfirm = () => {
-    dispatch(
+  const handleConfirm = async () => {
+    await dispatch(
       actDeleteCustomerPriceListSubActivity({
         subActivityId: subActivityId,
         priceListId: priceList._id,
-      }),
-    );
+      })
+    )
+      .unwrap()
+      .catch((error) => {
+        if (error.message) {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Unexpected error occurred",
+            variant: "destructive",
+          });
+        }
+      })
+      .then(() => {
+        dispatch(
+          removePriceListSubActivity({
+            priceListId: priceList._id,
+            subActivityId: subActivityId,
+          })
+        );
+        onOpenChange(false);
+        toast({
+          title: "Success",
+          description: "Sub-activity deleted successfully",
+        });
+      });
   };
 
   return (
