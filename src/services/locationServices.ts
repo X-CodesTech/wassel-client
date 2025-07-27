@@ -13,17 +13,13 @@ class LocationServices {
   async getLocations(page: number, limit: number, filters?: LocationFilters) {
     const params = new URLSearchParams();
     if (filters?.search) params.append("search", filters.search);
-    if (filters?.country) params.append("country", filters.country);
-    if (filters?.area) params.append("area", filters.area);
-    if (filters?.city) params.append("city", filters.city);
-    if (filters?.village) params.append("village", filters.village);
     if (filters?.isActive !== undefined)
       params.append("isActive", filters.isActive.toString());
 
     const queryString = params.toString();
     const url = queryString
-      ? `${apiUrlConstants.locations}?${queryString}`
-      : apiUrlConstants.locations;
+      ? `${apiUrlConstants.locations}/search?${queryString}`
+      : `${apiUrlConstants.locations}/search`;
 
     return await http.get<LocationsResponse>(url, {
       params: {
