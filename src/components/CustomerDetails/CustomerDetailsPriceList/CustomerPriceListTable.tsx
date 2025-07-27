@@ -13,6 +13,7 @@ import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import React, { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DeleteCustomerDetailsSubActivityDialog from "./CustomerDetailsDialogs/DeleteCustomerDetailsSubActivityDialog";
 
 type TPriceList = CustomerPriceListResponse["priceList"];
 type TSubActivityPrice = TPriceList["subActivityPrices"][number];
@@ -22,7 +23,7 @@ type TLocation = TLocationPrice["location"];
 const formatFromToAddress = (locationPrice: TLocationPrice) => {
   const formatFullAddress = (
     location: TLocation | undefined,
-    isArabic: boolean = false
+    isArabic: boolean = false,
   ) => {
     if (!location) return isArabic ? "غير متوفر" : "N/A";
 
@@ -70,7 +71,7 @@ const formatFromToAddress = (locationPrice: TLocationPrice) => {
 
 const renderCostRange = (
   cost: number | undefined,
-  locationPrices: TLocationPrice[]
+  locationPrices: TLocationPrice[],
 ) => {
   if (cost) {
     return cost.toLocaleString();
@@ -148,14 +149,14 @@ const CustomerPriceListTable = ({
   priceList: CustomerPriceListResponse["priceList"];
 }) => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [dialog, setDialog] = useState<"delete" | "edit" | null>(null);
+  const [dialog, setDialog] = useState<"deleteSubActivity" | null>(null);
   const [selectedSubActivityPrice, setSelectedSubActivityPrice] =
     useState<TSubActivityPrice | null>(null);
 
   const handleDialog = (
     open: boolean,
-    type?: "delete" | "edit",
-    subActivityPrice?: TSubActivityPrice
+    type?: "deleteSubActivity",
+    subActivityPrice?: TSubActivityPrice,
   ) => {
     if (!open) {
       setDialog(null);
@@ -232,7 +233,7 @@ const CustomerPriceListTable = ({
                           <TableCell className="text-center">
                             <Badge
                               className={getPricingMethodColor(
-                                locationPrice.pricingMethod
+                                locationPrice.pricingMethod,
                               )}
                             >
                               {
@@ -295,7 +296,7 @@ const CustomerPriceListTable = ({
           <TableCell className="font-medium text-center">
             <Badge
               className={getTransactionTypeColor(
-                item.subActivity.transactionType.name
+                item.subActivity.transactionType.name,
               )}
             >
               {item.subActivity.transactionType.name}
@@ -330,7 +331,9 @@ const CustomerPriceListTable = ({
                 variant="outline"
                 size="icon"
                 className="text-red-500 hover:text-red-600"
-                onClick={() => {}}
+                onClick={() => {
+                  handleDialog(true, "deleteSubActivity", item);
+                }}
               >
                 <Trash2 className="w-3 h-3" />
               </Button>
@@ -343,29 +346,38 @@ const CustomerPriceListTable = ({
   };
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-center w-12" />
-                {MAIN_TABLE_HEADERS.map((header) => (
-                  <TableHead key={header.key} className="text-center">
-                    {header.label}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {priceList.subActivityPrices?.map((item, index) =>
-                renderTableRow(item, index)
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-center w-12" />
+                  {MAIN_TABLE_HEADERS.map((header) => (
+                    <TableHead key={header.key} className="text-center">
+                      {header.label}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {priceList.subActivityPrices?.map((item, index) =>
+                  renderTableRow(item, index),
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <DeleteCustomerDetailsSubActivityDialog
+        open={dialog === "deleteSubActivity"}
+        onOpenChange={handleDialog}
+        priceList={priceList}
+        subActivityId={selectedSubActivityPrice?._id!}
+      />
+    </>
   );
 };
 

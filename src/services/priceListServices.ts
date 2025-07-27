@@ -91,7 +91,9 @@ class PriceListService {
     return await http.post(apiUrlConstants.priceLists, priceList);
   }
 
-  async addSubActivityToPriceList(data: TPriceBody<TPriceMethod>) {
+  async addSubActivityToPriceList(
+    data: TPriceBody<TPriceMethod>
+  ): Promise<AxiosResponse<{ message: string; data: PriceList }>> {
     const { priceListId, subActivityId, ...rest } = data;
     return await http.post<{ message?: string; data?: PriceList }>(
       `${apiUrlConstants.priceLists}/${priceListId}/sub-activity`,
@@ -114,7 +116,7 @@ class PriceListService {
   async deleteSubActivityFromPriceList(
     priceListId: string,
     subActivityId: string
-  ) {
+  ): Promise<AxiosResponse<{ message: string; data: PriceList }>> {
     return await http.delete(
       `${apiUrlConstants.priceLists}/${priceListId}/sub-activity/${subActivityId}`
     );

@@ -339,7 +339,6 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         <VendorPriceListActions
           vendorId={vendor._id}
           vendorName={vendor.vendName}
-          priceListId={selectedPriceListId!}
         />
       </div>
 

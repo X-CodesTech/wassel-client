@@ -40,7 +40,7 @@ const DeletePriceListSubActivityDialog = ({
     if (typeof subActivity === "string") {
       return "Unknown Activity";
     }
-    return subActivity.portalItemNameEn || "Unknown Activity";
+    return subActivity?.portalItemNameEn || "Unknown Activity";
   };
 
   const handleDeleteSubActivity = () => {
@@ -85,7 +85,7 @@ const DeletePriceListSubActivityDialog = ({
         </DialogHeader>
         <DialogDescription>
           Are you sure you want to delete "
-          {getSubActivityName(selectedSubActivityPrice.subActivity)}" from this
+          {getSubActivityName(selectedSubActivityPrice?.subActivity)}" from this
           price list? This action cannot be undone.
         </DialogDescription>
         <DialogFooter>

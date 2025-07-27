@@ -4,12 +4,14 @@ import {
   Customer,
   CustomerResponse,
   CustomerImportResponse,
-  CustomerPriceItem,
 } from "@/types/types";
 import { actGetCustomers } from "./act/actGetCustomers";
 import { actImportCustomers } from "./act/actImportCustomers";
 import { actGetCustomer } from "./act/actGetCustomer";
 import { CustomerPriceListResponse } from "@/services/customerServices";
+import { actAddCustomerPriceListSubActivity } from "./act/actAddCustomerPriceListSubActivity";
+import { actDeleteCustomerPriceListSubActivity } from "./act/actDeleteCustomerPriceListSubActivity.ts";
+import { current } from "@reduxjs/toolkit";
 
 interface ICustomersState {
   records: Customer[];
@@ -21,6 +23,10 @@ interface ICustomersState {
   importLoading: TLoading;
   importError: null | string;
   importStats: CustomerImportResponse["stats"] | null;
+  addPriceListSubActivityLoading: TLoading;
+  addPriceListSubActivityError: null | string;
+  deletePriceListSubActivityLoading: TLoading;
+  deletePriceListSubActivityError: null | string;
   pagination: {
     total: number;
     page: number;
@@ -37,6 +43,10 @@ const initialState: ICustomersState = {
   importLoading: "idle",
   importError: null,
   importStats: null,
+  addPriceListSubActivityLoading: "idle",
+  addPriceListSubActivityError: null,
+  deletePriceListSubActivityLoading: "idle",
+  deletePriceListSubActivityError: null,
   pagination: {
     total: 0,
     page: 1,
@@ -118,6 +128,56 @@ const customersSlice = createSlice({
         state.error = action.payload;
       }
     });
+
+    // Add Customer Price List Sub Activity
+    builder.addCase(actAddCustomerPriceListSubActivity.pending, (state) => {
+      state.addPriceListSubActivityLoading = "pending";
+      state.addPriceListSubActivityError = null;
+    });
+    builder.addCase(
+      actAddCustomerPriceListSubActivity.fulfilled,
+      (state, action) => {
+        state.addPriceListSubActivityLoading = "fulfilled";
+        state.selectedCustomer.priceLists = action.payload.subActivityPrices!;
+      }
+    );
+    builder.addCase(
+      actAddCustomerPriceListSubActivity.rejected,
+      (state, action) => {
+        state.addPriceListSubActivityLoading = "rejected";
+        if (isString(action.payload)) {
+          state.addPriceListSubActivityError = action.payload;
+        }
+      }
+    );
+
+    // Delete Customer Price List Sub Activity
+    builder.addCase(actDeleteCustomerPriceListSubActivity.pending, (state) => {
+      state.deletePriceListSubActivityLoading = "pending";
+      state.deletePriceListSubActivityError = null;
+    });
+    builder.addCase(
+      actDeleteCustomerPriceListSubActivity.fulfilled,
+      (state, action) => {
+        state.deletePriceListSubActivityLoading = "fulfilled";
+        console.log(action.payload);
+
+        // console.log(current([0].priceList._id));
+
+        state.selectedCustomer.priceLists.filter(
+          (priceList) => priceList.priceList._id !== action.payload.priceListId
+        );
+      }
+    );
+    builder.addCase(
+      actDeleteCustomerPriceListSubActivity.rejected,
+      (state, action) => {
+        state.deletePriceListSubActivityLoading = "rejected";
+        if (isString(action.payload)) {
+          state.deletePriceListSubActivityError = action.payload;
+        }
+      }
+    );
   },
 });
 
@@ -129,6 +189,12 @@ export const {
   clearSelectedCustomer,
 } = customersSlice.actions;
 
-export { actGetCustomers, actImportCustomers, actGetCustomer };
+export {
+  actGetCustomers,
+  actImportCustomers,
+  actGetCustomer,
+  actAddCustomerPriceListSubActivity,
+  actDeleteCustomerPriceListSubActivity,
+};
 
 export default customersSlice.reducer;

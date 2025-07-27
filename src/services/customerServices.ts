@@ -5,8 +5,12 @@ import {
   CustomerResponse,
   CustomerImportResponse,
 } from "@/types/types";
-import { Axios, AxiosResponse } from "axios";
+import { AxiosResponse } from "axios";
 import { TPriceMethod } from "@/types/vendorPriceListEditTypes";
+import {
+  TCustomerPriceListBody,
+  TPricingMethod,
+} from "@/types/customerPriceList.type";
 
 export type CustomerPriceListResponse = {
   _id: string;
@@ -212,6 +216,58 @@ const customerServices = {
           "Content-Type": "multipart/form-data",
         },
       }
+    );
+  },
+
+  /**
+   * Delete customer price list
+   */
+  deleteCustomerPriceList: async (
+    priceListId: string
+  ): Promise<AxiosResponse<{ message: string }>> => {
+    return await http.delete(
+      `${apiUrlConstants.customerPriceLists}/${priceListId}`
+    );
+  },
+
+  /**
+   * Add customer price list sub activity
+   */
+  addCustomerPriceListSubActivity: async <T extends TPricingMethod>({
+    priceListId,
+    pricingMethod,
+    subActivityId,
+    ...rest
+  }: TCustomerPriceListBody<T> & {
+    priceListId: string;
+  }): Promise<AxiosResponse<{ data: CustomerPriceListResponse }>> => {
+    return await http.post(
+      `${apiUrlConstants.customerPriceLists}/${priceListId}/sub-activity`,
+      {
+        pricingMethod,
+        subActivity: subActivityId,
+        ...rest,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  },
+
+  /**
+   * Delete customer price list sub activity
+   */
+  deleteCustomerPriceListSubActivity: async ({
+    customerId,
+    subActivityId,
+  }: {
+    customerId: string;
+    subActivityId: string;
+  }): Promise<AxiosResponse<{ message: string }>> => {
+    return await http.delete(
+      `${apiUrlConstants.customerPriceLists}/${customerId}/sub-activity/${subActivityId}`
     );
   },
 };
