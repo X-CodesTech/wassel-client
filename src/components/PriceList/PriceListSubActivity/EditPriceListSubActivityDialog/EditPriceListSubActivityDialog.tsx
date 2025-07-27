@@ -61,7 +61,7 @@ const EditPriceListSubActivityDialog = ({
         <DialogHeader>
           <DialogTitle>Edit Sub-Activity Price List</DialogTitle>
         </DialogHeader>
-        <DialogDescription className="max-h-[500px] overflow-y-auto">
+        <DialogDescription className="max-h-[70dvh] overflow-y-auto">
           {FormToRender}
         </DialogDescription>
       </DialogContent>

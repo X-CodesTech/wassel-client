@@ -19,6 +19,7 @@ import EditPriceListDialog from "@/components/PriceList/EditPriceListDialog";
 import DeletePriceListDialog from "@/components/PriceList/DeletePriceListDialog";
 import AddPriceListDialog from "@/components/PriceList/AddPriceListDialog";
 import Pagination from "@/components/Pagination";
+import { actGetLocations } from "@/store/locations";
 
 // Guard function to safely extract portalItemNameEn from subActivity
 const getSubActivityName = (
@@ -103,6 +104,7 @@ export default function PriceLists() {
     loading,
     error,
   } = useAppSelector((state) => state.priceLists);
+  const { records: locations } = useAppSelector((state) => state.locations);
   const { toast } = useToast();
 
   // Modal states
@@ -118,6 +120,9 @@ export default function PriceLists() {
 
   // Fetch price lists on component mount
   useEffect(() => {
+    if (locations.length === 0) {
+      dispatch(actGetLocations({ page: 1, limit: 1000, filters: {} }));
+    }
     dispatch(
       actGetPriceLists({
         page: 1,
@@ -168,7 +173,7 @@ export default function PriceLists() {
     setDeletingPriceList(null);
   };
 
-  if (loading && priceLists.length === 0) {
+  if (loading && priceLists.length === 0 && locations.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex items-center gap-2">

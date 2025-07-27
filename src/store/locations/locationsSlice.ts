@@ -6,9 +6,16 @@ import {
   actUpdateLocation,
   actDeleteLocation,
 } from "./act";
+import { getStructuredAddress } from "@/utils/getStructuredAddress";
 
 interface LocationsState {
   records: LocationsResponse["locations"];
+  structuredAddress: {
+    [key: string]: {
+      label: string;
+      value: string;
+    };
+  } | null;
   loading: boolean;
   error: string | null;
   pagination: {
@@ -21,6 +28,7 @@ interface LocationsState {
 
 const initialState: LocationsState = {
   records: [],
+  structuredAddress: null,
   loading: false,
   error: null,
   pagination: {
@@ -55,6 +63,16 @@ const locationsSlice = createSlice({
           state.pagination.page = action.payload.page;
           state.pagination.total = action.payload.total;
           state.pagination.totalPages = action.payload.totalPages;
+          state.structuredAddress = action.payload.locations.reduce(
+            (acc, location) => {
+              acc[location._id] = {
+                label: getStructuredAddress(location).en,
+                value: location._id,
+              };
+              return acc;
+            },
+            {} as { [key: string]: { label: string; value: string } }
+          );
         }
       )
       .addCase(actGetLocations.rejected, (state, action) => {

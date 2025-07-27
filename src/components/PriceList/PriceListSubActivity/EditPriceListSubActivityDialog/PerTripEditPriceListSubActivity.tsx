@@ -220,136 +220,143 @@ const PerTripEditPriceListSubActivity = ({
 
   return (
     <Form {...form}>
-      {selectedSubActivityPrice.pricingMethod === "perTrip" ? (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Edit Trip Pricing</h3>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddTrip}
-              disabled={!isFormValid || hasErrors}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Trip
-            </Button>
-          </div>
-
-          <div className="space-y-4">
-            {locationPriceFields.map((field, index) => (
-              <div
-                key={field.id}
-                className="flex items-center gap-3 p-3 border rounded-lg"
-              >
-                <FormField
-                  control={form.control}
-                  name={`locationPrices.${index}.fromLocation`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>From Location</FormLabel>
-                      <FormControl>
-                        <AsyncLocationSelect
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            // Clear focus from any active element after location selection
-                            if (document.activeElement instanceof HTMLElement) {
-                              document.activeElement.blur();
-                            }
-                          }}
-                          placeholder="Select from location"
-                          useAddressString={true}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name={`locationPrices.${index}.toLocation`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>To Location</FormLabel>
-                      <FormControl>
-                        <AsyncLocationSelect
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            // Clear focus from any active element after location selection
-                            if (document.activeElement instanceof HTMLElement) {
-                              document.activeElement.blur();
-                            }
-                          }}
-                          placeholder="Select to location"
-                          useAddressString={true}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name={`locationPrices.${index}.price`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel>Price</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          {...field}
-                          value={field.value}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value) || 0)
-                          }
-                          disabled={!isTripLocationsSelected(index)}
-                          onFocus={(e) => {
-                            if (!isTripLocationsSelected(index)) {
-                              e.target.blur();
-                            }
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {locationPriceFields.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeLocationPrice(index)}
-                    className="mt-6"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
+      <div className="flex flex-col h-[70dvh] gap-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Edit Trip Pricing</h3>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAddTrip}
+            disabled={!isFormValid || hasErrors}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Trip
+          </Button>
         </div>
-      ) : null}
+        <div className="flex-2 overflow-y-auto">
+          {selectedSubActivityPrice.pricingMethod === "perTrip" ? (
+            <div className="space-y-6">
+              <div className="space-y-4">
+                {locationPriceFields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="flex items-center gap-3 p-3 border rounded-lg"
+                  >
+                    <FormField
+                      control={form.control}
+                      name={`locationPrices.${index}.fromLocation`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>From Location</FormLabel>
+                          <FormControl>
+                            <AsyncLocationSelect
+                              value={field.value}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                // Clear focus from any active element after location selection
+                                if (
+                                  document.activeElement instanceof HTMLElement
+                                ) {
+                                  document.activeElement.blur();
+                                }
+                              }}
+                              placeholder="Select from location"
+                              useAddressString={true}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`locationPrices.${index}.toLocation`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>To Location</FormLabel>
+                          <FormControl>
+                            <AsyncLocationSelect
+                              value={field.value}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                // Clear focus from any active element after location selection
+                                if (
+                                  document.activeElement instanceof HTMLElement
+                                ) {
+                                  document.activeElement.blur();
+                                }
+                              }}
+                              placeholder="Select to location"
+                              useAddressString={true}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`locationPrices.${index}.price`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>Price</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              {...field}
+                              value={field.value}
+                              onChange={(e) =>
+                                field.onChange(parseFloat(e.target.value) || 0)
+                              }
+                              disabled={!isTripLocationsSelected(index)}
+                              onFocus={(e) => {
+                                if (!isTripLocationsSelected(index)) {
+                                  e.target.blur();
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    {locationPriceFields.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeLocationPrice(index)}
+                        className="mt-6"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
 
-      <div className="flex justify-end space-x-2 mt-6">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          onClick={form.handleSubmit(onSubmit)}
-          disabled={!isFormValid || hasErrors || !hasFormChanges}
-        >
-          Save
-        </Button>
+        <div className="flex justify-end space-x-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={!isFormValid || hasErrors || !hasFormChanges}
+          >
+            Save
+          </Button>
+        </div>
       </div>
     </Form>
   );
