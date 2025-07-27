@@ -1,5 +1,5 @@
 import { isString, TLoading } from "@/types";
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, current, PayloadAction } from "@reduxjs/toolkit";
 import {
   Customer,
   CustomerResponse,
@@ -122,6 +122,40 @@ const customersSlice = createSlice({
         )!.priceList.subActivityPrices = action.payload.subActivityPrices;
       }
     },
+    updateCustomerPriceListSubActivity: (
+      state,
+      action: PayloadAction<{
+        priceListId: string;
+        subActivityId: string;
+        data: Partial<SubActivityPrice>;
+      }>
+    ) => {
+      const { priceListId, subActivityId, data } = action.payload;
+
+      const priceListIndex = state.selectedCustomer?.priceLists.findIndex(
+        (priceList) => priceList.priceList._id === priceListId
+      );
+
+      const priceList = state.selectedCustomer?.priceLists[priceListIndex!];
+
+      // priceLists[0].priceList.subActivityPrices[1].subActivity._id
+
+      const subActivityIndex = priceList?.priceList.subActivityPrices.findIndex(
+        (sa) => sa.subActivity._id === subActivityId
+      );
+
+      const subActivity =
+        priceList?.priceList.subActivityPrices[subActivityIndex!];
+
+      if (subActivity) {
+        state.selectedCustomer!.priceLists[
+          priceListIndex!
+        ].priceList.subActivityPrices[subActivityIndex!] = {
+          ...subActivity,
+          ...data,
+        };
+      }
+    },
   },
   extraReducers: (builder) => {
     // Get Customers
@@ -236,6 +270,7 @@ export const {
   clearSelectedCustomer,
   addPriceListSubActivity,
   removePriceListSubActivity,
+  updateCustomerPriceListSubActivity,
 } = customersSlice.actions;
 
 export {

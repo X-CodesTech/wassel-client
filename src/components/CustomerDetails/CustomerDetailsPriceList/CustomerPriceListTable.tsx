@@ -14,6 +14,7 @@ import React, { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DeleteCustomerDetailsSubActivityDialog from "./CustomerDetailsDialogs/DeleteCustomerDetailsSubActivityDialog";
+import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
 
 type TPriceList = CustomerPriceListResponse["priceList"];
 type TSubActivityPrice = TPriceList["subActivityPrices"][number];
@@ -149,13 +150,15 @@ const CustomerPriceListTable = ({
   priceList: CustomerPriceListResponse["priceList"];
 }) => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [dialog, setDialog] = useState<"deleteSubActivity" | null>(null);
+  const [dialog, setDialog] = useState<
+    "deleteSubActivity" | "editSubActivity" | null
+  >(null);
   const [selectedSubActivityPrice, setSelectedSubActivityPrice] =
     useState<TSubActivityPrice | null>(null);
 
   const handleDialog = (
     open: boolean,
-    type?: "deleteSubActivity",
+    type?: "deleteSubActivity" | "editSubActivity",
     subActivityPrice?: TSubActivityPrice
   ) => {
     if (!open) {
@@ -323,7 +326,9 @@ const CustomerPriceListTable = ({
                 variant="outline"
                 size="icon"
                 className="text-blue-500"
-                onClick={() => {}}
+                onClick={() => {
+                  handleDialog(true, "editSubActivity", item);
+                }}
               >
                 <Edit className="w-3 h-3" />
               </Button>
@@ -376,6 +381,14 @@ const CustomerPriceListTable = ({
         onOpenChange={handleDialog}
         priceList={priceList}
         subActivityId={selectedSubActivityPrice?._id!}
+      />
+
+      <EditPriceListSubActivityDialog
+        open={dialog === "editSubActivity"}
+        onOpenChange={handleDialog}
+        selectedSubActivityPrice={selectedSubActivityPrice!}
+        priceListId={priceList._id!}
+        isCustomerPriceList={true}
       />
     </>
   );

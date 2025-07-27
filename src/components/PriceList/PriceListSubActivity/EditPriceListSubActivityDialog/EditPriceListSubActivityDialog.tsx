@@ -18,6 +18,7 @@ type TEditPriceListSubActivityDialogProps = {
   onOpenChange: (open: boolean) => void;
   selectedSubActivityPrice: SubActivityPrice;
   priceListId: string;
+  isCustomerPriceList?: boolean;
 };
 
 const EditPriceListSubActivityDialog = ({
@@ -25,6 +26,7 @@ const EditPriceListSubActivityDialog = ({
   onOpenChange,
   selectedSubActivityPrice,
   priceListId,
+  isCustomerPriceList = false,
 }: TEditPriceListSubActivityDialogProps) => {
   const pricingMethod = selectedSubActivityPrice?.pricingMethod;
 
@@ -34,6 +36,7 @@ const EditPriceListSubActivityDialog = ({
         selectedSubActivityPrice={selectedSubActivityPrice}
         onOpenChange={onOpenChange}
         priceListId={priceListId}
+        isCustomerPriceList={isCustomerPriceList}
       />
     ),
     perTrip: (
