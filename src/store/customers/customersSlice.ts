@@ -77,14 +77,36 @@ const customersSlice = createSlice({
       state.records = [];
       state.pagination = initialState.pagination;
     },
-    removePriceListSubActivity: (state, action: PayloadAction<string>) => {
-      const priceListId = action.payload;
+    removePriceListSubActivity: (
+      state,
+      action: PayloadAction<{
+        priceListId: string;
+        subActivityId: string;
+      }>
+    ) => {
+      const { priceListId, subActivityId } = action.payload;
 
       if (state.selectedCustomer) {
-        state.selectedCustomer.priceLists =
-          state.selectedCustomer.priceLists.filter(
-            (priceList) => priceList.priceList._id !== priceListId
+        const priceListIndex = state.selectedCustomer.priceLists.findIndex(
+          (priceList) => priceList.priceList._id === priceListId
+        );
+
+        if (priceListIndex !== -1) {
+          state.selectedCustomer.priceLists[
+            priceListIndex
+          ].priceList.subActivityPrices = state.selectedCustomer.priceLists[
+            priceListIndex
+          ].priceList.subActivityPrices.filter(
+            (subActivity) => subActivity._id !== subActivityId
           );
+        }
+
+        if (
+          state.selectedCustomer.priceLists[priceListIndex].priceList
+            .subActivityPrices.length === 0
+        ) {
+          state.selectedCustomer.priceLists.splice(priceListIndex, 1);
+        }
       }
     },
     addPriceListSubActivity: (
