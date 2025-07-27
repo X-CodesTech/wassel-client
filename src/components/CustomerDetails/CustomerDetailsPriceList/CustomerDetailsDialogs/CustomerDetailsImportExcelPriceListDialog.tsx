@@ -195,7 +195,9 @@ const CustomerDetailsImportExcelPriceListDialog = ({
           <DialogFooter>
             <Button
               type="submit"
-              disabled={loading === "pending" || !form.formState.isValid}
+              disabled={
+                loading === "pending" || !form.formState.isValid || disabled
+              }
               onClick={form.handleSubmit(onSubmit)}
             >
               {loading === "pending" ? (
