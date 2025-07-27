@@ -24,7 +24,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 const schema = z.object({
-  priceListFile: z.instanceof(File),
+  priceListFile: z.instanceof(File).optional(),
 });
 
 type TCustomerPriceListUploadData = z.infer<typeof schema>;
@@ -78,7 +78,7 @@ const CustomerDetailsImportExcelPriceListDialog = ({
         file.name.endsWith(".xlsx") ||
         file.name.endsWith(".xls")
       ) {
-        form.setValue("priceListFile", e.dataTransfer.files as any);
+        form.setValue("priceListFile", file);
         setSelectedFileName(file.name);
       } else {
         toast({
@@ -92,12 +92,13 @@ const CustomerDetailsImportExcelPriceListDialog = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      form.setValue("priceListFile", file);
       setSelectedFileName(file.name);
     }
   };
 
   const clearFile = () => {
-    form.setValue("priceListFile", undefined as any);
+    form.setValue("priceListFile", undefined);
     setSelectedFileName("");
   };
 
@@ -172,7 +173,6 @@ const CustomerDetailsImportExcelPriceListDialog = ({
                                   accept=".xlsx,.xls"
                                   className="hidden"
                                   onChange={(e) => {
-                                    field.onChange(e.target.files);
                                     handleFileChange(e);
                                   }}
                                 />
@@ -196,7 +196,9 @@ const CustomerDetailsImportExcelPriceListDialog = ({
             <Button
               type="submit"
               disabled={
-                loading === "pending" || !form.formState.isValid || disabled
+                loading === "pending" ||
+                !form.watch("priceListFile") ||
+                disabled
               }
               onClick={form.handleSubmit(onSubmit)}
             >
