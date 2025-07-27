@@ -270,6 +270,27 @@ const customerServices = {
       `${apiUrlConstants.customerPriceLists}/${customerId}/sub-activity/${subActivityId}`
     );
   },
+
+  /**
+   * Import customer price list from excel
+   */
+  importCustomerPriceList: async ({
+    customerId,
+    formData,
+  }: {
+    customerId: string;
+    formData: FormData;
+  }): Promise<AxiosResponse<{ data: CustomerPriceListResponse }>> => {
+    return await http.post(
+      `${apiUrlConstants.customerPriceLists}/customer/${customerId}/upload`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+  },
 };
 
 export default customerServices;

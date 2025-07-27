@@ -1,36 +1,9 @@
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { customerServices } from "@/services";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  FileSpreadsheet,
-  Import,
-  Loader2,
-  LucideDownloadCloud,
-  Upload,
-  X,
-} from "lucide-react";
-import { useReducer, useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { Import, Loader2, LucideDownloadCloud } from "lucide-react";
+import { useReducer } from "react";
 import CustomerDetailsImportExcelPriceListDialog from "./CustomerDetailsDialogs/CustomerDetailsImportExcelPriceListDialog";
 
 type TLoading = "idle" | "pending" | "fulfilled" | "rejected";
@@ -103,10 +76,6 @@ const CustomerDetailsPriceListActions = () => {
   const customerId = selectedCustomer?._id!;
   const customerName = selectedCustomer?.custName;
 
-  const handleImportPriceList = () => {
-    dispatch({ type: "importing/modalOpen", payload: true });
-  };
-
   const handleExportPriceList = async (isActive: boolean) => {
     if (state.exporting.loading === "pending") return;
     dispatch({ type: "exporting/loading", payload: "pending" });
@@ -133,13 +102,17 @@ const CustomerDetailsPriceListActions = () => {
     }
   };
 
+  const openImportPriceListDialog = () => {
+    dispatch({ type: "importing/modalOpen", payload: true });
+  };
+
   return (
     <>
       <div className="flex gap-2 flex-wrap">
         <Button
           size="sm"
           variant="outline"
-          onClick={handleImportPriceList}
+          onClick={openImportPriceListDialog}
           disabled={state.importing.loading === "pending"}
         >
           <Import className="h-4 w-4 mr-2" />
@@ -165,8 +138,8 @@ const CustomerDetailsPriceListActions = () => {
         onOpenChange={(open) =>
           dispatch({ type: "importing/modalOpen", payload: open })
         }
-        disabled={state.importing.loading === "pending"}
-        loading={state.importing.loading}
+        dialogDispatch={dispatch}
+        dialogState={state.importing}
       />
     </>
   );
