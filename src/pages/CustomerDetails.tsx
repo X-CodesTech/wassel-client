@@ -1,3 +1,4 @@
+import AttachmentModule from "@/components/AttachmentModule";
 import {
   CustomerDetailsLayoutHeader,
   CustomerDetailsPriceList,
@@ -62,6 +63,11 @@ export default function CustomerDetails() {
           <CustomerDetailsPriceList />
         </>
       )}
+      <AttachmentModule
+        contextId={selectedCustomer?.custAccount ?? ""}
+        contextType="Customer"
+        title="Customer Attachments"
+      />
     </div>
   );
 }
