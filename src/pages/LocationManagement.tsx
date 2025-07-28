@@ -41,13 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,12 +58,14 @@ import {
   Plus,
   Edit,
   Trash2,
-  Search,
   MapPin,
   Filter,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import { axiosErrorHandler } from "@/utils";
+import { confirm } from "@/components/ConfirmDialog/dialogService";
 
 // Form schema matching the bilingual JSON structure
 const locationFormSchema = z.object({
@@ -399,20 +395,6 @@ export default function LocationManagement() {
     [editForm]
   );
 
-  // Handle delete
-  const handleDelete = useCallback(
-    (id: string) => {
-      if (confirm("Are you sure you want to delete this location?")) {
-        dispatch(actDeleteLocation(id));
-        toast({
-          title: "Success",
-          description: "Location deleted successfully",
-        });
-      }
-    },
-    [dispatch, toast]
-  );
-
   // Handle filter changes
   const handleFilterChange = useCallback(
     (updates: Partial<LocationFilters>) => {
@@ -426,6 +408,32 @@ export default function LocationManagement() {
     setIsAddDialogOpen(false);
     setEditingLocation(null);
   }, []);
+
+  const handleDeleteClick = (id: string) => async () => {
+    // 1️⃣ ask for confirmation
+    const confirmed = await confirm({
+      title: "Delete Location",
+      description:
+        "Are you sure you want to delete this location? This cannot be undone.",
+    });
+
+    if (!confirmed) return;
+
+    // 2️⃣ perform the async action
+    try {
+      await dispatch(actDeleteLocation(id)).unwrap();
+      toast({
+        title: "Success",
+        description: "Location deleted successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: axiosErrorHandler(error),
+        variant: "destructive",
+      });
+    }
+  };
 
   // Filter locations
   const filteredLocations = locations.filter((location) => {
@@ -456,24 +464,6 @@ export default function LocationManagement() {
 
   // Get unique values for filter dropdowns
   const uniqueCountries = [...new Set(locations.map((l) => l.country))];
-  const uniqueAreas = [
-    ...new Set(
-      locations
-        .filter((l) => !filters.country || l.country === filters.country)
-        .map((l) => l.area)
-    ),
-  ];
-  const uniqueCities = [
-    ...new Set(
-      locations
-        .filter(
-          (l) =>
-            (!filters.country || l.country === filters.country) &&
-            (!filters.area || l.area === filters.area)
-        )
-        .map((l) => l.city)
-    ),
-  ];
 
   return (
     <div className="space-y-6">
@@ -659,7 +649,7 @@ export default function LocationManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {loading && !locations.length ? (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center py-8">
                     Loading locations...
@@ -709,10 +699,17 @@ export default function LocationManagement() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDelete(location._id)}
-                          className="text-red-600 hover:text-red-700"
+                          onClick={handleDeleteClick(location._id)}
+                          disabled={loading}
+                          className={`text-red-600 hover:text-red-700 ${
+                            loading && "opacity-50 cursor-not-allowed"
+                          }`}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {loading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
