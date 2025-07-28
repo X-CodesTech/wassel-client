@@ -473,6 +473,7 @@ export interface GetOrderResponse {
   success: boolean;
   data: {
     _id: string;
+    orderIndex?: string;
     service: string;
     typesOfGoods: string;
     goodsDescription: string;
@@ -634,6 +635,8 @@ export interface GetOrderResponse {
       subActivityNameAr: string;
       pricingMethod: string;
       price: number;
+      priceListId: string;
+      priceListName: string;
       locationDetails: {
         fromLocation: string;
         toLocation: string;
@@ -679,6 +682,8 @@ export interface GetOrderResponse {
         cost: number;
         locationPrice: number;
         locationCost: number | null;
+        priceListId: string;
+        priceListName: string;
       }>;
       deliverySpecialRequirements: Array<{
         subActivityId: string;
@@ -693,6 +698,8 @@ export interface GetOrderResponse {
         locationCost: number;
         vendor: string;
         vendorPriceList: string;
+        priceListId: string;
+        priceListName: string;
       }>;
     };
     createdAt: string;
