@@ -49,7 +49,7 @@ export default function ActivityManagement() {
     return <ActivitiesPageSkeleton />;
   }
 
-  if (loading === LOADING_STATES.REJECTED && error) {
+  if (loading === LOADING_STATES.REJECTED && error && !activities.length) {
     return (
       <div className="w-full h-full grid place-items-center">
         <ErrorComponent

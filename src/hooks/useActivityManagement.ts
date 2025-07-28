@@ -7,6 +7,7 @@ import {
 } from "@/store/activities/activitiesSlice";
 import { actGetTransactionTypes } from "@/store/transactionTypes/transactionTypesSlice";
 import { Activity } from "@/types/types";
+import { axiosErrorHandler } from "@/utils";
 import { useEffect, useState } from "react";
 
 export const useActivityManagement = () => {
@@ -97,7 +98,7 @@ export const useActivityManagement = () => {
     } catch (error) {
       toast({
         title: "Failed",
-        description: ERROR_MESSAGES.UNEXPECTED_ERROR,
+        description: axiosErrorHandler(error),
         variant: "destructive",
       });
     } finally {
