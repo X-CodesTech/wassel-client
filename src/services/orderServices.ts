@@ -117,6 +117,19 @@ const orderServices = {
     );
     return response.data;
   },
+
+  /**
+   * Get all orders
+   */
+  getOrders: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  }) => {
+    const response = await http.get(apiUrlConstants.orders, { params });
+    return response.data;
+  },
 };
 
 export default orderServices;

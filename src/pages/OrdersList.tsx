@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Order } from "@/types/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,41 +14,17 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useOrders } from "@/hooks/useOrders";
-import { useVendorCost } from "@/hooks/useVendorCost";
-import { CostWindow } from "@/components/InitialPriceOffer/CostWindow";
-import { VendorDropdown } from "@/components/InitialPriceOffer/VendorDropdown";
-import { UpdatePriceCostModal } from "@/components/UpdatePriceCostModal";
-import http from "@/services/http";
-import { ISubActivity, IActivity, ITransaction } from "@/types/ModelTypes";
-
-// Extended interface for sub-activity with API response structure
-interface ISubActivityWithId extends ISubActivity {
-  _id: string;
-  transactionType: ITransaction & { _id: string };
-  activity: IActivity & { _id: string };
-}
-
 import {
-  MoreHorizontal,
-  Mail,
-  Phone,
-  MapPin,
-  Package,
-  Clock,
-  User,
-  FileText,
-  Download,
-  Eye,
-  Edit,
-  Trash2,
-  Calendar,
-  DollarSign,
-  Truck,
-  Weight,
+  Search,
   Plus,
-  Upload,
-  Paperclip,
-  X,
+  Eye,
+  MoreHorizontal,
+  Filter,
+  Download,
+  Calendar,
+  Package,
+  User,
+  Clock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -57,13 +32,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -75,2784 +43,445 @@ import {
 export default function OrdersList() {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
-  const { getOrderById, loading, error, currentOrder } = useOrders();
-  const { fetchVendorCost, getVendorCostByKey, isLoadingByKey, getErrorByKey } =
-    useVendorCost();
-  const [orderId, setOrderId] = useState<string | null>(null);
-  const [attachments, setAttachments] = useState<
-    Array<{
-      id: string;
-      name: string;
-      type: string;
-      size: number;
-      uploadedAt: string;
-      url?: string;
-      serverId?: string;
-    }>
-  >([]);
-  const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
-  const [loadingFiles, setLoadingFiles] = useState(false);
-  const [ipoActions, setIpoActions] = useState({
-    updatePrice: false,
-    updateCost: false,
-  });
+  const {
+    getOrders,
+    ordersList,
+    ordersListLoading,
+    ordersListError,
+    totalOrders,
+    currentPage,
+  } = useOrders();
 
-  // State for tracking vendor selections and costs
-  const [selectedVendors, setSelectedVendors] = useState<
-    Record<string, string>
-  >({});
-  const [selectedCosts, setSelectedCosts] = useState<Record<string, number>>(
-    {}
+  // Debug log
+  console.log(
+    "OrdersList component - ordersList:",
+    ordersList,
+    "type:",
+    typeof ordersList,
+    "isArray:",
+    Array.isArray(ordersList)
   );
 
-  // State for tracking which cost windows are opened
-  const [openedCostWindows, setOpenedCostWindows] = useState<
-    Record<string, boolean>
-  >({});
+  // State for filters and pagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
 
-  // State for update price/cost modal
-  const [updateModal, setUpdateModal] = useState<{
-    isOpen: boolean;
-    type: "price" | "cost";
-    serviceKey: string;
-    currentValue: number;
-    serviceName: string;
-    serviceType: "truck" | "pickup" | "delivery";
-    itemIndex: number;
-  }>({
-    isOpen: false,
-    type: "price",
-    serviceKey: "",
-    currentValue: 0,
-    serviceName: "",
-    serviceType: "truck",
-    itemIndex: 0,
-  });
-
-  // State for custom price/cost overrides
-  const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>(
-    {}
-  );
-  const [costOverrides, setCostOverrides] = useState<Record<string, number>>(
-    {}
-  );
-
-  // State for Add Service Line popover
-  const [addServicePopoverOpen, setAddServicePopoverOpen] = useState(false);
-  const [serviceLineForm, setServiceLineForm] = useState({
-    serviceType: "perItem", // perItem or perLocation
-    locationMode: "pickup", // pickup or delivery
-    selectedLocation: "",
-    selectedSubActivity: "",
-  });
-
-  // State for sub-activities
-  const [subActivities, setSubActivities] = useState<ISubActivityWithId[]>([]);
-  const [loadingSubActivities, setLoadingSubActivities] = useState(false);
-
-  // File input ref
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Debug function to check current state
-  const debugAttachments = () => {
-    console.log("=== ATTACHMENTS DEBUG ===");
-    console.log("Current attachments:", attachments);
-    console.log("Loading files:", loadingFiles);
-    console.log("Uploading:", uploading);
-    console.log("Order ID:", order?._id);
-    console.log("========================");
-  };
-
-  // Make debug function available globally for testing
-  if (typeof window !== "undefined") {
-    (window as any).debugAttachments = debugAttachments;
-  }
-
-  // Handle vendor selection
-  const handleVendorChange = (
-    serviceKey: string,
-    vendorId: string,
-    cost: number
-  ) => {
-    setSelectedVendors((prev) => ({ ...prev, [serviceKey]: vendorId }));
-
-    // Only update cost if there's no manual cost override
-    if (!costOverrides[serviceKey]) {
-      setSelectedCosts((prev) => ({ ...prev, [serviceKey]: cost }));
-    }
-  };
-
-  // Generate unique key for each service item
-  const generateServiceKey = (
-    type: string,
-    index: number,
-    subActivityId?: string
-  ) => {
-    return `${type}-${index}-${subActivityId || ""}`;
-  };
-
-  // Handle opening a cost window and fetching vendor data
-  const handleOpenCostWindow = useCallback(
-    (serviceKey: string, subActivityId: string, locationParams?: any) => {
-      // Mark as opened
-      setOpenedCostWindows((prev) => ({ ...prev, [serviceKey]: true }));
-
-      // Fetch vendor data if not already loaded
-      if (!getVendorCostByKey(serviceKey)) {
+  // Fetch orders on component mount and when filters change
+  useEffect(() => {
+    const fetchOrdersData = async () => {
+      try {
         const params = {
-          subActivityId,
-          ...(locationParams?.location && {
-            location: locationParams.location,
-          }),
-          ...(locationParams?.fromLocation && {
-            fromLocation: locationParams.fromLocation,
-          }),
-          ...(locationParams?.toLocation && {
-            toLocation: locationParams.toLocation,
-          }),
+          page,
+          limit,
+          ...(searchTerm && { search: searchTerm }),
+          ...(statusFilter !== "all" && { status: statusFilter }),
         };
-
-        fetchVendorCost(params, serviceKey);
-      }
-    },
-    [fetchVendorCost, getVendorCostByKey]
-  );
-
-  // File upload function
-  const handleFileUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-
-    setUploading(true);
-
-    // Validate file types and sizes
-    const maxFileSize = 10 * 1024 * 1024; // 10MB
-    const allowedTypes = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "text/plain",
-      "text/csv",
-    ];
-
-    const validFiles = Array.from(files).filter((file) => {
-      if (file.size > maxFileSize) {
-        toast({
-          title: "File too large",
-          description: `${file.name} is too large. Maximum file size is 10MB.`,
-          variant: "destructive",
-        });
-        return false;
-      }
-      if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: "Invalid file type",
-          description: `${file.name} is not a supported file type.`,
-          variant: "destructive",
-        });
-        return false;
-      }
-      return true;
-    });
-
-    if (validFiles.length === 0) {
-      setUploading(false);
-      return;
-    }
-
-    try {
-      const uploadPromises = validFiles.map(async (file) => {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        // Get order ID from current order
-        const orderId = order._id;
-
-        const response = await http.post(
-          `/api/v1/uploads/orders/${orderId}/upload`,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-
-        return {
-          id: response.data.id || Math.random().toString(36).substr(2, 9),
-          name: file.name,
-          type: file.type || "application/octet-stream",
-          size: file.size,
-          uploadedAt: new Date().toISOString(),
-          url: response.data.url || URL.createObjectURL(file), // Use server URL or fallback to blob
-          serverId: response.data.id, // Store server-side ID for future operations
-        };
-      });
-
-      await Promise.all(uploadPromises);
-
-      // Small delay to ensure server processing is complete
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Refresh the files list from server to get the latest state
-      await fetchOrderFiles(order._id);
-      setUploading(false);
-
-      toast({
-        title: "Files uploaded successfully",
-        description: `${validFiles.length} file(s) uploaded to server`,
-      });
-    } catch (error) {
-      console.error("Upload error:", error);
-      setUploading(false);
-
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload files. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle file input change
-  const handleFileInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    handleFileUpload(event.target.files);
-    // Reset the input
-    event.target.value = "";
-  };
-
-  // Get file icon based on file type
-  const getFileIcon = (type: string) => {
-    if (type.includes("image/")) {
-      return <FileText className="h-5 w-5 text-green-500" />;
-    } else if (type.includes("pdf")) {
-      return <FileText className="h-5 w-5 text-red-500" />;
-    } else if (type.includes("word") || type.includes("document")) {
-      return <FileText className="h-5 w-5 text-blue-500" />;
-    } else if (type.includes("excel") || type.includes("spreadsheet")) {
-      return <FileText className="h-5 w-5 text-green-600" />;
-    } else {
-      return <FileText className="h-5 w-5 text-gray-500" />;
-    }
-  };
-
-  // Drag and drop handlers
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only set dragOver to false if we're leaving the drag zone itself
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-      setDragOver(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOver(false);
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFileUpload(files);
-    }
-  };
-
-  // Remove attachment
-  const handleRemoveAttachment = async (attachmentId: string) => {
-    const attachmentToRemove = attachments.find(
-      (att) => att.id === attachmentId
-    );
-
-    if (!attachmentToRemove) {
-      toast({
-        title: "Error",
-        description: "File not found",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setDeletingFileId(attachmentId);
-
-    try {
-      // Get order ID and file name for the API call
-      const orderId = order._id;
-      const fileName = attachmentToRemove.serverId; // Use serverId which contains the actual server filename
-
-      // Call the DELETE API endpoint
-      await http.delete(`/api/v1/uploads/orders/${orderId}/files/${fileName}`);
-
-      // Clean up blob URL for the deleted file (only for local blob URLs)
-      const deletedAttachment = attachments.find(
-        (att) => att.id === attachmentId
-      );
-      if (deletedAttachment?.url && deletedAttachment.url.startsWith("blob:")) {
-        URL.revokeObjectURL(deletedAttachment.url);
-      }
-
-      // Refresh the files list from server to get the latest state
-      await fetchOrderFiles(order._id);
-
-      toast({
-        title: "File Deleted",
-        description: "File has been successfully removed from server",
-      });
-    } catch (error) {
-      console.error("Delete file error:", error);
-      toast({
-        title: "Delete Failed",
-        description: "Failed to delete file from server. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setDeletingFileId(null);
-    }
-  };
-
-  // View attachment
-  const handleViewAttachment = (attachment: any) => {
-    if (attachment.url) {
-      // Open in new tab for preview
-      window.open(attachment.url, "_blank");
-    } else {
-      toast({
-        title: "Preview not available",
-        description: "This file cannot be previewed",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Download attachment
-  const handleDownloadAttachment = async (attachment: any) => {
-    if (attachment.url) {
-      try {
-        // For server URLs, we can directly link to them
-        if (attachment.url.startsWith("http")) {
-          const link = document.createElement("a");
-          link.href = attachment.url;
-          link.download = attachment.name;
-          link.target = "_blank";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        } else {
-          // For blob URLs (fallback), use the original method
-          const link = document.createElement("a");
-          link.href = attachment.url;
-          link.download = attachment.name;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-
-        toast({
-          title: "Download started",
-          description: `Downloading ${attachment.name}`,
-        });
+        const response = await getOrders(params);
+        console.log("Orders API Response:", response);
+        console.log("OrdersList from hook:", ordersList);
       } catch (error) {
-        toast({
-          title: "Download failed",
-          description: "Failed to download the file",
-          variant: "destructive",
-        });
-      }
-    } else {
-      toast({
-        title: "Download not available",
-        description: "This file cannot be downloaded",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // IPO Actions handlers
-  const handleUpdatePrice = (
-    serviceKey: string,
-    currentPrice: number,
-    serviceName: string,
-    serviceType: "truck" | "pickup" | "delivery",
-    itemIndex: number
-  ) => {
-    setUpdateModal({
-      isOpen: true,
-      type: "price",
-      serviceKey,
-      currentValue: currentPrice,
-      serviceName,
-      serviceType,
-      itemIndex,
-    });
-  };
-
-  const handleUpdateCost = (
-    serviceKey: string,
-    currentCost: number,
-    serviceName: string,
-    serviceType: "truck" | "pickup" | "delivery",
-    itemIndex: number
-  ) => {
-    setUpdateModal({
-      isOpen: true,
-      type: "cost",
-      serviceKey,
-      currentValue: currentCost,
-      serviceName,
-      serviceType,
-      itemIndex,
-    });
-  };
-
-  // Handle modal close
-  const handleModalClose = () => {
-    setUpdateModal((prev) => ({ ...prev, isOpen: false }));
-  };
-
-  // Reset IPO actions (only when submitting or cancelling)
-  const resetIpoActions = () => {
-    setIpoActions({ updatePrice: false, updateCost: false });
-  };
-
-  // Fetch sub-activities based on pricing method
-  const fetchSubActivities = useCallback(
-    async (pricingMethod: string) => {
-      setLoadingSubActivities(true);
-      try {
-        const response = await http.get(
-          `/api/v1/sub-activities/by-pricing-method?pricingMethods=${pricingMethod}`
-        );
-
-        // Handle the response structure with success and data fields
-        if (response.data?.success && response.data?.data) {
-          // Filter only active sub-activities
-          const activeSubActivities = response.data.data.filter(
-            (subActivity: ISubActivityWithId) => subActivity.isActive
-          );
-          setSubActivities(activeSubActivities);
-        } else {
-          setSubActivities([]);
-        }
-      } catch (error) {
-        console.error("Error fetching sub-activities:", error);
+        console.error("Error fetching orders:", error);
         toast({
           title: "Error",
-          description: "Failed to fetch sub-activities",
+          description: "Failed to fetch orders",
           variant: "destructive",
         });
-        setSubActivities([]);
-      } finally {
-        setLoadingSubActivities(false);
       }
-    },
-    [toast]
-  );
-
-  // Handle service line form changes
-  const handleServiceLineFormChange = (field: string, value: string) => {
-    setServiceLineForm((prev) => ({
-      ...prev,
-      [field]: value,
-      // Reset selected location when changing location mode
-      ...(field === "locationMode" && { selectedLocation: "" }),
-      // Reset selected sub-activity when changing service type
-      ...(field === "serviceType" && { selectedSubActivity: "" }),
-    }));
-
-    // Fetch sub-activities when service type changes
-    if (field === "serviceType") {
-      fetchSubActivities(value);
-    }
-  };
-
-  // Handle add service line submission
-  const handleAddServiceLine = () => {
-    // Find the selected sub-activity details
-    const selectedSubActivityDetails = subActivities.find(
-      (subActivity) => subActivity._id === serviceLineForm.selectedSubActivity
-    );
-
-    // Get selected location details
-    const locations = getAvailableLocations();
-    const selectedLocationDetails =
-      locations[parseInt(serviceLineForm.selectedLocation)];
-
-    console.log("Adding service line:", {
-      ...serviceLineForm,
-      selectedSubActivityDetails,
-      selectedLocationDetails,
-    });
-
-    // TODO: Implement the actual service line addition logic here
-    // This would typically involve adding a new row to the IPO table
-
-    toast({
-      title: "Service Line Added",
-      description: `Added ${serviceLineForm.serviceType} service: ${
-        selectedSubActivityDetails?.portalItemNameEn || "Unknown"
-      } (${selectedSubActivityDetails?.transactionType?.name}) for ${
-        serviceLineForm.locationMode
-      }`,
-    });
-
-    // Reset form and close popover
-    setServiceLineForm({
-      serviceType: "perItem",
-      locationMode: "pickup",
-      selectedLocation: "",
-      selectedSubActivity: "",
-    });
-    setAddServicePopoverOpen(false);
-  };
-
-  // Get available locations based on selection
-  const getAvailableLocations = () => {
-    if (serviceLineForm.locationMode === "pickup") {
-      return order.pickupInfo || [];
-    } else {
-      return order.deliveryInfo || [];
-    }
-  };
-
-  // Handle cancel service line form
-  const handleCancelServiceLine = () => {
-    setServiceLineForm({
-      serviceType: "perItem",
-      locationMode: "pickup",
-      selectedLocation: "",
-      selectedSubActivity: "",
-    });
-    setAddServicePopoverOpen(false);
-  };
-
-  // Clear cost override to use vendor cost
-  const clearCostOverride = (serviceKey: string) => {
-    setCostOverrides((prev) => {
-      const newOverrides = { ...prev };
-      delete newOverrides[serviceKey];
-      return newOverrides;
-    });
-
-    toast({
-      title: "Cost Override Cleared",
-      description: "Now using vendor cost",
-    });
-  };
-
-  // Handle price/cost update
-  const handlePriceCostUpdate = (newValue: number) => {
-    const { type, serviceKey } = updateModal;
-
-    if (type === "price") {
-      setPriceOverrides((prev) => ({ ...prev, [serviceKey]: newValue }));
-    } else {
-      setCostOverrides((prev) => ({ ...prev, [serviceKey]: newValue }));
-    }
-
-    handleModalClose();
-
-    toast({
-      title: `${type === "price" ? "Price" : "Cost"} Updated`,
-      description: `Successfully updated ${type} to $${newValue}`,
-    });
-  };
-
-  const handleSubmitIPO = async () => {
-    try {
-      // TODO: Implement POST endpoint call
-      // const response = await fetch('/api/ipo/submit', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ orderId, ipoActions })
-      // });
-
-      toast({
-        title: "IPO Submitted",
-        description: "Initial Price Offer has been submitted successfully",
-      });
-
-      // Reset actions after successful submission
-      resetIpoActions();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to submit IPO",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Fetch existing files for the order
-  const fetchOrderFiles = async (orderId: string) => {
-    setLoadingFiles(true);
-    try {
-      const response = await http.get(
-        `/api/v1/uploads/orders/${orderId}/files`
-      );
-
-      // Handle the specific API response structure
-      let files = [];
-      if (
-        response.data?.data?.files &&
-        Array.isArray(response.data.data.files)
-      ) {
-        files = response.data.data.files;
-      }
-
-      if (files.length > 0) {
-        const existingFiles = files.map((file: any, index: number) => {
-          // Generate MIME type from file extension
-          const getFileType = (fileName: string) => {
-            const extension = fileName.split(".").pop()?.toLowerCase();
-            const mimeTypes: Record<string, string> = {
-              pdf: "application/pdf",
-              png: "image/png",
-              jpg: "image/jpeg",
-              jpeg: "image/jpeg",
-              gif: "image/gif",
-              doc: "application/msword",
-              docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-              xls: "application/vnd.ms-excel",
-              xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-              txt: "text/plain",
-              csv: "text/csv",
-            };
-            return mimeTypes[extension || ""] || "application/octet-stream";
-          };
-
-          // Generate a clean display name from the fileName
-          const getDisplayName = (fileName: string) => {
-            // Remove timestamp prefix (e.g., "1753671141511_") if present
-            const cleanName = fileName.replace(/^\d+_/, "");
-            // Remove order ID suffix if present
-            return cleanName.replace(/_[a-f0-9]{24}\./, ".");
-          };
-
-          return {
-            id: `file-${index}-${Date.now()}`,
-            name: getDisplayName(file.fileName),
-            type: getFileType(file.fileName),
-            size: file.fileSize,
-            uploadedAt: file.uploadedAt,
-            url: `/api/v1/${file.filePath}`, // Construct proper API URL for file access
-            serverId: file.fileName, // Use fileName as server identifier
-          };
-        });
-
-        setAttachments(existingFiles);
-      } else {
-        // If no files, ensure attachments is empty
-        setAttachments([]);
-      }
-    } catch (error) {
-      console.error("Error fetching order files:", error);
-      // Don't show error toast for file fetching, as files might not exist
-      // This is expected behavior for new orders
-      setAttachments([]);
-    } finally {
-      setLoadingFiles(false);
-    }
-  };
-
-  // Extract order ID from URL and fetch data
-  useEffect(() => {
-    const pathParts = location.split("/");
-    const id = pathParts[pathParts.length - 1];
-
-    if (id && id !== "orders") {
-      setOrderId(id);
-      // Fetch order data immediately
-      getOrderById(id).catch((error) => {
-        console.error("Error fetching order:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to fetch order details",
-          variant: "destructive",
-        });
-      });
-
-      // Fetch existing files for this order
-      fetchOrderFiles(id);
-    }
-  }, [location, getOrderById, toast]);
-
-  // Cleanup blob URLs when component unmounts
-  useEffect(() => {
-    return () => {
-      // Clean up any remaining blob URLs to prevent memory leaks
-      attachments.forEach((attachment) => {
-        if (attachment.url && attachment.url.startsWith("blob:")) {
-          URL.revokeObjectURL(attachment.url);
-        }
-      });
     };
+
+    fetchOrdersData();
+  }, [page, limit, searchTerm, statusFilter, getOrders, toast]);
+
+  // Handle search with debounce
+  const handleSearch = useCallback((value: string) => {
+    setSearchTerm(value);
+    setPage(1); // Reset to first page when searching
   }, []);
 
-  // Fetch initial sub-activities when component mounts
-  useEffect(() => {
-    fetchSubActivities(serviceLineForm.serviceType);
-  }, [fetchSubActivities, serviceLineForm.serviceType]);
+  // Handle status filter change
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setPage(1); // Reset to first page when filtering
+  };
 
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="w-full p-6 space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading order details...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Handle pagination
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
 
-  // Show error state
-  if (error) {
-    return (
-      <div className="w-full p-6 space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-red-600 text-lg font-semibold">
-              Error loading order
-            </p>
-            <p className="text-gray-600 mt-2">{error}</p>
-            <Button onClick={() => navigate("/orders")} className="mt-4">
-              Back to Orders
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show no order state
-  if (!currentOrder?.orderDetails) {
-    return (
-      <div className="w-full p-6 space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-gray-600 text-lg">No order found</p>
-            <Button onClick={() => navigate("/orders")} className="mt-4">
-              Back to Orders
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const order = currentOrder.orderDetails;
+  // Handle row click to navigate to order details
+  const handleOrderClick = (orderId: string) => {
+    navigate(`/orders/${orderId}`);
+  };
 
   // Helper function to format date
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-GB");
-  };
-
-  // Helper function to format time
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(dateString).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
   // Helper function to format location
   const formatLocation = (location: any) => {
     if (!location) return "N/A";
-    return `${location.country || "N/A"}, ${location.area || "N/A"}, ${
-      location.city || "N/A"
-    }`;
+    return `${location.country || "N/A"}, ${location.area || "N/A"}`;
   };
 
-  // Helper function to format special requirements
-  const formatSpecialRequirements = (requirements: any[]) => {
-    if (!requirements || !Array.isArray(requirements)) return [];
-    return requirements.map(
-      (req) =>
-        `${req.quantity || 0} x ${
-          req.subActivity?.portalItemNameEn || "Unknown"
-        }${req.note ? ` - ${req.note}` : ""}`
+  // Helper function to get status badge
+  const getStatusBadge = (order: any) => {
+    if (order.isDraft) {
+      return (
+        <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+          Draft
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="secondary" className="bg-green-100 text-green-800">
+        Active
+      </Badge>
     );
   };
 
+  // Calculate total pages
+  const totalPages = Math.ceil(totalOrders / limit);
+
   return (
     <div className="w-full p-6 space-y-6">
-      {/* Order ID and CTA Buttons */}
-      <div className="flex justify-between items-center mb-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Order info</h1>
-          <h2 className="text-3xl font-bold text-blue-600">
-            {order.orderIndex || order._id}
-          </h2>
+          <h1 className="text-2xl font-bold">Orders</h1>
+          <p className="text-gray-600">Manage and track all orders</p>
         </div>
-        <div className="flex items-center space-x-4">
-          <Badge className="bg-purple-600 text-white">
-            Ready for processing
-          </Badge>
-          <div className="flex flex-col space-y-2">
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-              Post order
-            </Button>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-              Quick post
-            </Button>
-          </div>
-        </div>
+        <Button
+          onClick={() => navigate("/create-order")}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create Order
+        </Button>
       </div>
 
-      {/* Order Info - Full Width */}
-      <Card className="mb-6">
+      {/* Filters and Search */}
+      <Card>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
-            <div>
-              <p className="font-medium text-gray-700">Created date:</p>
-              <p className="text-gray-900">{formatDate(order.createdAt)}</p>
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search orders by ID, customer, or service..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <div>
-              <p className="font-medium text-gray-700">Service:</p>
-              <p className="text-gray-900">{order.service}</p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Contact:</p>
-              <p className="text-gray-900 break-words">{order.contactPerson}</p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Types of goods:</p>
-              <p className="text-gray-900">{order.typesOfGoods}</p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Customer:</p>
-              <p className="text-gray-900 break-words">
-                {order.billingAccount?.custName || "N/A"}
-              </p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Status:</p>
-              <Badge
-                variant="secondary"
-                className="bg-orange-100 text-orange-800"
-              >
-                Active
-              </Badge>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Type:</p>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="order"
-                  name="type"
-                  className="text-blue-600"
-                  defaultChecked
-                />
-                <label htmlFor="order" className="text-sm">
-                  Order
-                </label>
-              </div>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={handleStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Additional Actions */}
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                More Filters
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
-        {/* Required Service Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Required service details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-1">
-              <li className="text-sm">Service: {order.service}</li>
-              <li className="text-sm">Types of goods: {order.typesOfGoods}</li>
-              <li className="text-sm">
-                Goods description: {order.goodsDescription}
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Service Details Table */}
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-1/4">Service</TableHead>
-                  <TableHead className="w-1/4">Details</TableHead>
-                  <TableHead className="w-1/4">Requester Name</TableHead>
-                  <TableHead className="w-1/4">{order.requesterName}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium">Type of goods</TableCell>
-                  <TableCell
-                    className="max-w-xs truncate"
-                    title={order.typesOfGoods}
-                  >
-                    {order.typesOfGoods}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    Requester mobile number 1
-                  </TableCell>
-                  <TableCell>{order.requesterMobile1}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">
-                    Goods description
-                  </TableCell>
-                  <TableCell className="max-w-xs">
-                    <div
-                      className="line-clamp-2"
-                      title={order.goodsDescription}
-                    >
-                      {order.goodsDescription}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    Requester mobile number 2
-                  </TableCell>
-                  <TableCell>{order.requesterMobile2 || "N/A"}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">Billing Account</TableCell>
-                  <TableCell
-                    className="max-w-xs truncate"
-                    title={order.billingAccount?.custName || "N/A"}
-                  >
-                    {order.billingAccount?.custName || "N/A"}
-                  </TableCell>
-                  <TableCell className="font-medium">Email</TableCell>
-                  <TableCell
-                    className="max-w-xs truncate"
-                    title={order.emailAddress}
-                  >
-                    {order.emailAddress}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {/* Pickup Points */}
-        {(order.pickupInfo || []).map((pickup, index) => (
-          <Card key={`pickup-${index}`}>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <MapPin className="mr-2 h-5 w-5" />
-                Pickup point {index + 1}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-sm">
-                <div className="space-y-3">
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Pickup location:
-                    </p>
-                    <p className="text-gray-900">
-                      {formatLocation(pickup.pickupLocation)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">Pickup address:</p>
-                    <p className="text-gray-900 break-words">
-                      {pickup.pickupDetailedAddress}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Pickup time window:
-                    </p>
-                    <p className="text-gray-900">
-                      {formatDate(pickup.fromTime)}{" "}
-                      {formatTime(pickup.fromTime)} -{" "}
-                      {formatTime(pickup.toTime)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">Pickup notes:</p>
-                    <p className="text-gray-900 break-words">
-                      {pickup.pickupNotes || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Special requirements:
-                    </p>
-                    <ul className="ml-4 space-y-1">
-                      {formatSpecialRequirements(
-                        pickup.pickupSpecialRequirements
-                      ).map((req, reqIndex) => (
-                        <li
-                          key={reqIndex}
-                          className="text-gray-900 break-words"
-                        >
-                          {req}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Pickup coordinator name:
-                    </p>
-                    <p className="text-gray-900">
-                      {pickup.pickupCoordinator?.requesterName || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Pickup coordinator mobile 1:
-                    </p>
-                    <p className="text-gray-900">
-                      {pickup.pickupCoordinator?.requesterMobile1 || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Pickup coordinator mobile 2:
-                    </p>
-                    <p className="text-gray-900">
-                      {pickup.pickupCoordinator?.requesterMobile2 || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">Email:</p>
-                    <p className="text-gray-900 break-all">
-                      {pickup.pickupCoordinator?.emailAddress || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Other requirements:
-                    </p>
-                    <p className="text-gray-900 break-words">
-                      {pickup.otherRequirements || "N/A"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {/* Delivery Points */}
-        {(order.deliveryInfo || []).map((delivery, index) => (
-          <Card key={`delivery-${index}`}>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Package className="mr-2 h-5 w-5" />
-                Delivery point {index + 1}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-sm">
-                <div className="space-y-3">
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Delivery location:
-                    </p>
-                    <p className="text-gray-900">
-                      {formatLocation(delivery.deliveryLocation)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Delivery address:
-                    </p>
-                    <p className="text-gray-900 break-words">
-                      {delivery.deliveryDetailedAddress}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Delivery time window:
-                    </p>
-                    <p className="text-gray-900">
-                      {formatDate(delivery.fromTime)}{" "}
-                      {formatTime(delivery.fromTime)} -{" "}
-                      {formatTime(delivery.toTime)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">Delivery notes:</p>
-                    <p className="text-gray-900 break-words">
-                      {delivery.deliveryNotes || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Special requirements:
-                    </p>
-                    <ul className="ml-4 space-y-1">
-                      {formatSpecialRequirements(
-                        delivery.deliverySpecialRequirements
-                      ).map((req, reqIndex) => (
-                        <li
-                          key={reqIndex}
-                          className="text-gray-900 break-words"
-                        >
-                          {req}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Delivery coordinator name:
-                    </p>
-                    <p className="text-gray-900">
-                      {delivery.deliveryCoordinator?.requesterName || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Delivery coordinator mobile 1:
-                    </p>
-                    <p className="text-gray-900">
-                      {delivery.deliveryCoordinator?.requesterMobile1 || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Delivery coordinator mobile 2:
-                    </p>
-                    <p className="text-gray-900">
-                      {delivery.deliveryCoordinator?.requesterMobile2 || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">Email:</p>
-                    <p className="text-gray-900 break-all">
-                      {delivery.deliveryCoordinator?.emailAddress || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">
-                      Other requirements:
-                    </p>
-                    <p className="text-gray-900 break-words">
-                      {delivery.otherRequirements || "N/A"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {/* Shipping Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Truck className="mr-2 h-5 w-5" />
-              Shipping Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-              <div className="space-y-3">
-                <div>
-                  <p className="font-medium text-gray-700">Shipping units:</p>
-                  <p className="text-gray-900">
-                    {order.shippingDetails.shippingUnits?.activityNameEn ||
-                      "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Type of truck:</p>
-                  <p className="text-gray-900">
-                    {order.shippingDetails.typeOfTruck?.portalItemNameEn ||
-                      "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Quantity:</p>
-                  <p className="text-gray-900">{order.shippingDetails.qty}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Dimensions (M):</p>
-                  <p className="text-gray-900">{order.shippingDetails.dimM}</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="font-medium text-gray-700">Length:</p>
-                  <p className="text-gray-900">
-                    {order.shippingDetails.length} cm
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Width:</p>
-                  <p className="text-gray-900">
-                    {order.shippingDetails.width} cm
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Height:</p>
-                  <p className="text-gray-900">
-                    {order.shippingDetails.height} cm
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Total weight:</p>
-                  <p className="text-gray-900">
-                    {order.shippingDetails.totalWeight} kg
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Notes:</p>
-                  <p className="text-gray-900 break-words">
-                    {order.shippingDetails.note || "N/A"}
-                  </p>
-                </div>
+      {/* Orders Table */}
+      <Card>
+        <CardContent className="p-0">
+          {ordersListLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading orders...</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Price Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Price Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-              <div className="space-y-3">
-                <div>
-                  <p className="font-medium text-gray-700">Total Price:</p>
-                  <p className="text-gray-900 text-lg font-semibold">
-                    $
-                    {(order.truckTypeMatches || []).reduce(
-                      (sum, item) => sum + (item.price || 0),
-                      0
-                    ) +
-                      (
-                        order.specialRequirementsPrices
-                          ?.pickupSpecialRequirements || []
-                      ).reduce(
-                        (sum, item) =>
-                          sum +
-                          (item.basePrice || 0) +
-                          (item.locationPrice || 0),
-                        0
-                      ) +
-                      (
-                        order.specialRequirementsPrices
-                          ?.deliverySpecialRequirements || []
-                      ).reduce(
-                        (sum, item) =>
-                          sum +
-                          (item.basePrice || 0) +
-                          (item.locationPrice || 0),
-                        0
-                      )}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Total Cost:</p>
-                  <p className="text-gray-900 text-lg font-semibold">
-                    $
-                    {(order.truckTypeMatches || []).reduce(
-                      (sum, item) => sum + (item.cost || 0),
-                      0
-                    ) +
-                      (
-                        order.specialRequirementsPrices
-                          ?.pickupSpecialRequirements || []
-                      ).reduce((sum, item) => sum + (item.cost || 0), 0) +
-                      (
-                        order.specialRequirementsPrices
-                          ?.deliverySpecialRequirements || []
-                      ).reduce((sum, item) => sum + (item.cost || 0), 0)}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Status:</p>
-                  <Badge variant={order.isDraft ? "secondary" : "default"}>
-                    {order.isDraft ? "Draft" : "Final"}
-                  </Badge>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="font-medium text-gray-700">Created:</p>
-                  <p className="text-gray-900">{formatDate(order.createdAt)}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Updated:</p>
-                  <p className="text-gray-900">{formatDate(order.updatedAt)}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700">Contact Person:</p>
-                  <p className="text-gray-900 break-words">
-                    {order.contactPerson}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Initial Price Offer */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Initial Price Offer</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Offer ID */}
-              <div className="bg-blue-600 text-white p-4 rounded-lg">
-                <h3 className="font-bold text-lg">
-                  IPO-{order.orderIndex || order._id}
-                </h3>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2 justify-end">
-                <Button size="sm" className="bg-blue-600">
-                  Submit this IPO
-                </Button>
-                <Popover
-                  open={addServicePopoverOpen}
-                  onOpenChange={setAddServicePopoverOpen}
-                >
-                  <PopoverTrigger asChild>
-                    <Button size="sm" className="bg-blue-600">
-                      Add service line +
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80" align="end">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-sm">
-                          Add Service Line
-                        </h4>
-                        <p className="text-xs text-gray-500">
-                          Configure a new service line for this order
-                        </p>
-                      </div>
-
-                      {/* Service Type Dropdown */}
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="serviceType"
-                          className="text-xs font-medium"
-                        >
-                          Service Type
-                        </Label>
-                        <Select
-                          value={serviceLineForm.serviceType}
-                          onValueChange={(value) =>
-                            handleServiceLineFormChange("serviceType", value)
-                          }
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue placeholder="Select service type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="perItem">Per Item</SelectItem>
-                            <SelectItem value="perLocation">
-                              Per Location
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Location Mode Radio Buttons */}
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium">
-                          Location Mode
-                        </Label>
-                        <RadioGroup
-                          value={serviceLineForm.locationMode}
-                          onValueChange={(value) =>
-                            handleServiceLineFormChange("locationMode", value)
-                          }
-                          className="flex space-x-4"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem
-                              value="pickup"
-                              id="pickup"
-                              className="h-4 w-4"
-                            />
-                            <Label
-                              htmlFor="pickup"
-                              className="text-xs cursor-pointer"
-                            >
-                              Pick up
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem
-                              value="delivery"
-                              id="delivery"
-                              className="h-4 w-4"
-                            />
-                            <Label
-                              htmlFor="delivery"
-                              className="text-xs cursor-pointer"
-                            >
-                              Delivery
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-
-                      {/* Sub-Activity Selection Dropdown */}
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="subActivity"
-                          className="text-xs font-medium"
-                        >
-                          Sub-Activity
-                        </Label>
-                        <Select
-                          value={serviceLineForm.selectedSubActivity}
-                          onValueChange={(value) =>
-                            handleServiceLineFormChange(
-                              "selectedSubActivity",
-                              value
-                            )
-                          }
-                          disabled={loadingSubActivities}
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue
-                              placeholder={
-                                loadingSubActivities
-                                  ? "Loading sub-activities..."
-                                  : subActivities.length > 0
-                                  ? "Select a sub-activity"
-                                  : "No sub-activities available"
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {!loadingSubActivities &&
-                            subActivities.length > 0 ? (
-                              subActivities.map((subActivity) => {
-                                // Get finance effect color
-                                const getFinanceEffectColor = (
-                                  effect: string
-                                ) => {
-                                  switch (effect) {
-                                    case "positive":
-                                      return "text-green-600";
-                                    case "negative":
-                                      return "text-red-600";
-                                    default:
-                                      return "text-gray-600";
-                                  }
-                                };
-
-                                const getFinanceEffectIcon = (
-                                  effect: string
-                                ) => {
-                                  switch (effect) {
-                                    case "positive":
-                                      return "↗";
-                                    case "negative":
-                                      return "↙";
-                                    default:
-                                      return "—";
-                                  }
-                                };
-
-                                return (
-                                  <SelectItem
-                                    key={subActivity._id}
-                                    value={subActivity._id}
-                                  >
-                                    <div className="flex flex-col w-full">
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-medium">
-                                          {subActivity.portalItemNameEn}
-                                        </span>
-                                        <span
-                                          className={`text-xs font-medium ${getFinanceEffectColor(
-                                            subActivity.financeEffect
-                                          )}`}
-                                        >
-                                          {getFinanceEffectIcon(
-                                            subActivity.financeEffect
-                                          )}{" "}
-                                          {subActivity.financeEffect}
-                                        </span>
-                                      </div>
-                                      <span className="text-xs text-gray-500">
-                                        {subActivity.transactionType?.name} •{" "}
-                                        {subActivity.activity?.activityNameEn}
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })
-                            ) : !loadingSubActivities &&
-                              subActivities.length === 0 ? (
-                              <div className="px-2 py-1.5 text-xs text-gray-500">
-                                No sub-activities available
-                              </div>
-                            ) : (
-                              <div className="px-2 py-1.5 text-xs text-gray-500">
-                                Loading sub-activities...
-                              </div>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Location Selection Dropdown */}
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="location"
-                          className="text-xs font-medium"
-                        >
-                          {serviceLineForm.locationMode === "pickup"
-                            ? "Pickup Location"
-                            : "Delivery Location"}
-                        </Label>
-                        <Select
-                          value={serviceLineForm.selectedLocation}
-                          onValueChange={(value) =>
-                            handleServiceLineFormChange(
-                              "selectedLocation",
-                              value
-                            )
-                          }
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue
-                              placeholder={`Select ${serviceLineForm.locationMode} location`}
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getAvailableLocations().map((location, index) => {
-                              const displayText =
-                                serviceLineForm.locationMode === "pickup"
-                                  ? `${formatLocation(
-                                      (location as any).pickupLocation
-                                    )} - ${
-                                      (location as any).pickupDetailedAddress
-                                    }`
-                                  : `${formatLocation(
-                                      (location as any).deliveryLocation
-                                    )} - ${
-                                      (location as any).deliveryDetailedAddress
-                                    }`;
-
-                              return (
-                                <SelectItem
-                                  key={index}
-                                  value={index.toString()}
-                                >
-                                  {displayText}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex justify-end space-x-2 pt-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleCancelServiceLine}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={handleAddServiceLine}
-                          disabled={
-                            !serviceLineForm.selectedLocation ||
-                            !serviceLineForm.selectedSubActivity
-                          }
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          Add Service
-                        </Button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                <Button size="sm" className="bg-blue-600">
-                  Download excel
-                </Button>
-              </div>
-
-              {/* Service Lines Table */}
-              <div className="border rounded-lg overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <div className="min-w-auto">
-                    {/* Header Row */}
-                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 border-b sticky top-0 z-10">
-                      <div
-                        className="grid grid-cols-12 gap-2 text-sm font-semibold text-gray-700"
-                        style={{
-                          gridTemplateColumns:
-                            "60px 120px 1fr 40px 60px 300px 100px 50px 50px",
-                        }}
-                      >
-                        <div className="flex items-center">
-                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">
-                            PL#
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">
-                            Service
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-bold">
-                            Description
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-bold">
-                            QTY
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">
-                            Price
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">
-                            Cost Window
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs font-bold">
-                            Vendors
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">
-                            Cost
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-bold">
-                            Actions
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Truck Type Matches Rows */}
-                    {(order.truckTypeMatches || []).map((item, index) => {
-                      const serviceKey = generateServiceKey(
-                        "truck",
-                        index,
-                        item.subActivityId
-                      );
-                      const vendorCostData = getVendorCostByKey(serviceKey);
-                      const isLoadingVendors = isLoadingByKey(serviceKey);
-                      const selectedCost =
-                        costOverrides[serviceKey] ??
-                        selectedCosts[serviceKey] ??
-                        item.cost ??
-                        0;
-
-                      return (
-                        <div
-                          key={`truck-${index}`}
-                          className="p-4 border-b hover:bg-gray-50 transition-colors duration-200"
-                        >
-                          <div
-                            className="grid gap-2 text-sm items-start py-2"
-                            style={{
-                              gridTemplateColumns:
-                                "60px 120px 1fr 40px 60px 300px 100px 50px 50px",
-                            }}
-                          >
-                            <div>
-                              <span
-                                className="text-blue-600 cursor-pointer hover:underline font-medium text-xs leading-tight"
-                                title="Click to view customer price line"
-                                onClick={() =>
-                                  navigate(`/pricelists/${item.priceListId}`)
-                                }
-                              >
-                                {item.priceListName}
-                              </span>
-                            </div>
-                            <div>
-                              <span
-                                className="font-medium text-xs leading-tight break-words"
-                                title={item.subActivityName}
-                              >
-                                {item.subActivityName}
-                              </span>
-                            </div>
-                            <div>
-                              <span
-                                className="text-gray-700 text-xs leading-tight break-words"
-                                title={`${
-                                  item.locationDetails?.fromLocation || "N/A"
-                                } → ${
-                                  item.locationDetails?.toLocation || "N/A"
-                                }`}
-                              >
-                                {item.locationDetails?.fromLocation || "N/A"} →{" "}
-                                {item.locationDetails?.toLocation || "N/A"}
-                              </span>
-                            </div>
-                            <div className="text-center">
-                              <span className="font-semibold text-gray-900 text-xs">
-                                {order.shippingDetails?.qty || 1}
-                              </span>
-                            </div>
-                            <div className="text-center">
-                              <span className="font-bold text-green-600 text-xs">
-                                ${priceOverrides[serviceKey] ?? item.price ?? 0}
-                              </span>
-                            </div>
-                            <div>
-                              {openedCostWindows[serviceKey] ? (
-                                <CostWindow
-                                  vendorData={vendorCostData?.data || []}
-                                  costRange={
-                                    vendorCostData?.costRange || {
-                                      min: 0,
-                                      max: 0,
-                                      average: 0,
-                                      count: 0,
-                                      totalVendors: 0,
-                                    }
-                                  }
-                                  customerPrice={item.price}
-                                  loading={isLoadingVendors}
-                                />
-                              ) : (
-                                <button
-                                  onClick={() =>
-                                    handleOpenCostWindow(
-                                      serviceKey,
-                                      item.subActivityId,
-                                      {
-                                        fromLocation:
-                                          item.locationDetails?.fromLocation,
-                                        toLocation:
-                                          item.locationDetails?.toLocation,
-                                      }
-                                    )
-                                  }
-                                  className="relative w-full h-12 bg-gray-50 rounded-lg p-1 border hover:bg-gray-100 transition-colors flex items-center justify-center group"
-                                >
-                                  <div className="text-center">
-                                    <div className="text-xs text-gray-600 font-medium">
-                                      Click to view
-                                    </div>
-                                    <div className="text-xs text-blue-600 font-semibold">
-                                      Cost Comparison
-                                    </div>
-                                  </div>
-                                  <div className="absolute right-2 text-gray-400 group-hover:text-gray-600">
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 5l7 7-7 7"
-                                      />
-                                    </svg>
-                                  </div>
-                                </button>
-                              )}
-                            </div>
-                            <div>
-                              <VendorDropdown
-                                vendorData={vendorCostData?.data || []}
-                                selectedVendor={selectedVendors[serviceKey]}
-                                onVendorChange={(vendorId, cost) =>
-                                  handleVendorChange(serviceKey, vendorId, cost)
-                                }
-                                loading={isLoadingVendors}
-                              />
-                            </div>
-                            <div className="text-center">
-                              <span className="font-bold text-red-600 text-xs">
-                                ${costOverrides[serviceKey] ?? selectedCost}
-                              </span>
-                            </div>
-                            <div className="text-center">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    <MoreHorizontal className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleUpdatePrice(
-                                        serviceKey,
-                                        priceOverrides[serviceKey] ??
-                                          item.price ??
-                                          0,
-                                        item.subActivityName || "Service",
-                                        "truck",
-                                        index
-                                      )
-                                    }
-                                  >
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Update Price
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleUpdateCost(
-                                        serviceKey,
-                                        costOverrides[serviceKey] ??
-                                          selectedCosts[serviceKey] ??
-                                          item.cost ??
-                                          0,
-                                        item.subActivityName || "Service",
-                                        "truck",
-                                        index
-                                      )
-                                    }
-                                  >
-                                    <DollarSign className="mr-2 h-4 w-4" />
-                                    Update Cost
-                                  </DropdownMenuItem>
-                                  {costOverrides[serviceKey] && (
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        clearCostOverride(serviceKey)
-                                      }
-                                      className="text-orange-600"
-                                    >
-                                      <X className="mr-2 h-4 w-4" />
-                                      Clear Cost Override
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Pickup Special Requirements Rows */}
-                    {(
-                      order.specialRequirementsPrices
-                        ?.pickupSpecialRequirements || []
-                    ).map((item, index) => {
-                      const serviceKey = generateServiceKey(
-                        "pickup",
-                        index,
-                        item.subActivityId
-                      );
-                      const vendorCostData = getVendorCostByKey(serviceKey);
-                      const isLoadingVendors = isLoadingByKey(serviceKey);
-                      const selectedCost =
-                        costOverrides[serviceKey] ??
-                        selectedCosts[serviceKey] ??
-                        item.cost ??
-                        0;
-                      const totalPrice =
-                        (item.basePrice || 0) + (item.locationPrice || 0);
-                      const displayPrice =
-                        priceOverrides[serviceKey] ?? totalPrice;
-
-                      return (
-                        <div
-                          key={`pickup-sr-${index}`}
-                          className="p-4 border-b hover:bg-gray-50 transition-colors duration-200"
-                        >
-                          <div
-                            className="grid gap-2 text-sm items-start py-2"
-                            style={{
-                              gridTemplateColumns:
-                                "60px 120px 1fr 40px 60px 300px 100px 50px 50px",
-                            }}
-                          >
-                            <div>
-                              <span
-                                className="text-blue-600 cursor-pointer hover:underline font-medium text-xs leading-tight"
-                                title="Click to view customer price line"
-                                onClick={() =>
-                                  navigate(`/pricelists/${item.priceListId}`)
-                                }
-                              >
-                                {item.priceListName}
-                              </span>
-                            </div>
-                            <div>
-                              <span
-                                className="font-medium text-xs leading-tight break-words"
-                                title={item.subActivityName}
-                              >
-                                {item.subActivityName}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500 text-xs">-</span>
-                            </div>
-                            <div className="text-center">
-                              <span className="font-semibold text-gray-900 text-xs">
-                                {item.quantity || 1}
-                              </span>
-                            </div>
-                            <div className="text-center">
-                              <span className="font-bold text-green-600 text-xs">
-                                ${displayPrice}
-                              </span>
-                            </div>
-                            <div>
-                              {openedCostWindows[serviceKey] ? (
-                                <CostWindow
-                                  vendorData={vendorCostData?.data || []}
-                                  costRange={
-                                    vendorCostData?.costRange || {
-                                      min: 0,
-                                      max: 0,
-                                      average: 0,
-                                      count: 0,
-                                      totalVendors: 0,
-                                    }
-                                  }
-                                  customerPrice={displayPrice}
-                                  loading={isLoadingVendors}
-                                />
-                              ) : (
-                                <button
-                                  onClick={() =>
-                                    handleOpenCostWindow(
-                                      serviceKey,
-                                      item.subActivityId
-                                    )
-                                  }
-                                  className="relative w-full h-12 bg-gray-50 rounded-lg p-1 border hover:bg-gray-100 transition-colors flex items-center justify-center group"
-                                >
-                                  <div className="text-center">
-                                    <div className="text-xs text-gray-600 font-medium">
-                                      Click to view
-                                    </div>
-                                    <div className="text-xs text-blue-600 font-semibold">
-                                      Cost Comparison
-                                    </div>
-                                  </div>
-                                  <div className="absolute right-2 text-gray-400 group-hover:text-gray-600">
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 5l7 7-7 7"
-                                      />
-                                    </svg>
-                                  </div>
-                                </button>
-                              )}
-                            </div>
-                            <div>
-                              {openedCostWindows[serviceKey] ? (
-                                <VendorDropdown
-                                  vendorData={vendorCostData?.data || []}
-                                  selectedVendor={selectedVendors[serviceKey]}
-                                  onVendorChange={(vendorId, cost) =>
-                                    handleVendorChange(
-                                      serviceKey,
-                                      vendorId,
-                                      cost
-                                    )
-                                  }
-                                  loading={isLoadingVendors}
-                                />
-                              ) : (
-                                <select
-                                  className="w-full p-1 text-xs border rounded-md bg-gray-100"
-                                  disabled
-                                >
-                                  <option>Open cost window first</option>
-                                </select>
-                              )}
-                            </div>
-                            <div className="text-center">
-                              <span className="font-bold text-red-600 text-xs">
-                                ${selectedCost}
-                              </span>
-                            </div>
-                            <div className="text-center">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    <MoreHorizontal className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleUpdatePrice(
-                                        serviceKey,
-                                        priceOverrides[serviceKey] ??
-                                          totalPrice,
-                                        item.subActivityName ||
-                                          "Pickup Special Requirement",
-                                        "pickup",
-                                        index
-                                      )
-                                    }
-                                  >
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Update Price
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleUpdateCost(
-                                        serviceKey,
-                                        costOverrides[serviceKey] ??
-                                          selectedCosts[serviceKey] ??
-                                          item.cost ??
-                                          0,
-                                        item.subActivityName ||
-                                          "Pickup Special Requirement",
-                                        "pickup",
-                                        index
-                                      )
-                                    }
-                                  >
-                                    <DollarSign className="mr-2 h-4 w-4" />
-                                    Update Cost
-                                  </DropdownMenuItem>
-                                  {costOverrides[serviceKey] && (
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        clearCostOverride(serviceKey)
-                                      }
-                                      className="text-orange-600"
-                                    >
-                                      <X className="mr-2 h-4 w-4" />
-                                      Clear Cost Override
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Delivery Special Requirements Rows */}
-                    {(
-                      order.specialRequirementsPrices
-                        ?.deliverySpecialRequirements || []
-                    ).map((item, index) => {
-                      const serviceKey = generateServiceKey(
-                        "delivery",
-                        index,
-                        item.subActivityId
-                      );
-                      const vendorCostData = getVendorCostByKey(serviceKey);
-                      const isLoadingVendors = isLoadingByKey(serviceKey);
-                      const selectedCost =
-                        costOverrides[serviceKey] ??
-                        selectedCosts[serviceKey] ??
-                        item.cost ??
-                        0;
-                      const totalPrice =
-                        (item.basePrice || 0) + (item.locationPrice || 0);
-                      const displayPrice =
-                        priceOverrides[serviceKey] ?? totalPrice;
-
-                      return (
-                        <div
-                          key={`delivery-sr-${index}`}
-                          className="p-4 border-b hover:bg-gray-50 transition-colors duration-200"
-                        >
-                          <div
-                            className="grid gap-2 text-sm items-start py-2"
-                            style={{
-                              gridTemplateColumns:
-                                "60px 120px 1fr 40px 60px 300px 100px 50px 50px",
-                            }}
-                          >
-                            <div>
-                              <span
-                                className="text-blue-600 cursor-pointer hover:underline font-medium text-xs leading-tight"
-                                title="Click to view customer price line"
-                                onClick={() =>
-                                  navigate(`/pricelists/${item.priceListId}`)
-                                }
-                              >
-                                {item.priceListName}
-                              </span>
-                            </div>
-                            <div>
-                              <span
-                                className="font-medium text-xs leading-tight break-words"
-                                title={item.subActivityName}
-                              >
-                                {item.subActivityName}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500 text-xs">-</span>
-                            </div>
-                            <div className="text-center">
-                              <span className="font-semibold text-gray-900 text-xs">
-                                {item.quantity || 1}
-                              </span>
-                            </div>
-                            <div className="text-center">
-                              <span className="font-bold text-green-600 text-xs">
-                                ${displayPrice}
-                              </span>
-                            </div>
-                            <div>
-                              {openedCostWindows[serviceKey] ? (
-                                <CostWindow
-                                  vendorData={vendorCostData?.data || []}
-                                  costRange={
-                                    vendorCostData?.costRange || {
-                                      min: 0,
-                                      max: 0,
-                                      average: 0,
-                                      count: 0,
-                                      totalVendors: 0,
-                                    }
-                                  }
-                                  customerPrice={displayPrice}
-                                  loading={isLoadingVendors}
-                                />
-                              ) : (
-                                <button
-                                  onClick={() =>
-                                    handleOpenCostWindow(
-                                      serviceKey,
-                                      item.subActivityId
-                                    )
-                                  }
-                                  className="relative w-full h-12 bg-gray-50 rounded-lg p-1 border hover:bg-gray-100 transition-colors flex items-center justify-center group"
-                                >
-                                  <div className="text-center">
-                                    <div className="text-xs text-gray-600 font-medium">
-                                      Click to view
-                                    </div>
-                                    <div className="text-xs text-blue-600 font-semibold">
-                                      Cost Comparison
-                                    </div>
-                                  </div>
-                                  <div className="absolute right-2 text-gray-400 group-hover:text-gray-600">
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 5l7 7-7 7"
-                                      />
-                                    </svg>
-                                  </div>
-                                </button>
-                              )}
-                            </div>
-                            <div>
-                              {openedCostWindows[serviceKey] ? (
-                                <VendorDropdown
-                                  vendorData={vendorCostData?.data || []}
-                                  selectedVendor={selectedVendors[serviceKey]}
-                                  onVendorChange={(vendorId, cost) =>
-                                    handleVendorChange(
-                                      serviceKey,
-                                      vendorId,
-                                      cost
-                                    )
-                                  }
-                                  loading={isLoadingVendors}
-                                />
-                              ) : (
-                                <select
-                                  className="w-full p-1 text-xs border rounded-md bg-gray-100"
-                                  disabled
-                                >
-                                  <option>Open cost window first</option>
-                                </select>
-                              )}
-                            </div>
-                            <div className="text-center">
-                              <span className="font-bold text-red-600 text-xs">
-                                ${selectedCost}
-                              </span>
-                            </div>
-                            <div className="text-center">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    <MoreHorizontal className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleUpdatePrice(
-                                        serviceKey,
-                                        priceOverrides[serviceKey] ??
-                                          totalPrice,
-                                        item.subActivityName ||
-                                          "Delivery Special Requirement",
-                                        "delivery",
-                                        index
-                                      )
-                                    }
-                                  >
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Update Price
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleUpdateCost(
-                                        serviceKey,
-                                        costOverrides[serviceKey] ??
-                                          selectedCosts[serviceKey] ??
-                                          item.cost ??
-                                          0,
-                                        item.subActivityName ||
-                                          "Delivery Special Requirement",
-                                        "delivery",
-                                        index
-                                      )
-                                    }
-                                  >
-                                    <DollarSign className="mr-2 h-4 w-4" />
-                                    Update Cost
-                                  </DropdownMenuItem>
-                                  {costOverrides[serviceKey] && (
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        clearCostOverride(serviceKey)
-                                      }
-                                      className="text-orange-600"
-                                    >
-                                      <X className="mr-2 h-4 w-4" />
-                                      Clear Cost Override
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* IPO Summary */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Initial Price Offer Summary</h4>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-600">
-                      Selling price:
-                    </span>
-                    <span className="font-medium text-gray-900">
-                      $
-                      {(order.truckTypeMatches || []).reduce(
-                        (sum, item, index) => {
-                          const serviceKey = generateServiceKey(
-                            "truck",
-                            index,
-                            item.subActivityId
-                          );
-                          const price =
-                            priceOverrides[serviceKey] ?? item.price ?? 0;
-                          return (
-                            sum + price * (order.shippingDetails?.qty || 1)
-                          );
-                        },
-                        0
-                      ) +
-                        (
-                          order.specialRequirementsPrices
-                            ?.pickupSpecialRequirements || []
-                        ).reduce((sum, item, index) => {
-                          const serviceKey = generateServiceKey(
-                            "pickup",
-                            index,
-                            item.subActivityId
-                          );
-                          const price =
-                            priceOverrides[serviceKey] ??
-                            (item.basePrice || 0) + (item.locationPrice || 0);
-                          return sum + price;
-                        }, 0) +
-                        (
-                          order.specialRequirementsPrices
-                            ?.deliverySpecialRequirements || []
-                        ).reduce((sum, item, index) => {
-                          const serviceKey = generateServiceKey(
-                            "delivery",
-                            index,
-                            item.subActivityId
-                          );
-                          const price =
-                            priceOverrides[serviceKey] ??
-                            (item.basePrice || 0) + (item.locationPrice || 0);
-                          return sum + price;
-                        }, 0)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-600">Cost:</span>
-                    <span className="font-medium text-gray-900">
-                      $
-                      {(() => {
-                        // Calculate total cost using selected vendor costs
-                        let totalCost = 0;
-
-                        // Truck type matches
-                        (order.truckTypeMatches || []).forEach(
-                          (item, index) => {
-                            const serviceKey = generateServiceKey(
-                              "truck",
-                              index,
-                              item.subActivityId
-                            );
-                            const cost =
-                              costOverrides[serviceKey] ??
-                              selectedCosts[serviceKey] ??
-                              item.cost ??
-                              0;
-                            totalCost +=
-                              cost * (order.shippingDetails?.qty || 1);
-                          }
-                        );
-
-                        // Pickup special requirements
-                        (
-                          order.specialRequirementsPrices
-                            ?.pickupSpecialRequirements || []
-                        ).forEach((item, index) => {
-                          const serviceKey = generateServiceKey(
-                            "pickup",
-                            index,
-                            item.subActivityId
-                          );
-                          const cost =
-                            costOverrides[serviceKey] ??
-                            selectedCosts[serviceKey] ??
-                            item.cost ??
-                            0;
-                          totalCost += cost * (item.quantity || 1);
-                        });
-
-                        // Delivery special requirements
-                        (
-                          order.specialRequirementsPrices
-                            ?.deliverySpecialRequirements || []
-                        ).forEach((item, index) => {
-                          const serviceKey = generateServiceKey(
-                            "delivery",
-                            index,
-                            item.subActivityId
-                          );
-                          const cost =
-                            costOverrides[serviceKey] ??
-                            selectedCosts[serviceKey] ??
-                            item.cost ??
-                            0;
-                          totalCost += cost * (item.quantity || 1);
-                        });
-
-                        return totalCost;
-                      })()}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-600">
-                      Profit margin:
-                    </span>
-                    <span className="font-medium text-gray-900">
-                      {(() => {
-                        let totalPrice = 0;
-
-                        // Truck type matches
-                        (order.truckTypeMatches || []).forEach(
-                          (item, index) => {
-                            const serviceKey = generateServiceKey(
-                              "truck",
-                              index,
-                              item.subActivityId
-                            );
-                            const price =
-                              priceOverrides[serviceKey] ?? item.price ?? 0;
-                            totalPrice +=
-                              price * (order.shippingDetails?.qty || 1);
-                          }
-                        );
-
-                        // Pickup special requirements
-                        (
-                          order.specialRequirementsPrices
-                            ?.pickupSpecialRequirements || []
-                        ).forEach((item, index) => {
-                          const serviceKey = generateServiceKey(
-                            "pickup",
-                            index,
-                            item.subActivityId
-                          );
-                          const price =
-                            priceOverrides[serviceKey] ??
-                            (item.basePrice || 0) + (item.locationPrice || 0);
-                          totalPrice += price;
-                        });
-
-                        // Delivery special requirements
-                        (
-                          order.specialRequirementsPrices
-                            ?.deliverySpecialRequirements || []
-                        ).forEach((item, index) => {
-                          const serviceKey = generateServiceKey(
-                            "delivery",
-                            index,
-                            item.subActivityId
-                          );
-                          const price =
-                            priceOverrides[serviceKey] ??
-                            (item.basePrice || 0) + (item.locationPrice || 0);
-                          totalPrice += price;
-                        });
-                        // Calculate total cost using selected vendor costs
-                        let totalCost = 0;
-
-                        // Truck type matches
-                        (order.truckTypeMatches || []).forEach(
-                          (item, index) => {
-                            const serviceKey = generateServiceKey(
-                              "truck",
-                              index,
-                              item.subActivityId
-                            );
-                            const cost =
-                              costOverrides[serviceKey] ??
-                              selectedCosts[serviceKey] ??
-                              item.cost ??
-                              0;
-                            totalCost +=
-                              cost * (order.shippingDetails?.qty || 1);
-                          }
-                        );
-
-                        // Pickup special requirements
-                        (
-                          order.specialRequirementsPrices
-                            ?.pickupSpecialRequirements || []
-                        ).forEach((item, index) => {
-                          const serviceKey = generateServiceKey(
-                            "pickup",
-                            index,
-                            item.subActivityId
-                          );
-                          const cost =
-                            costOverrides[serviceKey] ??
-                            selectedCosts[serviceKey] ??
-                            item.cost ??
-                            0;
-                          totalCost += cost * (item.quantity || 1);
-                        });
-
-                        // Delivery special requirements
-                        (
-                          order.specialRequirementsPrices
-                            ?.deliverySpecialRequirements || []
-                        ).forEach((item, index) => {
-                          const serviceKey = generateServiceKey(
-                            "delivery",
-                            index,
-                            item.subActivityId
-                          );
-                          const cost =
-                            costOverrides[serviceKey] ??
-                            selectedCosts[serviceKey] ??
-                            item.cost ??
-                            0;
-                          totalCost += cost * (item.quantity || 1);
-                        });
-                        return totalPrice > 0
-                          ? (
-                              ((totalPrice - totalCost) / totalPrice) *
-                              100
-                            ).toFixed(1) + "%"
-                          : "0%";
-                      })()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action Status Indicators */}
-                {(ipoActions.updatePrice || ipoActions.updateCost) && (
-                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium text-blue-800">
-                          {ipoActions.updatePrice && "Price Update Mode Active"}
-                          {ipoActions.updateCost && "Cost Update Mode Active"}
-                        </span>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={handleSubmitIPO}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        Submit IPO
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Attachments */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Paperclip className="mr-2 h-5 w-5" />
-                Attachments
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileInputChange}
-                  className="hidden"
-                  ref={fileInputRef}
-                  accept="*/*"
-                />
+          ) : ordersListError ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <p className="text-red-600 text-lg font-semibold">
+                  Error loading orders
+                </p>
+                <p className="text-gray-600 mt-2">{ordersListError}</p>
                 <Button
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
-                  disabled={uploading}
-                  onClick={() => {
-                    fileInputRef.current?.click();
-                  }}
+                  onClick={() => getOrders({ page, limit })}
+                  className="mt-4"
                 >
-                  {uploading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Uploading...</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <Plus className="h-4 w-4" />
-                      <span>Add Files</span>
-                    </div>
-                  )}
+                  Retry
                 </Button>
               </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative">
-            {/* Loading state while fetching files */}
-            {loadingFiles && (
-              <div className="border-2 border-dashed rounded-lg p-8 text-center border-gray-300">
-                <div className="flex flex-col items-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                  <p className="text-lg font-medium text-gray-700 mb-2">
-                    Loading existing files...
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Please wait while we fetch your uploaded files
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Show Drag & Drop Zone only when no files are uploaded and not loading */}
-            {!loadingFiles && attachments.length === 0 && (
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  dragOver
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-300 hover:border-gray-400"
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-lg font-medium text-gray-700 mb-2">
-                  {dragOver ? "Drop files here" : "Drag & drop files here"}
+            </div>
+          ) : !Array.isArray(ordersList) || ordersList.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 text-lg">No orders found</p>
+                <p className="text-gray-500 mt-2">
+                  {searchTerm || statusFilter !== "all"
+                    ? "Try adjusting your search or filters"
+                    : "Create your first order to get started"}
                 </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  or click the button above to select files
-                </p>
-                <p className="text-xs text-gray-400">
-                  Supports: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF, TXT, CSV
-                  (Max 10MB each)
-                </p>
-              </div>
-            )}
-
-            {/* Hidden drag and drop overlay for when files exist */}
-            {!loadingFiles && attachments.length > 0 && (
-              <div
-                className={`absolute inset-0 border-2 border-dashed rounded-lg transition-colors pointer-events-none ${
-                  dragOver
-                    ? "border-blue-500 bg-blue-50 bg-opacity-90 pointer-events-auto z-10"
-                    : "border-transparent"
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                {dragOver && (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <Upload className="h-12 w-12 mx-auto mb-4 text-blue-500" />
-                      <p className="text-lg font-medium text-blue-700">
-                        Drop files to add more
-                      </p>
-                    </div>
-                  </div>
+                {!searchTerm && statusFilter === "all" && (
+                  <Button
+                    onClick={() => navigate("/create-order")}
+                    className="mt-4"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Order
+                  </Button>
                 )}
               </div>
-            )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[120px]">Order ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Service</TableHead>
+                    <TableHead>Pickup Location</TableHead>
+                    <TableHead>Delivery Location</TableHead>
+                    <TableHead>Created Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Total Price</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.isArray(ordersList) &&
+                    ordersList.map((order) => (
+                      <TableRow
+                        key={order._id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleOrderClick(order._id)}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex flex-col">
+                            <span className="text-blue-600 font-semibold">
+                              {order.orderIndex || order._id.slice(-6)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {order.billingAccount?.custName || "N/A"}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              {order.contactPerson}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{order.service}</span>
+                            <span className="text-sm text-gray-500">
+                              {order.typesOfGoods}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Package className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm">
+                              {order.pickupInfo?.[0]
+                                ? formatLocation(
+                                    order.pickupInfo[0].pickupLocation
+                                  )
+                                : "N/A"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Package className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm">
+                              {order.deliveryInfo?.[0]
+                                ? formatLocation(
+                                    order.deliveryInfo[0].deliveryLocation
+                                  )
+                                : "N/A"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Calendar className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm">
+                              {formatDate(order.createdAt)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(order)}</TableCell>
+                        <TableCell>
+                          <span className="font-semibold text-green-600">
+                            $
+                            {(
+                              (order.truckTypeMatches || []).reduce(
+                                (sum: number, item: any) =>
+                                  sum + (item.price || 0),
+                                0
+                              ) +
+                              (
+                                order.specialRequirementsPrices
+                                  ?.pickupSpecialRequirements || []
+                              ).reduce(
+                                (sum: number, item: any) =>
+                                  sum +
+                                  (item.basePrice || 0) +
+                                  (item.locationPrice || 0),
+                                0
+                              ) +
+                              (
+                                order.specialRequirementsPrices
+                                  ?.deliverySpecialRequirements || []
+                              ).reduce(
+                                (sum: number, item: any) =>
+                                  sum +
+                                  (item.basePrice || 0) +
+                                  (item.locationPrice || 0),
+                                0
+                              )
+                            ).toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOrderClick(order._id);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // TODO: Implement edit functionality
+                                }}
+                              >
+                                Edit Order
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // TODO: Implement duplicate functionality
+                                }}
+                              >
+                                Duplicate Order
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-            {/* Attachments List */}
-            {!loadingFiles && attachments.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900">
-                    Uploaded Files ({attachments.length})
-                  </h4>
-                  <p className="text-sm text-gray-500">
-                    Click "Add Files" to upload more
-                  </p>
+      {/* Pagination */}
+      {!ordersListLoading &&
+        Array.isArray(ordersList) &&
+        ordersList.length > 0 && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Showing {(page - 1) * limit + 1} to{" "}
+                  {Math.min(page * limit, totalOrders)} of {totalOrders} orders
                 </div>
-                {attachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="flex items-center justify-between p-3 border rounded-lg bg-gray-50"
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page === 1}
                   >
-                    <div className="flex items-center space-x-3">
-                      {getFileIcon(attachment.type)}
-                      <div>
-                        <p className="font-medium text-sm">{attachment.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {attachment.type} •{" "}
-                          {(attachment.size / 1024 / 1024).toFixed(2)} MB •{" "}
-                          {formatDate(attachment.uploadedAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewAttachment(attachment)}
-                        title="Preview file"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadAttachment(attachment)}
-                        title="Download file"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRemoveAttachment(attachment.id)}
-                        className="text-red-600 hover:text-red-700"
-                        title="Remove file"
-                        disabled={deletingFileId === attachment.id}
-                      >
-                        {deletingFileId === attachment.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                        ) : (
-                          <X className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
+                    Previous
+                  </Button>
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                    {totalPages > 5 && (
+                      <>
+                        <span className="text-gray-400">...</span>
+                        <Button
+                          variant={page === totalPages ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(totalPages)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {totalPages}
+                        </Button>
+                      </>
+                    )}
                   </div>
-                ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={page === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Update Price/Cost Modal */}
-      <UpdatePriceCostModal
-        isOpen={updateModal.isOpen}
-        onClose={handleModalClose}
-        onUpdate={handlePriceCostUpdate}
-        type={updateModal.type}
-        currentValue={updateModal.currentValue}
-        serviceName={updateModal.serviceName}
-        loading={false}
-      />
+            </CardContent>
+          </Card>
+        )}
     </div>
   );
 }

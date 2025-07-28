@@ -7,8 +7,10 @@ import {
   actGetOrderById,
   actCalculateOrderPrice,
   actGetOrderPriceBreakdown,
+  actGetOrders,
   clearOrder,
   clearError,
+  clearOrdersList,
 } from "@/store/orders";
 import {
   CreateOrderStep1Request,
@@ -18,9 +20,18 @@ import {
 
 export const useOrders = () => {
   const dispatch = useAppDispatch();
-  const { currentOrder, loading, error, success, orderId } = useAppSelector(
-    (state) => state.orders
-  );
+  const {
+    currentOrder,
+    loading,
+    error,
+    success,
+    orderId,
+    ordersList,
+    ordersListLoading,
+    ordersListError,
+    totalOrders,
+    currentPage,
+  } = useAppSelector((state) => state.orders);
 
   const createBasicOrder = useCallback(
     async (data: CreateOrderStep1Request) => {
@@ -110,6 +121,27 @@ export const useOrders = () => {
     dispatch(clearError());
   }, [dispatch]);
 
+  const getOrders = useCallback(
+    async (params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: string;
+    }) => {
+      try {
+        const result = await dispatch(actGetOrders(params || {})).unwrap();
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    },
+    [dispatch]
+  );
+
+  const clearOrdersListData = useCallback(() => {
+    dispatch(clearOrdersList());
+  }, [dispatch]);
+
   return {
     // State
     currentOrder,
@@ -117,6 +149,11 @@ export const useOrders = () => {
     error,
     success,
     orderId,
+    ordersList,
+    ordersListLoading,
+    ordersListError,
+    totalOrders,
+    currentPage,
 
     // Actions
     createBasicOrder,
@@ -125,7 +162,9 @@ export const useOrders = () => {
     getOrderById,
     calculateOrderPrice,
     getOrderPriceBreakdown,
+    getOrders,
     clearOrderData,
     clearOrderError,
+    clearOrdersListData,
   };
 };
