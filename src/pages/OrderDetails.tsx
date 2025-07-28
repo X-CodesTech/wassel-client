@@ -142,6 +142,7 @@ export default function OrderDetails() {
 
   // State for Add Service Line popover
   const [addServicePopoverOpen, setAddServicePopoverOpen] = useState(false);
+  const [addingServiceLine, setAddingServiceLine] = useState(false);
   const [serviceLineForm, setServiceLineForm] = useState({
     serviceType: "perItem", // perItem or perLocation
     locationMode: "pickup", // pickup or delivery
@@ -600,43 +601,203 @@ export default function OrderDetails() {
   };
 
   // Handle add service line submission
-  const handleAddServiceLine = () => {
-    // Find the selected sub-activity details
-    const selectedSubActivityDetails = subActivities.find(
-      (subActivity) => subActivity._id === serviceLineForm.selectedSubActivity
-    );
+  const handleAddServiceLine = async () => {
+    console.log("=== ADD SERVICE LINE SUBMISSION ===");
+    console.log("Service Line Form Data:", serviceLineForm);
+    console.log("Order ID:", order?._id);
 
-    // Get selected location details
-    const locations = getAvailableLocations();
-    const selectedLocationDetails =
-      locations[parseInt(serviceLineForm.selectedLocation)];
+    if (!order?._id) {
+      console.log("ERROR: Order ID not found");
+      toast({
+        title: "Error",
+        description: "Order ID not found",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    console.log("Adding service line:", {
-      ...serviceLineForm,
-      selectedSubActivityDetails,
-      selectedLocationDetails,
-    });
+    setAddingServiceLine(true);
 
-    // TODO: Implement the actual service line addition logic here
-    // This would typically involve adding a new row to the IPO table
+    // Declare requestBody outside try block for error logging
+    let requestBody: any = undefined;
 
-    toast({
-      title: "Service Line Added",
-      description: `Added ${serviceLineForm.serviceType} service: ${
-        selectedSubActivityDetails?.portalItemNameEn || "Unknown"
-      } (${selectedSubActivityDetails?.transactionType?.name}) for ${
-        serviceLineForm.locationMode
-      }`,
-    });
+    try {
+      // Find the selected sub-activity details
+      const selectedSubActivityDetails = subActivities.find(
+        (subActivity) => subActivity._id === serviceLineForm.selectedSubActivity
+      );
 
-    // Reset form and close popover
-    setServiceLineForm({
-      serviceType: "perItem",
-      locationMode: "pickup",
-      selectedLocation: "",
-      selectedSubActivity: "",
-    });
-    setAddServicePopoverOpen(false);
+      console.log("Available Sub-activities:", subActivities.length);
+      console.log("Selected Sub-activity Details:", selectedSubActivityDetails);
+
+      if (!selectedSubActivityDetails) {
+        console.log("ERROR: Selected sub-activity not found", {
+          selectedId: serviceLineForm.selectedSubActivity,
+          availableIds: subActivities.map((sa) => sa._id),
+        });
+        toast({
+          title: "Error",
+          description: "Selected sub-activity not found",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get selected location ID directly from form
+      const selectedLocationId = serviceLineForm.selectedLocation;
+
+      console.log("Selected Location ID:", selectedLocationId);
+      console.log("Location Mode:", serviceLineForm.locationMode);
+
+      if (!selectedLocationId || selectedLocationId.startsWith("fallback-")) {
+        console.log("ERROR: Invalid location ID", {
+          selectedLocationId,
+          locationMode: serviceLineForm.locationMode,
+        });
+        toast({
+          title: "Error",
+          description: "Please select a valid location",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Construct the new special requirement entry
+      const newSpecialRequirement = {
+        subActivity: serviceLineForm.selectedSubActivity,
+        quantity: 1, // Default quantity
+        note: "", // Default empty note
+      };
+
+      console.log("New Special Requirement:", newSpecialRequirement);
+
+      // Build the request body with existing special requirements + new one
+      requestBody = {
+        pickupSpecialRequirements: {},
+        deliverySpecialRequirements: {},
+      };
+
+      console.log("Existing Order Pickup Info:", order.pickupInfo);
+      console.log("Existing Order Delivery Info:", order.deliveryInfo);
+
+      // Copy existing pickup special requirements
+      if (order.pickupInfo && order.pickupInfo.length > 0) {
+        order.pickupInfo.forEach((pickup) => {
+          if (pickup.pickupLocation?._id && pickup.pickupSpecialRequirements) {
+            requestBody.pickupSpecialRequirements[pickup.pickupLocation._id] =
+              pickup.pickupSpecialRequirements.map((req: any) => ({
+                subActivity: req.subActivity?._id || req.subActivity,
+                quantity: req.quantity || 1,
+                note: req.note || "",
+              }));
+          }
+        });
+      }
+
+      // Copy existing delivery special requirements
+      if (order.deliveryInfo && order.deliveryInfo.length > 0) {
+        order.deliveryInfo.forEach((delivery) => {
+          if (
+            delivery.deliveryLocation?._id &&
+            delivery.deliverySpecialRequirements
+          ) {
+            requestBody.deliverySpecialRequirements[
+              delivery.deliveryLocation._id
+            ] = delivery.deliverySpecialRequirements.map((req: any) => ({
+              subActivity: req.subActivity?._id || req.subActivity,
+              quantity: req.quantity || 1,
+              note: req.note || "",
+            }));
+          }
+        });
+      }
+
+      // Add the new special requirement to the appropriate location
+      if (serviceLineForm.locationMode === "pickup") {
+        if (!requestBody.pickupSpecialRequirements[selectedLocationId]) {
+          requestBody.pickupSpecialRequirements[selectedLocationId] = [];
+        }
+        requestBody.pickupSpecialRequirements[selectedLocationId].push(
+          newSpecialRequirement
+        );
+      } else {
+        if (!requestBody.deliverySpecialRequirements[selectedLocationId]) {
+          requestBody.deliverySpecialRequirements[selectedLocationId] = [];
+        }
+        requestBody.deliverySpecialRequirements[selectedLocationId].push(
+          newSpecialRequirement
+        );
+      }
+
+      console.log("Final Request Body:", JSON.stringify(requestBody, null, 2));
+
+      // Make the API call
+      const response = await http.put(
+        `/api/v1/orders/${order._id}/special-requirements`,
+        requestBody
+      );
+
+      console.log("API Response:", response.data);
+
+      if (response.data?.success) {
+        // Refresh the order data to get the updated special requirements and pricing
+        await getOrderById(order._id);
+
+        toast({
+          title: "Service Line Added",
+          description: `Added ${serviceLineForm.serviceType} service: ${
+            selectedSubActivityDetails.portalItemNameEn || "Unknown"
+          } (${selectedSubActivityDetails.transactionType?.name}) for ${
+            serviceLineForm.locationMode
+          }`,
+        });
+
+        // Reset form and close popover
+        setServiceLineForm({
+          serviceType: "perItem",
+          locationMode: "pickup",
+          selectedLocation: "",
+          selectedSubActivity: "",
+        });
+        setAddServicePopoverOpen(false);
+      } else {
+        throw new Error(response.data?.message || "Failed to add service line");
+      }
+    } catch (error: any) {
+      console.error("=== ERROR ADDING SERVICE LINE ===");
+      console.error("Error details:", error);
+      console.error("Form data at error:", serviceLineForm);
+      console.error("Response data:", error.response?.data);
+      console.error("Error message:", error.message);
+
+      // Log the payload that was being sent (if it exists)
+      try {
+        if (requestBody && typeof requestBody === "object") {
+          console.error(
+            "Payload that was being sent:",
+            JSON.stringify(requestBody, null, 2)
+          );
+        } else {
+          console.error(
+            "Payload was not constructed due to early validation error"
+          );
+        }
+      } catch (logError) {
+        console.error("Could not log payload due to error:", logError);
+      }
+
+      toast({
+        title: "Error",
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to add service line",
+        variant: "destructive",
+      });
+    } finally {
+      console.log("=== ADD SERVICE LINE SUBMISSION COMPLETED ===");
+      setAddingServiceLine(false);
+    }
   };
 
   // Get available locations based on selection
@@ -657,6 +818,7 @@ export default function OrderDetails() {
       selectedSubActivity: "",
     });
     setAddServicePopoverOpen(false);
+    setAddingServiceLine(false);
   };
 
   // Clear cost override to use vendor cost
@@ -1681,6 +1843,11 @@ export default function OrderDetails() {
                           </SelectTrigger>
                           <SelectContent>
                             {getAvailableLocations().map((location, index) => {
+                              const locationId =
+                                serviceLineForm.locationMode === "pickup"
+                                  ? (location as any).pickupLocation?._id
+                                  : (location as any).deliveryLocation?._id;
+
                               const displayText =
                                 serviceLineForm.locationMode === "pickup"
                                   ? `${formatLocation(
@@ -1697,7 +1864,7 @@ export default function OrderDetails() {
                               return (
                                 <SelectItem
                                   key={index}
-                                  value={index.toString()}
+                                  value={locationId || `fallback-${index}`}
                                 >
                                   {displayText}
                                 </SelectItem>
@@ -1713,6 +1880,7 @@ export default function OrderDetails() {
                           size="sm"
                           variant="outline"
                           onClick={handleCancelServiceLine}
+                          disabled={addingServiceLine}
                         >
                           Cancel
                         </Button>
@@ -1720,12 +1888,20 @@ export default function OrderDetails() {
                           size="sm"
                           onClick={handleAddServiceLine}
                           disabled={
+                            addingServiceLine ||
                             !serviceLineForm.selectedLocation ||
                             !serviceLineForm.selectedSubActivity
                           }
                           className="bg-blue-600 hover:bg-blue-700"
                         >
-                          Add Service
+                          {addingServiceLine ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <span>Adding...</span>
+                            </div>
+                          ) : (
+                            "Add Service"
+                          )}
                         </Button>
                       </div>
                     </div>
