@@ -103,6 +103,12 @@ export default function CreateOrder() {
     clearOrderError,
   } = useOrders();
 
+  // Clear any existing errors on component mount
+  useEffect(() => {
+    clearOrderError();
+    clearOrderData();
+  }, [clearOrderError, clearOrderData]);
+
   // Check for existing draft on component mount
   useEffect(() => {
     if (!draftRestored && hasDraft()) {
@@ -505,7 +511,7 @@ export default function CreateOrder() {
   }, [lastSaved]);
 
   const renderStepIndicator = () => {
-    const progressPercentage = ((currentStep - 1) / 2) * 100;
+    const progressPercentage = ((currentStep - 1) / 3) * 100;
 
     return (
       <div className="mb-8">

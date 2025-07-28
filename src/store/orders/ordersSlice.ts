@@ -13,6 +13,11 @@ interface OrderState {
     step3?: CreateOrderStep3Response["data"];
     orderDetails?: GetOrderResponse["data"];
   };
+  ordersList: any[];
+  ordersListLoading: boolean;
+  ordersListError: string | null;
+  totalOrders: number;
+  currentPage: number;
   loading: boolean;
   error: string | null;
   success: boolean;
@@ -21,6 +26,11 @@ interface OrderState {
 
 const initialState: OrderState = {
   currentOrder: {},
+  ordersList: [],
+  ordersListLoading: false,
+  ordersListError: null,
+  totalOrders: 0,
+  currentPage: 1,
   loading: false,
   error: null,
   success: false,
@@ -79,6 +89,31 @@ const ordersSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    setOrdersListLoading: (state, action: PayloadAction<boolean>) => {
+      state.ordersListLoading = action.payload;
+    },
+    setOrdersListError: (state, action: PayloadAction<string | null>) => {
+      state.ordersListError = action.payload;
+      state.ordersListLoading = false;
+    },
+    setOrdersList: (state, action: PayloadAction<any[]>) => {
+      state.ordersList = action.payload;
+      state.ordersListLoading = false;
+      state.ordersListError = null;
+    },
+    setOrdersPagination: (
+      state,
+      action: PayloadAction<{ total: number; page: number }>
+    ) => {
+      state.totalOrders = action.payload.total;
+      state.currentPage = action.payload.page;
+    },
+    clearOrdersList: (state) => {
+      state.ordersList = [];
+      state.totalOrders = 0;
+      state.currentPage = 1;
+      state.ordersListError = null;
+    },
   },
 });
 
@@ -93,6 +128,11 @@ export const {
   setOrderDetails,
   clearOrder,
   clearError,
+  setOrdersListLoading,
+  setOrdersListError,
+  setOrdersList,
+  setOrdersPagination,
+  clearOrdersList,
 } = ordersSlice.actions;
 
 export default ordersSlice.reducer;

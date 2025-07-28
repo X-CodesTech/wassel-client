@@ -5,4 +5,5 @@ export {
   actGetOrderById,
   actCalculateOrderPrice,
   actGetOrderPriceBreakdown,
+  actGetOrders,
 } from "./actCreateOrder";

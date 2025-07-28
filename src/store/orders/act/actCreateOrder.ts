@@ -13,6 +13,10 @@ import {
   setStep2Data,
   setStep3Data,
   setOrderDetails,
+  setOrdersListLoading,
+  setOrdersListError,
+  setOrdersList,
+  setOrdersPagination,
 } from "../ordersSlice";
 
 // Step 1: Create basic order
@@ -188,6 +192,74 @@ export const actGetOrderPriceBreakdown = createAsyncThunk(
       throw error;
     } finally {
       dispatch(setLoading(false));
+    }
+  }
+);
+
+// Get all orders
+export const actGetOrders = createAsyncThunk(
+  "orders/getOrders",
+  async (
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: string;
+    } = {},
+    { dispatch }
+  ) => {
+    try {
+      dispatch(setOrdersListLoading(true));
+      dispatch(setOrdersListError(null));
+
+      const response = await orderServices.getOrders(params);
+
+      console.log("Raw API Response:", response);
+
+      if (response.success) {
+        // Handle different possible response structures
+        let orders = [];
+        let total = 0;
+
+        if (Array.isArray(response.data)) {
+          // Data is directly an array of orders
+          orders = response.data;
+          total = response.total || response.data.length;
+        } else if (response.data && Array.isArray(response.data.orders)) {
+          // Data contains orders array and pagination info
+          orders = response.data.orders;
+          total = response.data.total || response.data.orders.length;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          // Data contains nested data array
+          orders = response.data.data;
+          total = response.data.total || response.data.data.length;
+        } else {
+          // Fallback
+          orders = [];
+          total = 0;
+        }
+
+        console.log("Extracted orders:", orders);
+        console.log("Total count:", total);
+
+        dispatch(setOrdersList(orders));
+        dispatch(
+          setOrdersPagination({
+            total: total,
+            page: params.page || 1,
+          })
+        );
+        return response;
+      } else {
+        throw new Error(response.message || "Failed to fetch orders");
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || error.message || "An error occurred";
+      dispatch(setOrdersListError(errorMessage));
+      throw error;
+    } finally {
+      dispatch(setOrdersListLoading(false));
     }
   }
 );
