@@ -237,7 +237,7 @@ const SubActivityPriceDialog = ({
   }, [getSubActivitiesByPricingMethod, selectedPricingMethod, form]);
 
   useEffect(() => {
-    if (selectedSubActivity && !defaultValues) {
+    if (selectedSubActivity) {
       if (selectedPricingMethod === "perLocation") {
         form.setValue("locationPrices", [
           {
@@ -258,7 +258,7 @@ const SubActivityPriceDialog = ({
       }
       form.trigger("locationPrices");
     }
-  }, [selectedSubActivity, selectedPricingMethod, form, defaultValues]);
+  }, [selectedSubActivity, selectedPricingMethod, form]);
 
   useEffect(() => {
     if (defaultValues) {
