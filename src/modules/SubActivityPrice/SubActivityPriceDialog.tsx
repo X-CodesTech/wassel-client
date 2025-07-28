@@ -172,6 +172,7 @@ const SubActivityPriceDialog = ({
       return (
         currentTrip.fromLocation !== originalTrip.fromLocation ||
         currentTrip.toLocation !== originalTrip.toLocation ||
+        currentTrip.location !== originalTrip.location ||
         currentTrip.price !== originalTrip.price
       );
     });
