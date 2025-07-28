@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { Order } from "@/types/types";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,16 @@ import { useVendorCost } from "@/hooks/useVendorCost";
 import { CostWindow } from "@/components/InitialPriceOffer/CostWindow";
 import { VendorDropdown } from "@/components/InitialPriceOffer/VendorDropdown";
 import { UpdatePriceCostModal } from "@/components/UpdatePriceCostModal";
+import http from "@/services/http";
+import { ISubActivity, IActivity, ITransaction } from "@/types/ModelTypes";
+
+// Extended interface for sub-activity with API response structure
+interface ISubActivityWithId extends ISubActivity {
+  _id: string;
+  transactionType: ITransaction & { _id: string };
+  activity: IActivity & { _id: string };
+}
+
 import {
   MoreHorizontal,
   Mail,
@@ -47,6 +57,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function OrdersList() {
   const [location, navigate] = useLocation();
@@ -62,10 +86,14 @@ export default function OrdersList() {
       type: string;
       size: number;
       uploadedAt: string;
+      url?: string;
+      serverId?: string;
     }>
   >([]);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
+  const [loadingFiles, setLoadingFiles] = useState(false);
   const [ipoActions, setIpoActions] = useState({
     updatePrice: false,
     updateCost: false,
@@ -110,6 +138,37 @@ export default function OrdersList() {
   const [costOverrides, setCostOverrides] = useState<Record<string, number>>(
     {}
   );
+
+  // State for Add Service Line popover
+  const [addServicePopoverOpen, setAddServicePopoverOpen] = useState(false);
+  const [serviceLineForm, setServiceLineForm] = useState({
+    serviceType: "perItem", // perItem or perLocation
+    locationMode: "pickup", // pickup or delivery
+    selectedLocation: "",
+    selectedSubActivity: "",
+  });
+
+  // State for sub-activities
+  const [subActivities, setSubActivities] = useState<ISubActivityWithId[]>([]);
+  const [loadingSubActivities, setLoadingSubActivities] = useState(false);
+
+  // File input ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Debug function to check current state
+  const debugAttachments = () => {
+    console.log("=== ATTACHMENTS DEBUG ===");
+    console.log("Current attachments:", attachments);
+    console.log("Loading files:", loadingFiles);
+    console.log("Uploading:", uploading);
+    console.log("Order ID:", order?._id);
+    console.log("========================");
+  };
+
+  // Make debug function available globally for testing
+  if (typeof window !== "undefined") {
+    (window as any).debugAttachments = debugAttachments;
+  }
 
   // Handle vendor selection
   const handleVendorChange = (
@@ -163,56 +222,101 @@ export default function OrdersList() {
 
   // File upload function
   const handleFileUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0 || !orderId) return;
+    if (!files || files.length === 0) return;
 
     setUploading(true);
 
-    // Add files to local state immediately for better UX
-    const newAttachments = Array.from(files).map((file) => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-    }));
+    // Validate file types and sizes
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "text/plain",
+      "text/csv",
+    ];
 
-    setAttachments((prev) => [...prev, ...newAttachments]);
+    const validFiles = Array.from(files).filter((file) => {
+      if (file.size > maxFileSize) {
+        toast({
+          title: "File too large",
+          description: `${file.name} is too large. Maximum file size is 10MB.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not a supported file type.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      return true;
+    });
 
-    const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-      formData.append("files", files[i]);
+    if (validFiles.length === 0) {
+      setUploading(false);
+      return;
     }
 
     try {
-      const response = await fetch(`/uploads/orders/${orderId}/upload`, {
-        method: "POST",
-        body: formData,
+      const uploadPromises = validFiles.map(async (file) => {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        // Get order ID from current order
+        const orderId = order._id;
+
+        const response = await http.post(
+          `/api/v1/uploads/orders/${orderId}/upload`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        return {
+          id: response.data.id || Math.random().toString(36).substr(2, 9),
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          uploadedAt: new Date().toISOString(),
+          url: response.data.url || URL.createObjectURL(file), // Use server URL or fallback to blob
+          serverId: response.data.id, // Store server-side ID for future operations
+        };
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        toast({
-          title: "Success",
-          description: "Files uploaded successfully",
-        });
-      } else {
-        throw new Error("Upload failed");
-      }
+      await Promise.all(uploadPromises);
+
+      // Small delay to ensure server processing is complete
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Refresh the files list from server to get the latest state
+      await fetchOrderFiles(order._id);
+      setUploading(false);
+
+      toast({
+        title: "Files uploaded successfully",
+        description: `${validFiles.length} file(s) uploaded to server`,
+      });
     } catch (error) {
       console.error("Upload error:", error);
+      setUploading(false);
+
       toast({
-        title: "Error",
-        description: "Failed to upload files",
+        title: "Upload failed",
+        description: "Failed to upload files. Please try again.",
         variant: "destructive",
       });
-      // Remove files from state if upload failed
-      setAttachments((prev) =>
-        prev.filter(
-          (att) => !newAttachments.find((newAtt) => newAtt.id === att.id)
-        )
-      );
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -225,31 +329,155 @@ export default function OrdersList() {
     event.target.value = "";
   };
 
+  // Get file icon based on file type
+  const getFileIcon = (type: string) => {
+    if (type.includes("image/")) {
+      return <FileText className="h-5 w-5 text-green-500" />;
+    } else if (type.includes("pdf")) {
+      return <FileText className="h-5 w-5 text-red-500" />;
+    } else if (type.includes("word") || type.includes("document")) {
+      return <FileText className="h-5 w-5 text-blue-500" />;
+    } else if (type.includes("excel") || type.includes("spreadsheet")) {
+      return <FileText className="h-5 w-5 text-green-600" />;
+    } else {
+      return <FileText className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
   // Drag and drop handlers
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOver(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    setDragOver(false);
+    e.stopPropagation();
+    // Only set dragOver to false if we're leaving the drag zone itself
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOver(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOver(false);
+
     const files = e.dataTransfer.files;
-    handleFileUpload(files);
+    if (files.length > 0) {
+      handleFileUpload(files);
+    }
   };
 
   // Remove attachment
-  const handleRemoveAttachment = (attachmentId: string) => {
-    setAttachments((prev) => prev.filter((att) => att.id !== attachmentId));
-    toast({
-      title: "Attachment Removed",
-      description: "File has been removed from the list",
-    });
+  const handleRemoveAttachment = async (attachmentId: string) => {
+    const attachmentToRemove = attachments.find(
+      (att) => att.id === attachmentId
+    );
+
+    if (!attachmentToRemove) {
+      toast({
+        title: "Error",
+        description: "File not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDeletingFileId(attachmentId);
+
+    try {
+      // Get order ID and file name for the API call
+      const orderId = order._id;
+      const fileName = attachmentToRemove.serverId; // Use serverId which contains the actual server filename
+
+      // Call the DELETE API endpoint
+      await http.delete(`/api/v1/uploads/orders/${orderId}/files/${fileName}`);
+
+      // Clean up blob URL for the deleted file (only for local blob URLs)
+      const deletedAttachment = attachments.find(
+        (att) => att.id === attachmentId
+      );
+      if (deletedAttachment?.url && deletedAttachment.url.startsWith("blob:")) {
+        URL.revokeObjectURL(deletedAttachment.url);
+      }
+
+      // Refresh the files list from server to get the latest state
+      await fetchOrderFiles(order._id);
+
+      toast({
+        title: "File Deleted",
+        description: "File has been successfully removed from server",
+      });
+    } catch (error) {
+      console.error("Delete file error:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete file from server. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingFileId(null);
+    }
+  };
+
+  // View attachment
+  const handleViewAttachment = (attachment: any) => {
+    if (attachment.url) {
+      // Open in new tab for preview
+      window.open(attachment.url, "_blank");
+    } else {
+      toast({
+        title: "Preview not available",
+        description: "This file cannot be previewed",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Download attachment
+  const handleDownloadAttachment = async (attachment: any) => {
+    if (attachment.url) {
+      try {
+        // For server URLs, we can directly link to them
+        if (attachment.url.startsWith("http")) {
+          const link = document.createElement("a");
+          link.href = attachment.url;
+          link.download = attachment.name;
+          link.target = "_blank";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          // For blob URLs (fallback), use the original method
+          const link = document.createElement("a");
+          link.href = attachment.url;
+          link.download = attachment.name;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+
+        toast({
+          title: "Download started",
+          description: `Downloading ${attachment.name}`,
+        });
+      } catch (error) {
+        toast({
+          title: "Download failed",
+          description: "Failed to download the file",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Download not available",
+        description: "This file cannot be downloaded",
+        variant: "destructive",
+      });
+    }
   };
 
   // IPO Actions handlers
@@ -297,6 +525,117 @@ export default function OrdersList() {
   // Reset IPO actions (only when submitting or cancelling)
   const resetIpoActions = () => {
     setIpoActions({ updatePrice: false, updateCost: false });
+  };
+
+  // Fetch sub-activities based on pricing method
+  const fetchSubActivities = useCallback(
+    async (pricingMethod: string) => {
+      setLoadingSubActivities(true);
+      try {
+        const response = await http.get(
+          `/api/v1/sub-activities/by-pricing-method?pricingMethods=${pricingMethod}`
+        );
+
+        // Handle the response structure with success and data fields
+        if (response.data?.success && response.data?.data) {
+          // Filter only active sub-activities
+          const activeSubActivities = response.data.data.filter(
+            (subActivity: ISubActivityWithId) => subActivity.isActive
+          );
+          setSubActivities(activeSubActivities);
+        } else {
+          setSubActivities([]);
+        }
+      } catch (error) {
+        console.error("Error fetching sub-activities:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch sub-activities",
+          variant: "destructive",
+        });
+        setSubActivities([]);
+      } finally {
+        setLoadingSubActivities(false);
+      }
+    },
+    [toast]
+  );
+
+  // Handle service line form changes
+  const handleServiceLineFormChange = (field: string, value: string) => {
+    setServiceLineForm((prev) => ({
+      ...prev,
+      [field]: value,
+      // Reset selected location when changing location mode
+      ...(field === "locationMode" && { selectedLocation: "" }),
+      // Reset selected sub-activity when changing service type
+      ...(field === "serviceType" && { selectedSubActivity: "" }),
+    }));
+
+    // Fetch sub-activities when service type changes
+    if (field === "serviceType") {
+      fetchSubActivities(value);
+    }
+  };
+
+  // Handle add service line submission
+  const handleAddServiceLine = () => {
+    // Find the selected sub-activity details
+    const selectedSubActivityDetails = subActivities.find(
+      (subActivity) => subActivity._id === serviceLineForm.selectedSubActivity
+    );
+
+    // Get selected location details
+    const locations = getAvailableLocations();
+    const selectedLocationDetails =
+      locations[parseInt(serviceLineForm.selectedLocation)];
+
+    console.log("Adding service line:", {
+      ...serviceLineForm,
+      selectedSubActivityDetails,
+      selectedLocationDetails,
+    });
+
+    // TODO: Implement the actual service line addition logic here
+    // This would typically involve adding a new row to the IPO table
+
+    toast({
+      title: "Service Line Added",
+      description: `Added ${serviceLineForm.serviceType} service: ${
+        selectedSubActivityDetails?.portalItemNameEn || "Unknown"
+      } (${selectedSubActivityDetails?.transactionType?.name}) for ${
+        serviceLineForm.locationMode
+      }`,
+    });
+
+    // Reset form and close popover
+    setServiceLineForm({
+      serviceType: "perItem",
+      locationMode: "pickup",
+      selectedLocation: "",
+      selectedSubActivity: "",
+    });
+    setAddServicePopoverOpen(false);
+  };
+
+  // Get available locations based on selection
+  const getAvailableLocations = () => {
+    if (serviceLineForm.locationMode === "pickup") {
+      return order.pickupInfo || [];
+    } else {
+      return order.deliveryInfo || [];
+    }
+  };
+
+  // Handle cancel service line form
+  const handleCancelServiceLine = () => {
+    setServiceLineForm({
+      serviceType: "perItem",
+      locationMode: "pickup",
+      selectedLocation: "",
+      selectedSubActivity: "",
+    });
+    setAddServicePopoverOpen(false);
   };
 
   // Clear cost override to use vendor cost
@@ -356,6 +695,78 @@ export default function OrdersList() {
     }
   };
 
+  // Fetch existing files for the order
+  const fetchOrderFiles = async (orderId: string) => {
+    setLoadingFiles(true);
+    try {
+      const response = await http.get(
+        `/api/v1/uploads/orders/${orderId}/files`
+      );
+
+      // Handle the specific API response structure
+      let files = [];
+      if (
+        response.data?.data?.files &&
+        Array.isArray(response.data.data.files)
+      ) {
+        files = response.data.data.files;
+      }
+
+      if (files.length > 0) {
+        const existingFiles = files.map((file: any, index: number) => {
+          // Generate MIME type from file extension
+          const getFileType = (fileName: string) => {
+            const extension = fileName.split(".").pop()?.toLowerCase();
+            const mimeTypes: Record<string, string> = {
+              pdf: "application/pdf",
+              png: "image/png",
+              jpg: "image/jpeg",
+              jpeg: "image/jpeg",
+              gif: "image/gif",
+              doc: "application/msword",
+              docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              xls: "application/vnd.ms-excel",
+              xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              txt: "text/plain",
+              csv: "text/csv",
+            };
+            return mimeTypes[extension || ""] || "application/octet-stream";
+          };
+
+          // Generate a clean display name from the fileName
+          const getDisplayName = (fileName: string) => {
+            // Remove timestamp prefix (e.g., "1753671141511_") if present
+            const cleanName = fileName.replace(/^\d+_/, "");
+            // Remove order ID suffix if present
+            return cleanName.replace(/_[a-f0-9]{24}\./, ".");
+          };
+
+          return {
+            id: `file-${index}-${Date.now()}`,
+            name: getDisplayName(file.fileName),
+            type: getFileType(file.fileName),
+            size: file.fileSize,
+            uploadedAt: file.uploadedAt,
+            url: `/api/v1/${file.filePath}`, // Construct proper API URL for file access
+            serverId: file.fileName, // Use fileName as server identifier
+          };
+        });
+
+        setAttachments(existingFiles);
+      } else {
+        // If no files, ensure attachments is empty
+        setAttachments([]);
+      }
+    } catch (error) {
+      console.error("Error fetching order files:", error);
+      // Don't show error toast for file fetching, as files might not exist
+      // This is expected behavior for new orders
+      setAttachments([]);
+    } finally {
+      setLoadingFiles(false);
+    }
+  };
+
   // Extract order ID from URL and fetch data
   useEffect(() => {
     const pathParts = location.split("/");
@@ -372,8 +783,28 @@ export default function OrdersList() {
           variant: "destructive",
         });
       });
+
+      // Fetch existing files for this order
+      fetchOrderFiles(id);
     }
   }, [location, getOrderById, toast]);
+
+  // Cleanup blob URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clean up any remaining blob URLs to prevent memory leaks
+      attachments.forEach((attachment) => {
+        if (attachment.url && attachment.url.startsWith("blob:")) {
+          URL.revokeObjectURL(attachment.url);
+        }
+      });
+    };
+  }, []);
+
+  // Fetch initial sub-activities when component mounts
+  useEffect(() => {
+    fetchSubActivities(serviceLineForm.serviceType);
+  }, [fetchSubActivities, serviceLineForm.serviceType]);
 
   // Show loading state
   if (loading) {
@@ -478,9 +909,6 @@ export default function OrdersList() {
             </Button>
             <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
               Quick post
-            </Button>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-              Print order
             </Button>
           </div>
         </div>
@@ -1005,14 +1433,274 @@ export default function OrdersList() {
                 <Button size="sm" className="bg-blue-600">
                   Submit this IPO
                 </Button>
-                <Button size="sm" className="bg-blue-600">
-                  Add service line +
-                </Button>
+                <Popover
+                  open={addServicePopoverOpen}
+                  onOpenChange={setAddServicePopoverOpen}
+                >
+                  <PopoverTrigger asChild>
+                    <Button size="sm" className="bg-blue-600">
+                      Add service line +
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">
+                          Add Service Line
+                        </h4>
+                        <p className="text-xs text-gray-500">
+                          Configure a new service line for this order
+                        </p>
+                      </div>
+
+                      {/* Service Type Dropdown */}
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="serviceType"
+                          className="text-xs font-medium"
+                        >
+                          Service Type
+                        </Label>
+                        <Select
+                          value={serviceLineForm.serviceType}
+                          onValueChange={(value) =>
+                            handleServiceLineFormChange("serviceType", value)
+                          }
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Select service type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="perItem">Per Item</SelectItem>
+                            <SelectItem value="perLocation">
+                              Per Location
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Location Mode Radio Buttons */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">
+                          Location Mode
+                        </Label>
+                        <RadioGroup
+                          value={serviceLineForm.locationMode}
+                          onValueChange={(value) =>
+                            handleServiceLineFormChange("locationMode", value)
+                          }
+                          className="flex space-x-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem
+                              value="pickup"
+                              id="pickup"
+                              className="h-4 w-4"
+                            />
+                            <Label
+                              htmlFor="pickup"
+                              className="text-xs cursor-pointer"
+                            >
+                              Pick up
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem
+                              value="delivery"
+                              id="delivery"
+                              className="h-4 w-4"
+                            />
+                            <Label
+                              htmlFor="delivery"
+                              className="text-xs cursor-pointer"
+                            >
+                              Delivery
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+
+                      {/* Sub-Activity Selection Dropdown */}
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="subActivity"
+                          className="text-xs font-medium"
+                        >
+                          Sub-Activity
+                        </Label>
+                        <Select
+                          value={serviceLineForm.selectedSubActivity}
+                          onValueChange={(value) =>
+                            handleServiceLineFormChange(
+                              "selectedSubActivity",
+                              value
+                            )
+                          }
+                          disabled={loadingSubActivities}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue
+                              placeholder={
+                                loadingSubActivities
+                                  ? "Loading sub-activities..."
+                                  : subActivities.length > 0
+                                  ? "Select a sub-activity"
+                                  : "No sub-activities available"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {!loadingSubActivities &&
+                            subActivities.length > 0 ? (
+                              subActivities.map((subActivity) => {
+                                // Get finance effect color
+                                const getFinanceEffectColor = (
+                                  effect: string
+                                ) => {
+                                  switch (effect) {
+                                    case "positive":
+                                      return "text-green-600";
+                                    case "negative":
+                                      return "text-red-600";
+                                    default:
+                                      return "text-gray-600";
+                                  }
+                                };
+
+                                const getFinanceEffectIcon = (
+                                  effect: string
+                                ) => {
+                                  switch (effect) {
+                                    case "positive":
+                                      return "↗";
+                                    case "negative":
+                                      return "↙";
+                                    default:
+                                      return "—";
+                                  }
+                                };
+
+                                return (
+                                  <SelectItem
+                                    key={subActivity._id}
+                                    value={subActivity._id}
+                                  >
+                                    <div className="flex flex-col w-full">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">
+                                          {subActivity.portalItemNameEn}
+                                        </span>
+                                        <span
+                                          className={`text-xs font-medium ${getFinanceEffectColor(
+                                            subActivity.financeEffect
+                                          )}`}
+                                        >
+                                          {getFinanceEffectIcon(
+                                            subActivity.financeEffect
+                                          )}{" "}
+                                          {subActivity.financeEffect}
+                                        </span>
+                                      </div>
+                                      <span className="text-xs text-gray-500">
+                                        {subActivity.transactionType?.name} •{" "}
+                                        {subActivity.activity?.activityNameEn}
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })
+                            ) : !loadingSubActivities &&
+                              subActivities.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-gray-500">
+                                No sub-activities available
+                              </div>
+                            ) : (
+                              <div className="px-2 py-1.5 text-xs text-gray-500">
+                                Loading sub-activities...
+                              </div>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Location Selection Dropdown */}
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="location"
+                          className="text-xs font-medium"
+                        >
+                          {serviceLineForm.locationMode === "pickup"
+                            ? "Pickup Location"
+                            : "Delivery Location"}
+                        </Label>
+                        <Select
+                          value={serviceLineForm.selectedLocation}
+                          onValueChange={(value) =>
+                            handleServiceLineFormChange(
+                              "selectedLocation",
+                              value
+                            )
+                          }
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue
+                              placeholder={`Select ${serviceLineForm.locationMode} location`}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getAvailableLocations().map((location, index) => {
+                              const displayText =
+                                serviceLineForm.locationMode === "pickup"
+                                  ? `${formatLocation(
+                                      (location as any).pickupLocation
+                                    )} - ${
+                                      (location as any).pickupDetailedAddress
+                                    }`
+                                  : `${formatLocation(
+                                      (location as any).deliveryLocation
+                                    )} - ${
+                                      (location as any).deliveryDetailedAddress
+                                    }`;
+
+                              return (
+                                <SelectItem
+                                  key={index}
+                                  value={index.toString()}
+                                >
+                                  {displayText}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex justify-end space-x-2 pt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCancelServiceLine}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleAddServiceLine}
+                          disabled={
+                            !serviceLineForm.selectedLocation ||
+                            !serviceLineForm.selectedSubActivity
+                          }
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          Add Service
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <Button size="sm" className="bg-blue-600">
                   Download excel
-                </Button>
-                <Button size="sm" className="bg-blue-600">
-                  Print IPO
                 </Button>
               </div>
 
@@ -1215,16 +1903,9 @@ export default function OrdersList() {
                               />
                             </div>
                             <div className="text-center">
-                              <div className="flex flex-col items-center">
-                                <span className="font-bold text-red-600 text-xs">
-                                  ${costOverrides[serviceKey] ?? selectedCost}
-                                </span>
-                                {costOverrides[serviceKey] && (
-                                  <span className="text-xs text-orange-600 font-medium">
-                                    Override
-                                  </span>
-                                )}
-                              </div>
+                              <span className="font-bold text-red-600 text-xs">
+                                ${costOverrides[serviceKey] ?? selectedCost}
+                              </span>
                             </div>
                             <div className="text-center">
                               <DropdownMenu>
@@ -1432,16 +2113,9 @@ export default function OrdersList() {
                               )}
                             </div>
                             <div className="text-center">
-                              <div className="flex flex-col items-center">
-                                <span className="font-bold text-red-600 text-xs">
-                                  ${selectedCost}
-                                </span>
-                                {costOverrides[serviceKey] && (
-                                  <span className="text-xs text-orange-600 font-medium">
-                                    Override
-                                  </span>
-                                )}
-                              </div>
+                              <span className="font-bold text-red-600 text-xs">
+                                ${selectedCost}
+                              </span>
                             </div>
                             <div className="text-center">
                               <DropdownMenu>
@@ -1650,16 +2324,9 @@ export default function OrdersList() {
                               )}
                             </div>
                             <div className="text-center">
-                              <div className="flex flex-col items-center">
-                                <span className="font-bold text-red-600 text-xs">
-                                  ${selectedCost}
-                                </span>
-                                {costOverrides[serviceKey] && (
-                                  <span className="text-xs text-orange-600 font-medium">
-                                    Override
-                                  </span>
-                                )}
-                              </div>
+                              <span className="font-bold text-red-600 text-xs">
+                                ${selectedCost}
+                              </span>
                             </div>
                             <div className="text-center">
                               <DropdownMenu>
@@ -2016,66 +2683,117 @@ export default function OrdersList() {
                   multiple
                   onChange={handleFileInputChange}
                   className="hidden"
-                  id="file-upload"
+                  ref={fileInputRef}
                   accept="*/*"
                 />
-                <label htmlFor="file-upload">
-                  <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
-                    disabled={uploading}
-                  >
-                    {uploading ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Uploading...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <Plus className="h-4 w-4" />
-                        <span>Add Files</span>
-                      </div>
-                    )}
-                  </Button>
-                </label>
+                <Button
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                  disabled={uploading}
+                  onClick={() => {
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  {uploading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Uploading...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <Plus className="h-4 w-4" />
+                      <span>Add Files</span>
+                    </div>
+                  )}
+                </Button>
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            {/* Drag & Drop Zone */}
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                dragOver
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-300 hover:border-gray-400"
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-lg font-medium text-gray-700 mb-2">
-                {dragOver ? "Drop files here" : "Drag & drop files here"}
-              </p>
-              <p className="text-sm text-gray-500 mb-4">
-                or click the button above to select files
-              </p>
-              <p className="text-xs text-gray-400">
-                Supports: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, and more
-              </p>
-            </div>
+          <CardContent className="relative">
+            {/* Loading state while fetching files */}
+            {loadingFiles && (
+              <div className="border-2 border-dashed rounded-lg p-8 text-center border-gray-300">
+                <div className="flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                  <p className="text-lg font-medium text-gray-700 mb-2">
+                    Loading existing files...
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Please wait while we fetch your uploaded files
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Show Drag & Drop Zone only when no files are uploaded and not loading */}
+            {!loadingFiles && attachments.length === 0 && (
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  dragOver
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-lg font-medium text-gray-700 mb-2">
+                  {dragOver ? "Drop files here" : "Drag & drop files here"}
+                </p>
+                <p className="text-sm text-gray-500 mb-4">
+                  or click the button above to select files
+                </p>
+                <p className="text-xs text-gray-400">
+                  Supports: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF, TXT, CSV
+                  (Max 10MB each)
+                </p>
+              </div>
+            )}
+
+            {/* Hidden drag and drop overlay for when files exist */}
+            {!loadingFiles && attachments.length > 0 && (
+              <div
+                className={`absolute inset-0 border-2 border-dashed rounded-lg transition-colors pointer-events-none ${
+                  dragOver
+                    ? "border-blue-500 bg-blue-50 bg-opacity-90 pointer-events-auto z-10"
+                    : "border-transparent"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {dragOver && (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Upload className="h-12 w-12 mx-auto mb-4 text-blue-500" />
+                      <p className="text-lg font-medium text-blue-700">
+                        Drop files to add more
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Attachments List */}
-            {attachments.length > 0 && (
-              <div className="mt-6 space-y-3">
-                <h4 className="font-medium text-gray-900">Uploaded Files</h4>
+            {!loadingFiles && attachments.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-gray-900">
+                    Uploaded Files ({attachments.length})
+                  </h4>
+                  <p className="text-sm text-gray-500">
+                    Click "Add Files" to upload more
+                  </p>
+                </div>
                 {attachments.map((attachment) => (
                   <div
                     key={attachment.id}
                     className="flex items-center justify-between p-3 border rounded-lg bg-gray-50"
                   >
                     <div className="flex items-center space-x-3">
-                      <FileText className="h-5 w-5 text-gray-500" />
+                      {getFileIcon(attachment.type)}
                       <div>
                         <p className="font-medium text-sm">{attachment.name}</p>
                         <p className="text-xs text-gray-500">
@@ -2086,10 +2804,20 @@ export default function OrdersList() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewAttachment(attachment)}
+                        title="Preview file"
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadAttachment(attachment)}
+                        title="Download file"
+                      >
                         <Download className="h-4 w-4" />
                       </Button>
                       <Button
@@ -2097,8 +2825,14 @@ export default function OrdersList() {
                         size="sm"
                         onClick={() => handleRemoveAttachment(attachment.id)}
                         className="text-red-600 hover:text-red-700"
+                        title="Remove file"
+                        disabled={deletingFileId === attachment.id}
                       >
-                        <X className="h-4 w-4" />
+                        {deletingFileId === attachment.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                        ) : (
+                          <X className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
