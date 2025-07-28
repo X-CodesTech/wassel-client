@@ -31,6 +31,9 @@ interface UseSubActivityPriceDialogOptions {
   onSubmit?: (data: TFormSchema) => void;
   onError?: (error: any) => void;
   onOpenChange: (open: boolean) => void;
+  submitLoading?: boolean;
+  submitDisabled?: boolean;
+  addLocationDisabled?: boolean;
 }
 
 export const useSubActivityPriceDialog = ({
@@ -39,6 +42,9 @@ export const useSubActivityPriceDialog = ({
   onSubmit = () => {},
   onError = () => {},
   onOpenChange,
+  submitLoading = false,
+  submitDisabled = false,
+  addLocationDisabled = false,
 }: UseSubActivityPriceDialogOptions) => {
   const dispatch = useAppDispatch();
 
@@ -338,6 +344,9 @@ export const useSubActivityPriceDialog = ({
       onSubmit,
       onError,
       subActivityId: "", // You can make this configurable if needed
+      submitLoading,
+      submitDisabled,
+      addLocationDisabled,
     },
 
     // Internal state and methods (for advanced usage)

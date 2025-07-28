@@ -50,10 +50,12 @@ type TSubActivityPriceDialog = {
   onOpenChange: (open: boolean) => void;
   dialogTitle: string;
   dialogDescription: string;
-  subActivityId: string;
   defaultValues?: TFormSchema;
   onSubmit?: (data: TFormSchema) => void;
   onError?: (errors: any) => void;
+  submitLoading?: boolean;
+  submitDisabled?: boolean;
+  addLocationDisabled?: boolean;
 };
 
 const SubActivityPriceDialog = ({
@@ -64,6 +66,9 @@ const SubActivityPriceDialog = ({
   defaultValues,
   onSubmit = () => {},
   onError = () => {},
+  submitLoading = false,
+  submitDisabled = false,
+  addLocationDisabled,
 }: TSubActivityPriceDialog) => {
   const [subActivities, setSubActivities] = useState<
     ISubActivityByPricingMethod["data"]
@@ -284,13 +289,21 @@ const SubActivityPriceDialog = ({
   const isFormValid = form.formState.isValid;
 
   const addLocationButtonDisabled = useMemo(
-    () => loading === "pending" || !isFormValid || !selectedSubActivity,
-    [loading, isFormValid, selectedSubActivity]
+    () =>
+      loading === "pending" ||
+      !isFormValid ||
+      !selectedSubActivity ||
+      addLocationDisabled,
+    [loading, isFormValid, selectedSubActivity, addLocationDisabled]
   );
 
   const submitButtonDisabled = useMemo(
-    () => loading === "pending" || !hasFormChanges || !isFormValid,
-    [loading, hasFormChanges, isFormValid]
+    () =>
+      loading === "pending" ||
+      !hasFormChanges ||
+      !isFormValid ||
+      submitDisabled,
+    [loading, hasFormChanges, isFormValid, submitDisabled]
   );
 
   return (
@@ -318,7 +331,7 @@ const SubActivityPriceDialog = ({
                     <FormLabel>Pricing Method</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger disabled={!!defaultValues}>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -349,7 +362,7 @@ const SubActivityPriceDialog = ({
                       disabled={!selectedPricingMethod || loading === "pending"}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger disabled={!!defaultValues}>
                           {loading === "pending" ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : null}
@@ -542,7 +555,7 @@ const SubActivityPriceDialog = ({
                 disabled={submitButtonDisabled}
                 onClick={submitFormHandler}
               >
-                {loading === "pending" ? "Saving..." : "Save"}
+                {submitLoading ? "Saving..." : "Save"}
               </Button>
             </DialogFooter>
           </Form>
