@@ -36,6 +36,7 @@ import DeletePriceListSubActivityDialog from "@/components/DeletePriceListSubAct
 import DeleteSubActivityConfirmationDialog from "@/components/PriceList/PriceListSubActivity/DeleteSubActivityConfirmationDialog";
 import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
 import { AddPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/AddPriceListSubActivityDialog";
+import { getStructuredAddress } from "@/utils/getStructuredAddress";
 
 // Form schema for editing price list
 const editPriceListFormSchema = z.object({
@@ -371,7 +372,7 @@ export default function PriceListDetails() {
     );
   };
 
-  const renderTableRow = (item: any, index: number) => {
+  const renderTableRow = (item: SubActivityPrice, index: number) => {
     const isExpandable = ["perLocation", "perTrip"].includes(
       item.pricingMethod
     );
@@ -431,7 +432,9 @@ export default function PriceListDetails() {
                 variant="outline"
                 size="icon"
                 className="text-blue-500"
-                onClick={() => handleEditSubActivity(item)}
+                onClick={() => {
+                  handleEditSubActivity(item);
+                }}
               >
                 <Edit className="w-3 h-3" />
               </Button>
@@ -521,7 +524,9 @@ export default function PriceListDetails() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => setAddItemDialogOpen(true)}
+              onClick={() => {
+                setAddItemDialogOpen(true);
+              }}
             >
               <Plus className="h-4 w-4" />
               Add Item
