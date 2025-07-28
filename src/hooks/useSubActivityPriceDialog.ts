@@ -273,7 +273,7 @@ export const useSubActivityPriceDialog = ({
 
   // Handle form reset for edit mode
   useEffect(() => {
-    if (transformedDefaultValues?.pricingMethod) {
+    if (transformedDefaultValues?.pricingMethod && dialogOpen) {
       if (!subActivities.length) {
         setLoading("pending");
         subActivityServices

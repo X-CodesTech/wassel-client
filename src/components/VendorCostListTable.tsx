@@ -20,6 +20,7 @@ import {
 } from "./ui/table";
 import EditPriceCostListDialog from "./vendorPriceList/EditPriceCostList/EditPriceCostListDialog";
 import DeletePriceCostListDialog from "./vendorPriceList/DeletePriceCostListDialog";
+import SubActivityPriceManager from "./SubActivityPriceManager";
 
 const renderCostRange = (
   cost: number | undefined,
@@ -391,14 +392,33 @@ export default function VendorCostListTable({
         />
       )}
 
-      {selectedSubActivityPrice && dialog === "edit" && (
+      <SubActivityPriceManager
+        contextType="vendor"
+        vendorId={priceList.vendor?._id || ""}
+        dialogTitle={
+          !!selectedSubActivityPrice ? "Edit Price List" : "Add Price List"
+        }
+        dialogDescription={
+          !!selectedSubActivityPrice
+            ? "Edit the price list"
+            : "Add a new sub-activity to the price list"
+        }
+        isDialogOpen={openEdit}
+        setIsDialogOpen={setOpenEdit}
+        editData={selectedSubActivityPrice || undefined}
+        setEditData={setSelectedSubActivityPrice}
+        subActivityPriceId={selectedSubActivityPrice?.subActivity?._id || ""}
+        priceListId={priceList._id}
+      />
+
+      {/* {selectedSubActivityPrice && dialog === "edit" && (
         <EditPriceCostListDialog
           open={openEdit}
           selectedSubActivityPrice={selectedSubActivityPrice}
           onOpenChange={handleDialog}
           priceListId={priceList._id}
         />
-      )}
+      )} */}
     </>
   );
 }

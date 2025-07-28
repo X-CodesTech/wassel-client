@@ -10,23 +10,72 @@ import {
 import { actGetCustomer, addPriceListSubActivity } from "@/store/customers";
 import { toast } from "@/hooks/use-toast";
 import { TLoading } from "@/types";
+import {
+  actAddVendorSubActivityPrice,
+  actGetVendorPriceLists,
+} from "@/store/vendors";
+import { actEditVendorSubActivityPrice } from "@/store/vendors/vendorsSlice";
 
-const updateBodyPasrer = (data: any) => {
-  switch (data.pricingMethod) {
-    case "perItem":
-      return {
-        basePrice: data.basePrice,
-      };
-    case "perTrip":
-      return {
-        locationPrices: data.locationPrices,
-      };
-    case "perLocation":
-      return {
-        locationPrices: data.locationPrices,
-      };
+const updateBodyPasrer = (
+  data: any,
+  contextType: ContextType,
+  isEdit: boolean = false
+) => {
+  switch (contextType) {
+    case "vendor":
+      switch (data.pricingMethod) {
+        case "perItem":
+          return isEdit
+            ? {
+                cost: data.basePrice,
+              }
+            : {
+                subActivity: data.subActivity,
+                cost: data.basePrice,
+                pricingMethod: data.pricingMethod,
+              };
+        case "perTrip":
+          return {
+            subActivity: data.subActivity,
+            pricingMethod: data.pricingMethod,
+            locationPrices: data.locationPrices?.map((lp) => ({
+              ...lp,
+              fromLocation: lp.fromLocation,
+              toLocation: lp.toLocation,
+              cost: lp.price,
+            })),
+          };
+        case "perLocation":
+          return {
+            subActivity: data.subActivity,
+            pricingMethod: data.pricingMethod,
+            locationPrices: data.locationPrices?.map((lp) => ({
+              ...lp,
+              fromLocation: lp.fromLocation,
+              toLocation: lp.toLocation,
+              cost: lp.price,
+            })),
+          };
+        default:
+          return {};
+      }
     default:
-      return {};
+      switch (data.pricingMethod) {
+        case "perItem":
+          return {
+            basePrice: data.basePrice,
+          };
+        case "perTrip":
+          return {
+            locationPrices: data.locationPrices,
+          };
+        case "perLocation":
+          return {
+            locationPrices: data.locationPrices,
+          };
+        default:
+          return {};
+      }
   }
 };
 
@@ -60,14 +109,35 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
   priceListId,
   subActivityPriceId,
 }) => {
+  const defaultValues = useMemo(() => {
+    if (contextType === "vendor") {
+      return {
+        subActivity: editData?.subActivity,
+        pricingMethod: editData?.pricingMethod || "perItem",
+        locationPrices:
+          editData?.locationPrices?.map((lp) => ({
+            ...lp,
+            fromLocation: lp.fromLocation,
+            toLocation: lp.toLocation,
+            price: lp.cost,
+          })) || [],
+        basePrice: editData?.cost || 0,
+      };
+    } else {
+      return editData;
+    }
+  }, [contextType, editData]);
+
   const dispatch = useAppDispatch();
   const { selectedCustomer } = useAppSelector((state) => state.customers);
   customerId = selectedCustomer?._id || customerId || "";
   const [loading, setLoading] = useState<TLoading>("idle");
 
   React.useEffect(() => {
-    dispatch(actGetLocations({ page: 1, limit: 100, filters: {} }));
-  }, [dispatch]);
+    if (isDialogOpen) {
+      dispatch(actGetLocations({ page: 1, limit: 100, filters: {} }));
+    }
+  }, [dispatch, isDialogOpen]);
 
   const successNotificationHandler = () => {
     toast({
@@ -139,7 +209,7 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
       actUpdateSubActivityPrice({
         priceListId: priceListId!,
         subActivityId: editData.subActivity._id,
-        data: updateBodyPasrer(data),
+        data: updateBodyPasrer(data, contextType),
       })
     )
       .unwrap()
@@ -152,8 +222,66 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
       });
   };
 
+  const handleAddVendorPriceListSubActivity = async (
+    data: any,
+    callback?: () => void
+  ) => {
+    await dispatch(
+      actAddVendorSubActivityPrice({
+        vendorPriceListId: priceListId!,
+        ...updateBodyPasrer(data, contextType),
+      })
+    )
+      .unwrap()
+      .catch((error) => {
+        errorNotificationHandler(error);
+      })
+      .then(() => {
+        successNotificationHandler();
+        callback?.();
+      });
+  };
+
+  const handleEditVendorPriceListSubActivity = async (
+    data: any,
+    callback?: () => void
+  ) => {
+    console.log("🎯 handleEditVendorPriceListSubActivity", data);
+    await dispatch(
+      actEditVendorSubActivityPrice({
+        vendorPriceListId: priceListId!,
+        subActivityId: subActivityPriceId!,
+        ...updateBodyPasrer(data, contextType, true),
+      })
+    )
+      .unwrap()
+      .catch((error) => {
+        if (error.message) {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "An unexpected error occurred",
+            variant: "destructive",
+          });
+        }
+      })
+      .then(() => {
+        toast({
+          title: "Success",
+          description: "Price list updated successfully",
+        });
+        dispatch(actGetVendorPriceLists(vendorId!));
+        setIsDialogOpen(false);
+      });
+  };
+
   const handleSubmit = async (data: any) => {
-    console.group("🎯 SubActivityPriceManager - Form submitted:");
+    console.groupCollapsed("🎯 SubActivityPriceManager - Form submitted:");
     console.log({
       contextType,
       customerId,
@@ -164,27 +292,42 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
     });
     console.groupEnd();
 
-    // Here you would dispatch the appropriate action based on contextType
-    // For now, just log the data
-
     setLoading("pending");
     if (!editData) {
-      handleAddPriceListSubActivity(data, () => {
-        setLoading("fulfilled");
-      });
+      if (contextType === "vendor") {
+        handleAddVendorPriceListSubActivity(data, () => {
+          dispatch(actGetVendorPriceLists(vendorId!))
+            .unwrap()
+            .then(() => {
+              setLoading("fulfilled");
+              setIsDialogOpen(false);
+            });
+        });
+      } else {
+        handleAddPriceListSubActivity(data, () => {
+          setLoading("fulfilled");
+        });
+      }
     } else {
-      handleEditPriceListSubActivity(data, () => {
-        setLoading("fulfilled");
-        if (contextType === "customer") {
-          dispatch(actGetCustomer(customerId!));
-        }
-      });
+      if (contextType === "vendor") {
+        handleEditVendorPriceListSubActivity(data, () => {
+          setLoading("fulfilled");
+          setIsDialogOpen(false);
+        });
+      } else {
+        handleEditPriceListSubActivity(data, () => {
+          setLoading("fulfilled");
+          if (contextType === "customer") {
+            dispatch(actGetCustomer(customerId!));
+          }
+        });
+      }
     }
   };
 
   // Use the custom hook for dialog management
   const { dialogProps } = useSubActivityPriceDialog({
-    defaultValues: editData,
+    defaultValues: defaultValues,
     dialogOpen: isDialogOpen,
     addLocationDisabled: loading === "pending",
     submitLoading: loading === "pending",

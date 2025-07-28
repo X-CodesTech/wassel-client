@@ -1,4 +1,5 @@
 import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
+import SubActivityPriceManager from "@/components/SubActivityPriceManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -392,12 +393,45 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
       )}
 
       {/* Modals */}
-      <VendorPriceListModal
+      {/* <VendorPriceListModal
         isOpen={isDialogOpen("addSubActivityPrice")}
         onClose={handleCloseDialog}
         vendorId={vendor?._id || ""}
         onSubmit={handleAddSubActivityPrice}
         isLoading={createPriceListLoading === "pending"}
+      /> */}
+
+      {/* <SubActivityPriceManager
+        contextType="customer"
+        dialogTitle="Add Sub-Activity"
+        dialogDescription="Add a new sub-activity to the price list"
+        isDialogOpen={dialog === "add" || !!selectedSubActivity}
+        setIsDialogOpen={(isOpen) => {
+          if (!isOpen) {
+            handleDialog({ open: false });
+          }
+        }}
+        editData={selectedSubActivity || undefined}
+        setEditData={setSelectedSubActivity}
+        subActivityPriceId={selectedSubActivity?._id || ""}
+        priceListId={selectedPriceList?._id || ""}
+      /> */}
+
+      <SubActivityPriceManager
+        contextType="vendor"
+        vendorId={vendor?._id || ""}
+        dialogTitle={!!selectedPriceList ? "Edit Price List" : "Add Price List"}
+        dialogDescription={
+          !!selectedPriceList
+            ? "Edit the price list"
+            : "Add a new sub-activity to the price list"
+        }
+        isDialogOpen={isDialogOpen("addSubActivityPrice")}
+        setIsDialogOpen={handleCloseDialog}
+        editData={selectedPriceList || undefined}
+        setEditData={setSelectedPriceList}
+        subActivityPriceId={selectedPriceList?._id || ""}
+        priceListId={selectedPriceListId || ""}
       />
 
       <CreatePriceListDialog

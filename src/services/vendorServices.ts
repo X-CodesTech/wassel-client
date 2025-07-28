@@ -294,7 +294,9 @@ const vendorServices = {
     subActivityId,
     vendorPriceListId,
     ...rest
-  }: TPriceBody<T>): Promise<any> => {
+  }: TPriceBody<T> & {
+    vendorPriceListId: string;
+  }): Promise<any> => {
     return await http.put(
       `${apiUrlConstants.vendorPriceLists}/${vendorPriceListId}/sub-activity/${subActivityId}`,
       {
