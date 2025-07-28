@@ -66,6 +66,7 @@ import {
 import Pagination from "@/components/Pagination";
 import { axiosErrorHandler } from "@/utils";
 import { confirm } from "@/components/ConfirmDialog/dialogService";
+import { TLoading } from "@/types";
 
 // Form schema matching the bilingual JSON structure
 const locationFormSchema = z.object({
@@ -272,6 +273,59 @@ const LocationForm = memo(
   )
 );
 
+const DeleteButton = ({ locationId }: { locationId: string }) => {
+  const { toast } = useToast();
+  const dispatch = useDispatch<AppDispatch>();
+  const [loading, setLoading] = useState<TLoading>("idle");
+
+  const handleDeleteClick = (id: string) => async () => {
+    // 1️⃣ ask for confirmation
+    const confirmed = await confirm({
+      title: "Delete Location",
+      description:
+        "Are you sure you want to delete this location? This cannot be undone.",
+    });
+
+    if (!confirmed) return;
+
+    // 2️⃣ perform the async action
+    try {
+      setLoading("pending");
+      await dispatch(actDeleteLocation(id)).unwrap();
+      toast({
+        title: "Success",
+        description: "Location deleted successfully",
+      });
+      setLoading("fulfilled");
+    } catch (error) {
+      setLoading("rejected");
+      toast({
+        title: "Error",
+        description: axiosErrorHandler(error),
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleDeleteClick(locationId)}
+      disabled={loading === "pending"}
+      className={`text-red-600 hover:text-red-700 ${
+        loading === "pending" && "opacity-50 cursor-not-allowed"
+      }`}
+    >
+      {loading === "pending" ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Trash2 className="h-4 w-4" />
+      )}
+    </Button>
+  );
+};
+
 LocationForm.displayName = "LocationForm";
 
 export default function LocationManagement() {
@@ -408,32 +462,6 @@ export default function LocationManagement() {
     setIsAddDialogOpen(false);
     setEditingLocation(null);
   }, []);
-
-  const handleDeleteClick = (id: string) => async () => {
-    // 1️⃣ ask for confirmation
-    const confirmed = await confirm({
-      title: "Delete Location",
-      description:
-        "Are you sure you want to delete this location? This cannot be undone.",
-    });
-
-    if (!confirmed) return;
-
-    // 2️⃣ perform the async action
-    try {
-      await dispatch(actDeleteLocation(id)).unwrap();
-      toast({
-        title: "Success",
-        description: "Location deleted successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: axiosErrorHandler(error),
-        variant: "destructive",
-      });
-    }
-  };
 
   // Filter locations
   const filteredLocations = locations.filter((location) => {
@@ -696,21 +724,10 @@ export default function LocationManagement() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDeleteClick(location._id)}
-                          disabled={loading}
-                          className={`text-red-600 hover:text-red-700 ${
-                            loading && "opacity-50 cursor-not-allowed"
-                          }`}
-                        >
-                          {loading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <DeleteButton
+                          key={location._id}
+                          locationId={location._id}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
