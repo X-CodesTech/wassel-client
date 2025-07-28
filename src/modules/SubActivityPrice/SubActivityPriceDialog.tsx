@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.tsx";
+import { useCallback, useEffect, useState } from "react";
 import {
   Form,
   FormControl,
@@ -15,6 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form.tsx";
+import { FieldPath, useFieldArray, useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input.tsx";
 import {
   Select,
@@ -23,20 +25,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.tsx";
-import { cn } from "@/utils";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "@/hooks/use-toast.ts";
+import { subActivityServices } from "@/services";
+import { axiosErrorHandler, cn } from "@/utils";
 import { PlusIcon, TrashIcon } from "lucide-react";
 import LocationSelect from "./LocationSelect";
+import { TLoading } from "@/types";
+import { createFormSchema } from "./validation";
 import { PRICING_METHODS } from "@/utils/constants";
-import type { FormSchemaType } from "./validation";
-import { useSubActivityPriceDialog } from "@/hooks/useSubActivityPriceDialog";
-import { getStructuredAddress } from "@/utils/getStructuredAddress";
-
-// Define LocationObject type locally to match LocationSelect
-type LocationObject = {
-  _id: string;
-  label: string;
-  [key: string]: any;
-};
 
 type TSubActivityPriceDialog<T extends "customer" | "vendor" | "priceList"> = {
   dialogOpen: boolean;
@@ -45,55 +43,139 @@ type TSubActivityPriceDialog<T extends "customer" | "vendor" | "priceList"> = {
   dialogDescription: string;
   subActivityId: string;
   userType: T;
-  defaultValues?: FormSchemaType<T>;
-  onSubmit?: (data: FormSchemaType<T>) => void;
-  onError?: (error: any) => void;
+  defaultValues?: z.infer<ReturnType<typeof createFormSchema>>;
+  onSubmit?: (data: z.infer<ReturnType<typeof createFormSchema>>) => void;
 };
 
-const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
+const SubActivityPriceDialog = ({
   dialogOpen,
   onOpenChange,
   dialogTitle,
   dialogDescription,
   defaultValues,
   onSubmit = () => {},
-  onError = () => {},
   userType,
 }: TSubActivityPriceDialog<T>) => {
-  // Use the custom hook to manage all dialog logic
-  const {
-    form,
-    isFormValid,
-    handleSubmit,
-    handleOpenChange,
-    subActivities,
-    subActivitiesLoading: loading,
-    findLocationById,
-    locationPriceFields,
-    addLocationPriceHandler,
-    removeLocationPriceHandler,
-    selectedPricingMethod,
-    selectedSubActivity,
-  } = useSubActivityPriceDialog({
-    userType,
+  const formSchema = createFormSchema(userType);
+  type FormSchema = z.infer<typeof formSchema>;
+
+  const [subActivities, setSubActivities] = useState<
+    ISubActivityByPricingMethod["data"]
+  >([]);
+  const [loading, setLoading] = useState<TLoading>("idle");
+
+  const form = useForm<FormSchema>({
     defaultValues,
-    dialogOpen,
-    onSubmit,
-    onError,
-    onOpenChange,
+    resolver: zodResolver(formSchema),
   });
 
+  const {
+    fields: locationPriceFields,
+    remove: removeLocationPrice,
+    append: appendLocationPrice,
+  } = useFieldArray({
+    control: form.control,
+    name: "locationPrices",
+  });
+
+  const selectedPricingMethod = form.watch("pricingMethod");
+  const selectedSubActivity = form.watch("subActivity");
+
+  const getSubActivitiesByPricingMethod = useCallback(async () => {
+    form.reset();
+    setLoading("pending");
+    try {
+      const { data } = await subActivityServices.getSubActivityByPricingMethod(
+        selectedPricingMethod
+      );
+      setSubActivities(data.data);
+      setLoading("fulfilled");
+      return data;
+    } catch (error) {
+      const apiError = axiosErrorHandler(error);
+      let errorMessage = apiError?.message || apiError;
+
+      if (apiError) {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred.",
+          variant: "destructive",
+        });
+      }
+      setLoading("rejected");
+    }
+  }, [selectedPricingMethod]);
+
+  const addLocationPriceHandler = () => {
+    appendLocationPrice({
+      fromLocation: "",
+      toLocation: "",
+      price: 0,
+      pricingMethod: "perTrip" as const,
+    });
+    form.trigger("locationPrices");
+  };
+
+  const removeLocationPriceHandler = (index: number) => {
+    removeLocationPrice(index);
+    form.trigger("locationPrices");
+  };
+
+  useEffect(() => {
+    if (selectedPricingMethod) {
+      getSubActivitiesByPricingMethod();
+    }
+  }, [getSubActivitiesByPricingMethod, selectedPricingMethod]);
+
+  useEffect(() => {
+    if (selectedSubActivity && !defaultValues) {
+      form.setValue("locationPrices", [
+        {
+          fromLocation: "",
+          toLocation: "",
+          price: 0,
+          pricingMethod: "perTrip" as const,
+        },
+      ]);
+      form.trigger("locationPrices");
+    }
+  }, [selectedSubActivity]);
+
+  useEffect(() => {
+    if (defaultValues) {
+      form.reset({
+        pricingMethod: defaultValues.pricingMethod,
+        subActivity: defaultValues.subActivity,
+        ...(defaultValues.pricingMethod === "perItem" && {
+          basePrice: defaultValues.basePrice,
+        }),
+        ...(defaultValues.pricingMethod === "perLocation" && {
+          locationPrices: defaultValues.locationPrices,
+        }),
+        ...(defaultValues.pricingMethod === "perTrip" && {
+          locationPrices: defaultValues.locationPrices,
+        }),
+      });
+    }
+  }, [defaultValues]);
+
+  const isFormValid = form.formState.isValid;
+
   return (
-    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit, (error) => onError?.(error))}
-        >
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{dialogTitle}</DialogTitle>
-              <DialogDescription>{dialogDescription}</DialogDescription>
-            </DialogHeader>
+    <>
+      <Dialog open={dialogOpen} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{dialogTitle}</DialogTitle>
+            <DialogDescription>{dialogDescription}</DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
             <div
               className={cn(
                 "grid gap-4",
@@ -108,11 +190,7 @@ const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
                 render={({ field }) => (
                   <FormItem className="flex flex-col h-full">
                     <FormLabel>Pricing Method</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={!!defaultValues} // Disable in edit mode
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -142,11 +220,7 @@ const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
-                      disabled={
-                        !!defaultValues ||
-                        !selectedPricingMethod ||
-                        loading === "pending"
-                      } // Disable in edit mode
+                      disabled={!selectedPricingMethod || loading === "pending"}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -154,7 +228,7 @@ const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {subActivities?.map((subActivity: any) => (
+                        {subActivities?.map((subActivity) => (
                           <SelectItem
                             key={subActivity._id}
                             value={subActivity._id}
@@ -171,7 +245,7 @@ const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
               {selectedPricingMethod === "perItem" ? (
                 <FormField
                   control={form.control}
-                  name={userType === "vendor" ? "cost" : ("basePrice" as any)}
+                  name={`basePrice` as FieldPath<FormSchema>}
                   render={({ field }) => (
                     <FormItem className="flex flex-col h-full">
                       <FormLabel>Base Price</FormLabel>
@@ -179,13 +253,10 @@ const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
                         <Input
                           type="number"
                           placeholder="0.00"
-                          value={field.value || 0}
+                          {...field}
                           onChange={(e) =>
                             field.onChange(parseFloat(e.target.value) || 0)
                           }
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
                           disabled={!selectedSubActivity}
                         />
                       </FormControl>
@@ -204,7 +275,7 @@ const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
                       </h3>
                       <Button
                         onClick={addLocationPriceHandler}
-                        disabled={loading === "pending"}
+                        disabled={loading === "pending" || !isFormValid}
                       >
                         <PlusIcon />
                         Add{" "}
@@ -222,33 +293,12 @@ const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
                               form={form}
                               name={`locationPrices.${idx}.location`}
                               label={"Location"}
-                              defaultValues={
-                                // First try to use the original location object with label
-                                (locationPrice as any)._originalLocation &&
-                                typeof (locationPrice as any)
-                                  ._originalLocation === "object"
-                                  ? {
-                                      ...(locationPrice as any)
-                                        ._originalLocation,
-                                      label: getStructuredAddress(
-                                        (locationPrice as any)._originalLocation
-                                      ).en,
-                                    }
-                                  : // Then try to find the location by ID from store
-                                  typeof (locationPrice as any).location ===
-                                    "string"
-                                  ? findLocationById(
-                                      (locationPrice as any).location
-                                    )
-                                  : // Finally, fallback to treating it as a location object
-                                    ((locationPrice as any)
-                                      .location as LocationObject)
-                              }
+                              defaultValues={locationPrice}
                             />
                             <div className="flex flex-1 items-end gap-2">
                               <FormField
                                 control={form.control}
-                                name={`locationPrices.${idx}.price`}
+                                name={`locationPrices.${idx}.cost`}
                                 render={({ field }) => (
                                   <FormItem className="flex flex-col h-full">
                                     <FormLabel>Price</FormLabel>
@@ -291,52 +341,14 @@ const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
                               form={form}
                               name={`locationPrices.${idx}.fromLocation`}
                               label={"From Location"}
-                              defaultValues={
-                                (locationPrice as any)._originalFromLocation &&
-                                typeof (locationPrice as any)
-                                  ._originalFromLocation === "object"
-                                  ? {
-                                      ...(locationPrice as any)
-                                        ._originalFromLocation,
-                                      label: getStructuredAddress(
-                                        (locationPrice as any)
-                                          ._originalFromLocation
-                                      ).en,
-                                    }
-                                  : typeof (locationPrice as any)
-                                      .fromLocation === "string"
-                                  ? findLocationById(
-                                      (locationPrice as any).fromLocation
-                                    )
-                                  : ((locationPrice as any)
-                                      .fromLocation as LocationObject)
-                              }
+                              defaultValues={locationPrice}
                             />
                             <LocationSelect
                               key={idx}
                               form={form}
                               name={`locationPrices.${idx}.toLocation`}
                               label={"To Location"}
-                              defaultValues={
-                                (locationPrice as any)._originalToLocation &&
-                                typeof (locationPrice as any)
-                                  ._originalToLocation === "object"
-                                  ? {
-                                      ...(locationPrice as any)
-                                        ._originalToLocation,
-                                      label: getStructuredAddress(
-                                        (locationPrice as any)
-                                          ._originalToLocation
-                                      ).en,
-                                    }
-                                  : typeof (locationPrice as any).toLocation ===
-                                    "string"
-                                  ? findLocationById(
-                                      (locationPrice as any).toLocation
-                                    )
-                                  : ((locationPrice as any)
-                                      .toLocation as LocationObject)
-                              }
+                              defaultValues={locationPrice}
                             />
                             <div className="flex flex-1 items-end gap-2">
                               <FormField
@@ -361,7 +373,6 @@ const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
                                         }
                                       />
                                     </FormControl>
-                                    <FormMessage />
                                   </FormItem>
                                 )}
                               />
@@ -380,21 +391,21 @@ const SubActivityPriceDialog = <T extends "customer" | "vendor" | "priceList">({
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => handleOpenChange(false)}>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={loading === "pending"}
-                onClick={handleSubmit}
+                disabled={loading === "pending" || !isFormValid}
+                onClick={() => form.handleSubmit(onSubmit)}
               >
                 {loading === "pending" ? "Saving..." : "Save"}
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </form>
-      </Form>
-    </Dialog>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
