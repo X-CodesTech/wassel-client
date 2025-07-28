@@ -19,9 +19,6 @@ import {
   ChevronUpIcon,
   Plus,
 } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import {
   actGetPriceListById,
@@ -32,22 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SubActivityPrice } from "@/services/priceListServices";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import React from "react";
-import DeletePriceListSubActivityDialog from "@/components/DeletePriceListSubActivityDialog";
-import DeleteSubActivityConfirmationDialog from "@/components/PriceList/PriceListSubActivity/DeleteSubActivityConfirmationDialog";
 import SubActivityPriceManager from "@/components/SubActivityPriceManager";
-
-// Form schema for editing price list
-const editPriceListFormSchema = z.object({
-  name: z.string().min(1, "Price list name (English) is required"),
-  nameAr: z.string().min(1, "Price list name (Arabic) is required"),
-  description: z.string().optional(),
-  descriptionAr: z.string().optional(),
-  effectiveFrom: z.string().min(1, "Effective from date is required"),
-  effectiveTo: z.string().min(1, "Effective to date is required"),
-  isActive: z.boolean(),
-});
-
-type EditPriceListFormValues = z.infer<typeof editPriceListFormSchema>;
 
 export default function PriceListDetails() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -56,34 +38,17 @@ export default function PriceListDetails() {
   const [, setLocation] = useLocation();
   const dispatch = useAppDispatch();
   const { toast } = useToast();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [deleteSubActivityDialogOpen, setDeleteSubActivityDialogOpen] =
     useState(false);
   const [selectedSubActivityPrice, setSelectedSubActivityPrice] =
     useState<SubActivityPrice | null>(null);
-  const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
 
   const {
     selectedPriceList: priceList,
     loading,
     error,
   } = useAppSelector((state) => state.priceLists);
-
-  // Initialize edit form
-  const editForm = useForm<EditPriceListFormValues>({
-    resolver: zodResolver(editPriceListFormSchema),
-    defaultValues: {
-      name: "",
-      nameAr: "",
-      description: "",
-      descriptionAr: "",
-      effectiveFrom: "",
-      effectiveTo: "",
-      isActive: true,
-    },
-  });
 
   // Fetch price list data when component mounts
   useEffect(() => {
@@ -111,27 +76,6 @@ export default function PriceListDetails() {
       dispatch(clearError());
     }
   }, [error, toast, dispatch]);
-
-  // Populate edit form when price list data is available
-  useEffect(() => {
-    if (priceList && editDialogOpen) {
-      // Format dates for datetime-local input (YYYY-MM-DDTHH:mm)
-      const formatDateForInput = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toISOString().slice(0, 16);
-      };
-
-      editForm.reset({
-        name: priceList.name,
-        nameAr: priceList.nameAr,
-        description: priceList.description || "",
-        descriptionAr: priceList.descriptionAr || "",
-        effectiveFrom: formatDateForInput(priceList.effectiveFrom),
-        effectiveTo: formatDateForInput(priceList.effectiveTo),
-        isActive: priceList.isActive,
-      });
-    }
-  }, [priceList, editDialogOpen, editForm]);
 
   const handleEditSubActivity = (subActivityPrice: SubActivityPrice) => {
     setSelectedSubActivityPrice(subActivityPrice);
@@ -574,32 +518,14 @@ export default function PriceListDetails() {
         dialogTitle="Add Sub-Activity"
         dialogDescription="Add a new sub-activity to the price list"
         isDialogOpen={isDialogOpen}
-        setIsDialogOpen={(isOpen) => {
-          if (!isOpen) {
-            setIsDialogOpen(false);
-          }
-        }}
+        setIsDialogOpen={setIsDialogOpen}
         editData={selectedSubActivityPrice || undefined}
         setEditData={setSelectedSubActivityPrice}
         subActivityPriceId={selectedSubActivityPrice?._id || ""}
         priceListId={priceList._id || ""}
+        isDelete={deleteSubActivityDialogOpen}
+        setIsDelete={setDeleteSubActivityDialogOpen}
       />
-
-      {/* Delete Confirmation Dialog */}
-      <DeleteSubActivityConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-      />
-
-      {/* Delete Sub-Activity Dialog */}
-      {selectedSubActivityPrice && (
-        <DeletePriceListSubActivityDialog
-          open={deleteSubActivityDialogOpen}
-          onOpenChange={setDeleteSubActivityDialogOpen}
-          selectedSubActivityPrice={selectedSubActivityPrice}
-          priceListId={priceList._id || ""}
-        />
-      )}
     </div>
   );
 }

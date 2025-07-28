@@ -15,6 +15,7 @@ import {
   actGetVendorPriceLists,
 } from "@/store/vendors";
 import { actEditVendorSubActivityPrice } from "@/store/vendors/vendorsSlice";
+import DeletePriceListSubActivityDialog from "./DeletePriceListSubActivityDialog";
 
 const updateBodyPasrer = (
   data: any,
@@ -94,6 +95,8 @@ interface SubActivityPriceManagerProps {
   vendorId?: string;
   priceListId?: string;
   subActivityPriceId?: string;
+  isDelete?: boolean;
+  setIsDelete?: (isDelete: boolean) => void;
 }
 
 const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
@@ -108,6 +111,8 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
   vendorId,
   priceListId,
   subActivityPriceId,
+  isDelete,
+  setIsDelete,
 }) => {
   const defaultValues = useMemo(() => {
     if (!editData) return undefined;
@@ -350,6 +355,24 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
     }),
     [dialogProps, dialogTitle, dialogDescription]
   );
+
+  if (isDelete && editData && priceListId && setIsDelete) {
+    return (
+      <DeletePriceListSubActivityDialog
+        contextType={contextType}
+        open={isDelete}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setIsDelete?.(false);
+            setEditData(null);
+          }
+        }}
+        selectedSubActivityPrice={editData}
+        priceListId={priceListId || ""}
+        vendorId={vendorId || ""}
+      />
+    );
+  }
 
   return (
     <>{isDialogOpen && <SubActivityPriceDialog {...finalDialogProps} />}</>

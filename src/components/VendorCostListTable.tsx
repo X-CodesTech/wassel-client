@@ -383,14 +383,14 @@ export default function VendorCostListTable({
           </div>
         </CardContent>
       </Card>
-      {selectedSubActivityPrice && dialog === "delete" && (
+      {/* {selectedSubActivityPrice && dialog === "delete" && (
         <DeletePriceCostListDialog
           open={open}
           onOpenChange={handleDialog}
           selectedSubActivityPrice={selectedSubActivityPrice}
           priceListId={priceList._id}
         />
-      )}
+      )} */}
 
       <SubActivityPriceManager
         contextType="vendor"
@@ -409,6 +409,8 @@ export default function VendorCostListTable({
         setEditData={setSelectedSubActivityPrice}
         subActivityPriceId={selectedSubActivityPrice?.subActivity?._id || ""}
         priceListId={priceList._id}
+        isDelete={dialog === "delete"}
+        setIsDelete={handleDialog}
       />
 
       {/* {selectedSubActivityPrice && dialog === "edit" && (

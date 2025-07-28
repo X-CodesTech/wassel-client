@@ -14,12 +14,19 @@ import {
   actGetPriceListById,
 } from "@/store/priceLists";
 import { useToast } from "@/hooks/use-toast";
+import {
+  actDeleteVendorSubActivityPrice,
+  actGetVendorPriceLists,
+} from "@/store/vendors";
+import { removePriceListSubActivity } from "@/store/customers";
 
 type TDeletePriceListSubActivityDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedSubActivityPrice: SubActivityPrice;
   priceListId: string;
+  contextType: "customer" | "vendor" | "priceList";
+  vendorId?: string;
 };
 
 const DeletePriceListSubActivityDialog = ({
@@ -27,6 +34,8 @@ const DeletePriceListSubActivityDialog = ({
   onOpenChange,
   selectedSubActivityPrice,
   priceListId,
+  vendorId = "",
+  contextType,
 }: TDeletePriceListSubActivityDialogProps) => {
   const dispatch = useAppDispatch();
   const { deleteSubActivityLoading } = useAppSelector(
@@ -57,7 +66,16 @@ const DeletePriceListSubActivityDialog = ({
           description: "Sub-activity deleted successfully from price list",
         });
         // Refresh the price list data
-        dispatch(actGetPriceListById(priceListId));
+        if (contextType === "priceList") {
+          dispatch(actGetPriceListById(priceListId));
+        } else if (contextType === "customer") {
+          dispatch(
+            removePriceListSubActivity({
+              priceListId: priceListId,
+              subActivityId: subActivityId,
+            })
+          );
+        }
         onOpenChange(false);
       })
       .catch((error) => {
@@ -75,6 +93,38 @@ const DeletePriceListSubActivityDialog = ({
           });
         }
       });
+  };
+
+  const handleDeleteSubActivityFromVendor = async () => {
+    try {
+      await dispatch(
+        actDeleteVendorSubActivityPrice({
+          vendorPriceListId: priceListId,
+          subActivityPriceId: subActivityId,
+        })
+      )
+        .unwrap()
+        .then(() => {
+          toast({
+            title: "Success",
+            description: "Price list deleted successfully",
+          });
+          dispatch(actGetVendorPriceLists(vendorId));
+          onOpenChange(false);
+        });
+    } catch (error) {
+      if (error.message) {
+        toast({
+          title: "Error",
+          description: error.message,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "There is an error while deleting the price list",
+        });
+      }
+    }
   };
 
   return (
@@ -98,7 +148,11 @@ const DeletePriceListSubActivityDialog = ({
           </Button>
           <Button
             variant="destructive"
-            onClick={handleDeleteSubActivity}
+            onClick={
+              contextType === "vendor"
+                ? handleDeleteSubActivityFromVendor
+                : handleDeleteSubActivity
+            }
             disabled={deleteSubActivityLoading}
           >
             Delete

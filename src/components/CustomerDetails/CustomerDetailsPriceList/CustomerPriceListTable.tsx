@@ -1,22 +1,19 @@
+import SubActivityPriceManager from "@/components/SubActivityPriceManager";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
-  TableHead,
   TableCell,
+  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { CustomerPriceListResponse } from "@/services/customerServices";
-import { Badge } from "@/components/ui/badge";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
-import React, { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import DeleteCustomerDetailsSubActivityDialog from "./CustomerDetailsDialogs/DeleteCustomerDetailsSubActivityDialog";
-import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
-import SubActivityPriceManager from "@/components/SubActivityPriceManager";
-import { useAppSelector } from "@/hooks/useAppSelector";
+import React, { useState } from "react";
 
 type TPriceList = CustomerPriceListResponse["priceList"];
 type TSubActivityPrice = TPriceList["subActivityPrices"][number];
@@ -378,13 +375,6 @@ const CustomerPriceListTable = ({
         </CardContent>
       </Card>
 
-      <DeleteCustomerDetailsSubActivityDialog
-        open={dialog === "deleteSubActivity"}
-        onOpenChange={handleDialog}
-        priceList={priceList}
-        subActivityId={selectedSubActivityPrice?._id!}
-      />
-
       <SubActivityPriceManager
         contextType="customer"
         dialogTitle="Edit Sub-Activity"
@@ -401,15 +391,13 @@ const CustomerPriceListTable = ({
         setEditData={setSelectedSubActivityPrice}
         subActivityPriceId={selectedSubActivityPrice?._id || ""}
         priceListId={priceList._id!}
+        isDelete={dialog === "deleteSubActivity"}
+        setIsDelete={(isDelete) => {
+          if (!isDelete) {
+            handleDialog(false, "deleteSubActivity");
+          }
+        }}
       />
-
-      {/* <EditPriceListSubActivityDialog
-        open={dialog === "editSubActivity"}
-        onOpenChange={handleDialog}
-        selectedSubActivityPrice={selectedSubActivityPrice!}
-        priceListId={priceList._id!}
-        isCustomerPriceList={true}
-      /> */}
     </>
   );
 };
