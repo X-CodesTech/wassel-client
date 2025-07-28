@@ -2,7 +2,7 @@ import { TableSkeleton } from "@/components/LoadingComponents";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import React, { useState } from "react";
 import CustomerPriceListTable from "./CustomerPriceListTable";
 import CustomerDetailsPriceListActions from "./CustomerDetailsPriceListActions";
@@ -10,6 +10,7 @@ import { CustomerPriceListResponse } from "@/services/customerServices";
 import { AddPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/AddPriceListSubActivityDialog";
 import DeleteCustomerDetailsSubActivityDialog from "./CustomerDetailsDialogs/DeleteCustomerDetailsSubActivityDialog";
 import { setSelectedPriceList } from "@/store/priceLists";
+import SubActivityPriceManager from "@/components/SubActivityPriceManager";
 
 const CustomerDetailsPriceList = () => {
   const dispatch = useAppDispatch();
@@ -72,9 +73,6 @@ const CustomerDetailsPriceList = () => {
                   <Plus className="h-4 w-4 mr-2" />
                   Add
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => {}}>
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -100,11 +98,27 @@ const CustomerDetailsPriceList = () => {
         subActivityId={selectedPriceList?._id!}
       />
 
-      <AddPriceListSubActivityDialog
+      <SubActivityPriceManager
+        contextType="customer"
+        dialogTitle="Add Sub-Activity"
+        dialogDescription="Add a new sub-activity to the price list"
+        isDialogOpen={dialog === "add" || !!selectedSubActivity}
+        setIsDialogOpen={(isOpen) => {
+          if (!isOpen) {
+            handleDialog({ open: false });
+          }
+        }}
+        editData={selectedSubActivity || undefined}
+        setEditData={setSelectedSubActivity}
+        subActivityPriceId={selectedSubActivity?._id || ""}
+        priceListId={selectedPriceList?._id || ""}
+      />
+
+      {/* <AddPriceListSubActivityDialog
         open={dialog === "add" && !!selectedPriceList}
         onOpenChange={(open) => handleDialog({ open })}
         isCustomerPriceList={true}
-      />
+      /> */}
     </>
   );
 };

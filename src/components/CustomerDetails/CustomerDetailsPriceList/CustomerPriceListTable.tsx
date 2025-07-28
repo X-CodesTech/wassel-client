@@ -15,6 +15,8 @@ import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DeleteCustomerDetailsSubActivityDialog from "./CustomerDetailsDialogs/DeleteCustomerDetailsSubActivityDialog";
 import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
+import SubActivityPriceManager from "@/components/SubActivityPriceManager";
+import { useAppSelector } from "@/hooks/useAppSelector";
 
 type TPriceList = CustomerPriceListResponse["priceList"];
 type TSubActivityPrice = TPriceList["subActivityPrices"][number];
@@ -383,13 +385,31 @@ const CustomerPriceListTable = ({
         subActivityId={selectedSubActivityPrice?._id!}
       />
 
-      <EditPriceListSubActivityDialog
+      <SubActivityPriceManager
+        contextType="customer"
+        dialogTitle="Edit Sub-Activity"
+        dialogDescription="Edit the sub-activity"
+        isDialogOpen={
+          dialog === "editSubActivity" && !!selectedSubActivityPrice
+        }
+        setIsDialogOpen={(isOpen) => {
+          if (!isOpen) {
+            handleDialog(false, "editSubActivity");
+          }
+        }}
+        editData={selectedSubActivityPrice || undefined}
+        setEditData={setSelectedSubActivityPrice}
+        subActivityPriceId={selectedSubActivityPrice?._id || ""}
+        priceListId={priceList._id!}
+      />
+
+      {/* <EditPriceListSubActivityDialog
         open={dialog === "editSubActivity"}
         onOpenChange={handleDialog}
         selectedSubActivityPrice={selectedSubActivityPrice!}
         priceListId={priceList._id!}
         isCustomerPriceList={true}
-      />
+      /> */}
     </>
   );
 };

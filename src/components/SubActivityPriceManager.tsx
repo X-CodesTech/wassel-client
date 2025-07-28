@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from "react";
 import SubActivityPriceDialog from "@/modules/SubActivityPrice/SubActivityPriceDialog";
 import { useSubActivityPriceDialog } from "@/hooks/useSubActivityPriceDialog";
-import { useAppDispatch } from "@/hooks/useAppSelector";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
 import { actGetLocations } from "@/store/locations";
 import {
   actAddPriceListSubActivity,
   actUpdateSubActivityPrice,
 } from "@/store/priceLists";
-import { addPriceListSubActivity } from "@/store/customers";
+import { actGetCustomer, addPriceListSubActivity } from "@/store/customers";
 import { toast } from "@/hooks/use-toast";
 import { TLoading } from "@/types";
 
@@ -61,6 +61,8 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
   subActivityPriceId,
 }) => {
   const dispatch = useAppDispatch();
+  const { selectedCustomer } = useAppSelector((state) => state.customers);
+  customerId = selectedCustomer?._id || customerId || "";
   const [loading, setLoading] = useState<TLoading>("idle");
 
   React.useEffect(() => {
@@ -95,13 +97,11 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
     }
   };
 
-  console.log({ editData });
-
   const handleAddPriceListSubActivity = async (
     data: any,
     callback?: () => void
   ) => {
-    dispatch(
+    await dispatch(
       actAddPriceListSubActivity({
         priceListId: priceListId!,
         pricingMethod: data.pricingMethod,
@@ -135,7 +135,7 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
     data: any,
     callback?: () => void
   ) => {
-    dispatch(
+    await dispatch(
       actUpdateSubActivityPrice({
         priceListId: priceListId!,
         subActivityId: editData.subActivity._id,
@@ -175,6 +175,9 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
     } else {
       handleEditPriceListSubActivity(data, () => {
         setLoading("fulfilled");
+        if (contextType === "customer") {
+          dispatch(actGetCustomer(customerId!));
+        }
       });
     }
   };
