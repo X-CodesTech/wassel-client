@@ -9,3 +9,21 @@ export const PRICING_METHOD_OPTIONS = {
   perItem: "Per Item",
   perTrip: "Per Trip",
 };
+
+export const PRICING_METHODS = [
+  {
+    _id: "0",
+    value: "perItem",
+    label: "Per Item",
+  },
+  {
+    _id: "1",
+    value: "perLocation",
+    label: "Per Location",
+  },
+  {
+    _id: "2",
+    value: "perTrip",
+    label: "Per Trip",
+  },
+];
