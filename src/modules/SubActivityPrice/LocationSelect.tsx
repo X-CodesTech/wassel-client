@@ -102,7 +102,7 @@ const SearchInput = React.memo(
     };
 
     return (
-      <div className="p-2 border-b">
+      <div className="sticky top-0 z-10 bg-background border-b p-2">
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
@@ -113,12 +113,10 @@ const SearchInput = React.memo(
             onChange={handleInputChange}
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-8 pr-8"
             onFocus={(e) => {
-              console.log("🎯 Search input focused - UNCONTROLLED");
               onFocus();
               e.stopPropagation();
             }}
             onBlur={(e) => {
-              console.log("😴 Search input blurred - UNCONTROLLED");
               onBlur();
             }}
             onKeyDown={(e) => {
@@ -164,22 +162,12 @@ const LocationOptions = React.memo(
     isInitialized: boolean;
     userHasInteracted: boolean;
   }) => {
-    console.log("📋 LocationOptions render:", {
-      recordsCount: records.length,
-      loading,
-      hasMore,
-      isInitialized,
-      userHasInteracted,
-    });
-
     // Memoize the load more handler to prevent unnecessary re-renders
     const handleLoadMore = useCallback(() => {
-      console.log("⬇️ Load more clicked");
       loadMore();
     }, [loadMore]);
 
     const handleManualLoad = useCallback(() => {
-      console.log("🎬 Manual load clicked");
       loadMore();
     }, [loadMore]);
 
@@ -189,11 +177,6 @@ const LocationOptions = React.memo(
         <div className="max-h-48 overflow-y-auto">
           {records.length > 0
             ? records.map((location) => {
-                console.log(
-                  "🏷️ Rendering location:",
-                  location._id,
-                  getStructuredAddress(location).en
-                );
                 return (
                   <SelectItem key={location._id} value={location._id}>
                     {getStructuredAddress(location).en}
@@ -285,27 +268,9 @@ const LocationSelect = React.memo<TLocationSelect>(
     const [isOpen, setIsOpen] = useState(false);
     const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Debug logging
-    useEffect(() => {
-      console.log("🔄 LocationSelect state:", {
-        records: records.length,
-        loading,
-        isInitialized,
-        isEmpty,
-        hasMore,
-        isOpen,
-      });
-    }, [records.length, loading, isInitialized, isEmpty, hasMore, isOpen]);
-
     // Initialize data when dropdown opens for the first time
     useEffect(() => {
-      console.log("👀 Dropdown open effect:", {
-        isOpen,
-        isInitialized,
-        loading,
-      });
       if (isOpen && !isInitialized && !loading) {
-        console.log("🎯 Calling initializeData");
         initializeData();
       }
     }, [isOpen, isInitialized, loading, initializeData]);
@@ -325,7 +290,6 @@ const LocationSelect = React.memo<TLocationSelect>(
           const value = input.value;
           const cursorPos = input.selectionStart || 0;
 
-          console.log("🔄 Preserving focus and cursor position");
           input.focus();
           input.setSelectionRange(cursorPos, cursorPos);
         }
@@ -344,10 +308,6 @@ const LocationSelect = React.memo<TLocationSelect>(
     // Stable handlers to prevent unnecessary re-renders
     const stableHandleSearchChange = useCallback(
       (value: string) => {
-        console.log("🔍 Search input changed:", {
-          from: searchQuery,
-          to: value,
-        });
         handleSearchChange(value);
         preserveFocus();
       },
@@ -355,105 +315,97 @@ const LocationSelect = React.memo<TLocationSelect>(
     );
 
     const stableHandleClearSearch = useCallback(() => {
-      console.log("🧹 Search cleared via button");
       clearSearch();
     }, [clearSearch]);
 
     const stableHandleFocus = useCallback(() => {
-      console.log("🎯 Search input focused");
+      // Focus handler
     }, []);
 
     const stableHandleBlur = useCallback(() => {
-      console.log("😴 Search input blurred");
+      // Blur handler
     }, []);
-
-    // Memoized display values to prevent unnecessary recalculations
-    const displayValues = useMemo(() => {
-      const currentValue = form.watch(name) || defaultValues?._id || "";
-      const selectedLocation = records.find(
-        (location) => location._id === currentValue
-      );
-      const displayText = selectedLocation
-        ? getStructuredAddress(selectedLocation).en
-        : defaultValues?.label || "";
-
-      return { currentValue, displayText };
-    }, [form, name, defaultValues?._id, defaultValues?.label, records]);
 
     return (
       <FormField
         control={form.control}
         name={name}
-        render={({ field }) => (
-          <FormItem className="flex flex-col h-full">
-            <FormLabel>{label}</FormLabel>
-            <Select
-              onValueChange={field.onChange}
-              value={displayValues.currentValue}
-              disabled={disabled}
-              onOpenChange={(open) => {
-                console.log("🎪 Dropdown onOpenChange:", open);
-                setIsOpen(open);
-              }}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select location">
-                    {displayValues.displayText || "Select location"}
-                  </SelectValue>
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent className="p-0">
-                {/* Search Input */}
-                <SearchInput
-                  searchQuery={searchQuery}
-                  handleSearchChange={stableHandleSearchChange}
-                  clearSearch={stableHandleClearSearch}
-                  searchInputRef={searchInputRef}
-                  onFocus={stableHandleFocus}
-                  onBlur={stableHandleBlur}
-                />
+        render={({ field }) => {
+          // Memoize display values inside render where field.value is available
+          const displayValues = useMemo(() => {
+            const currentValue = field.value || defaultValues?._id || "";
+            const selectedLocation = records.find(
+              (location) => location._id === currentValue
+            );
+            const displayText = selectedLocation
+              ? getStructuredAddress(selectedLocation).en
+              : defaultValues?.label || "";
 
-                {/* Debug Info */}
-                {process.env.NODE_ENV === "development" && (
-                  <div className="p-2 text-xs text-gray-500 border-b">
-                    Debug: {records.length} records, loading:{" "}
-                    {loading.toString()}, init: {isInitialized.toString()}
-                  </div>
-                )}
+            return { currentValue, displayText };
+          }, [field.value, defaultValues?._id, defaultValues?.label, records]);
 
-                {/* Loading State */}
-                {loading && (
-                  <div className="flex items-center justify-center p-4">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    <span className="text-sm text-muted-foreground">
-                      Loading...
-                    </span>
-                  </div>
-                )}
+          return (
+            <FormItem className="flex flex-col h-full">
+              <FormLabel>{label}</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                value={displayValues.currentValue}
+                disabled={disabled}
+                onOpenChange={(open) => {
+                  setIsOpen(open);
+                }}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location">
+                      {displayValues.displayText || "Select location"}
+                    </SelectValue>
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="p-0">
+                  {/* Search Input - Sticky to top */}
+                  <SearchInput
+                    searchQuery={searchQuery}
+                    handleSearchChange={stableHandleSearchChange}
+                    clearSearch={stableHandleClearSearch}
+                    searchInputRef={searchInputRef}
+                    onFocus={stableHandleFocus}
+                    onBlur={stableHandleBlur}
+                  />
 
-                {/* Empty State - Show when initialized but no records */}
-                {isInitialized && !loading && records.length === 0 && (
-                  <div className="flex items-center justify-center p-4">
-                    <span className="text-sm text-muted-foreground">
-                      No options
-                    </span>
-                  </div>
-                )}
+                  {/* Loading State */}
+                  {loading && (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-sm text-muted-foreground">
+                        Loading...
+                      </span>
+                    </div>
+                  )}
 
-                {/* Location Options - Always show the component */}
-                <LocationOptions
-                  records={records}
-                  loading={loading}
-                  hasMore={hasMore}
-                  loadMore={loadMore}
-                  isInitialized={isInitialized}
-                  userHasInteracted={userHasInteracted}
-                />
-              </SelectContent>
-            </Select>
-          </FormItem>
-        )}
+                  {/* Empty State - Show when initialized but no records */}
+                  {isInitialized && !loading && records.length === 0 && (
+                    <div className="flex items-center justify-center p-4">
+                      <span className="text-sm text-muted-foreground">
+                        No options
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Location Options - Always show the component */}
+                  <LocationOptions
+                    records={records}
+                    loading={loading}
+                    hasMore={hasMore}
+                    loadMore={loadMore}
+                    isInitialized={isInitialized}
+                    userHasInteracted={userHasInteracted}
+                  />
+                </SelectContent>
+              </Select>
+            </FormItem>
+          );
+        }}
       />
     );
   }
