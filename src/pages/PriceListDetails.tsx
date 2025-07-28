@@ -36,6 +36,8 @@ import DeletePriceListSubActivityDialog from "@/components/DeletePriceListSubAct
 import DeleteSubActivityConfirmationDialog from "@/components/PriceList/PriceListSubActivity/DeleteSubActivityConfirmationDialog";
 import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
 import { AddPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/AddPriceListSubActivityDialog";
+import SubActivityPriceDialog from "@/modules/SubActivityPrice/SubActivityPriceDialog";
+import { actGetLocations } from "@/store/locations";
 
 // Form schema for editing price list
 const editPriceListFormSchema = z.object({
@@ -51,6 +53,11 @@ const editPriceListFormSchema = z.object({
 type EditPriceListFormValues = z.infer<typeof editPriceListFormSchema>;
 
 export default function PriceListDetails() {
+  const [testDialogOpen, setTestDialogOpen] = useState<"add" | "edit" | null>(
+    null
+  );
+  const [selectedPriceListTest, setSelectedPriceListTest] =
+    useState<SubActivityPrice | null>(null);
   const [match, params] = useRoute<{ id: string }>("/price-lists/:id");
   const [, setLocation] = useLocation();
   const dispatch = useAppDispatch();
@@ -70,6 +77,56 @@ export default function PriceListDetails() {
     error,
   } = useAppSelector((state) => state.priceLists);
 
+  const transformSelectedPriceListTest = () => {
+    if (!selectedPriceListTest) return undefined;
+
+    if (selectedPriceListTest?.pricingMethod === "perTrip") {
+      return {
+        pricingMethod: selectedPriceListTest?.pricingMethod,
+        subActivity:
+          typeof selectedPriceListTest?.subActivity === "string"
+            ? selectedPriceListTest?.subActivity
+            : selectedPriceListTest?.subActivity?._id,
+        locationPrices:
+          selectedPriceListTest?.locationPrices?.map((lp) => ({
+            fromLocation: lp.fromLocation?._id || lp.fromLocation,
+            toLocation: lp.toLocation?._id || lp.toLocation,
+            pricingMethod: "perTrip" as const,
+            cost: lp.price || lp.cost || 0, // Use 'cost' for perTrip
+            // Store original objects for LocationSelect display
+            _originalFromLocation: lp.fromLocation,
+            _originalToLocation: lp.toLocation,
+          })) || [],
+      };
+    }
+    if (selectedPriceListTest?.pricingMethod === "perLocation") {
+      return {
+        pricingMethod: selectedPriceListTest?.pricingMethod,
+        subActivity:
+          typeof selectedPriceListTest?.subActivity === "string"
+            ? selectedPriceListTest?.subActivity
+            : selectedPriceListTest?.subActivity?._id,
+        locationPrices:
+          selectedPriceListTest?.locationPrices?.map((lp) => ({
+            location: lp.location?._id || lp.location,
+            pricingMethod: "perLocation" as const,
+            price: lp.price || 0,
+            // Store original object for LocationSelect display
+            _originalLocation: lp.location,
+          })) || [],
+      };
+    }
+
+    return {
+      pricingMethod: selectedPriceListTest?.pricingMethod,
+      subActivity:
+        typeof selectedPriceListTest?.subActivity === "string"
+          ? selectedPriceListTest?.subActivity
+          : selectedPriceListTest?.subActivity?._id,
+      basePrice: selectedPriceListTest?.basePrice || 0,
+    };
+  };
+
   // Initialize edit form
   const editForm = useForm<EditPriceListFormValues>({
     resolver: zodResolver(editPriceListFormSchema),
@@ -88,6 +145,7 @@ export default function PriceListDetails() {
   useEffect(() => {
     if (match && params?.id) {
       dispatch(actGetPriceListById(params.id));
+      dispatch(actGetLocations({ page: 1, limit: 999999, filters: {} }));
     }
   }, [match, params?.id, dispatch]);
 
@@ -371,7 +429,7 @@ export default function PriceListDetails() {
     );
   };
 
-  const renderTableRow = (item: any, index: number) => {
+  const renderTableRow = (item: SubActivityPrice, index: number) => {
     const isExpandable = ["perLocation", "perTrip"].includes(
       item.pricingMethod
     );
@@ -431,7 +489,10 @@ export default function PriceListDetails() {
                 variant="outline"
                 size="icon"
                 className="text-blue-500"
-                onClick={() => handleEditSubActivity(item)}
+                onClick={() => {
+                  setSelectedPriceListTest(item);
+                  setTestDialogOpen("edit");
+                }}
               >
                 <Edit className="w-3 h-3" />
               </Button>
@@ -521,7 +582,11 @@ export default function PriceListDetails() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => setAddItemDialogOpen(true)}
+              onClick={() => {
+                setSelectedPriceListTest(null);
+                setTestDialogOpen("add");
+                // setAddItemDialogOpen(true);
+              }}
             >
               <Plus className="h-4 w-4" />
               Add Item
@@ -593,6 +658,37 @@ export default function PriceListDetails() {
         open={addItemDialogOpen}
         onOpenChange={setAddItemDialogOpen}
       />
+
+      {(testDialogOpen === "add" || testDialogOpen === "edit") && (
+        <SubActivityPriceDialog<"priceList">
+          dialogOpen={testDialogOpen === "add" || testDialogOpen === "edit"}
+          defaultValues={
+            testDialogOpen === "edit" && selectedPriceListTest
+              ? transformSelectedPriceListTest()
+              : undefined
+          }
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedPriceListTest(null);
+              setTestDialogOpen(null);
+            }
+          }}
+          onSubmit={(data) => {
+            console.log(data);
+          }}
+          onError={(error) => {
+            console.log(error);
+          }}
+          dialogTitle={testDialogOpen === "add" ? "Add Item" : "Edit Item"}
+          dialogDescription={
+            testDialogOpen === "add"
+              ? "Add an item to the price list"
+              : "Edit the selected item"
+          }
+          userType="priceList"
+          subActivityId={""}
+        />
+      )}
     </div>
   );
 }
