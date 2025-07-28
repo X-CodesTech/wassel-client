@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import SubActivityPriceDialog from "@/modules/SubActivityPrice/SubActivityPriceDialog";
 import { useSubActivityPriceDialog } from "@/hooks/useSubActivityPriceDialog";
 import { useAppDispatch } from "@/hooks/useAppSelector";
 import { actGetLocations } from "@/store/locations";
+import { TFormSchema } from "@/modules/SubActivityPrice/validation";
 
 type ContextType = "customer" | "vendor" | "priceList";
 
@@ -34,13 +35,15 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
 }) => {
   const dispatch = useAppDispatch();
 
-  // Initialize locations when component mounts
+  const [defaultValues, setDefaultValues] = useState<TFormSchema | null>(
+    editData || null
+  );
   React.useEffect(() => {
-    dispatch(actGetLocations({ page: 1, limit: 10, filters: {} }));
+    dispatch(actGetLocations({ page: 1, limit: 100, filters: {} }));
   }, [dispatch]);
 
   const handleSubmit = async (data: any) => {
-    console.log({
+    console.log("🎯 SubActivityPriceManager - Form submitted:", {
       contextType,
       customerId,
       vendorId,
@@ -48,12 +51,14 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
       subActivityPriceId,
       data,
     });
+
+    // Here you would dispatch the appropriate action based on contextType
+    // For now, just log the data
   };
 
   // Use the custom hook for dialog management
   const { dialogProps } = useSubActivityPriceDialog({
-    userType: contextType,
-    defaultValues: editData,
+    defaultValues, // Pass editData directly
     dialogOpen: isDialogOpen,
     onOpenChange: setIsDialogOpen,
     onSubmit: handleSubmit,
@@ -68,6 +73,16 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
     }),
     [dialogProps, dialogTitle, dialogDescription]
   );
+
+  useEffect(() => {
+    if (editData) {
+      setDefaultValues(editData);
+    }
+
+    return () => {
+      setDefaultValues(null);
+    };
+  }, [editData]);
 
   return (
     <>{isDialogOpen && <SubActivityPriceDialog {...finalDialogProps} />}</>

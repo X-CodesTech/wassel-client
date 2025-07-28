@@ -34,6 +34,17 @@ import LocationSelect from "./LocationSelect";
 import { TLoading } from "@/types";
 import { TFormSchema, formSchema } from "./validation";
 import { PRICING_METHODS } from "@/utils/constants";
+import { getStructuredAddress } from "@/utils/getStructuredAddress";
+
+// Define the interface for sub-activity response
+interface ISubActivityByPricingMethod {
+  success: boolean;
+  data: Array<{
+    _id: string;
+    portalItemNameEn: string;
+    [key: string]: any;
+  }>;
+}
 
 type TSubActivityPriceDialog = {
   dialogOpen: boolean;
@@ -134,12 +145,44 @@ const SubActivityPriceDialog = ({
   };
 
   const submitFormHandler = form.handleSubmit(onSubmit, (errors) => {
-    console.groupCollapsed("Form Errors");
-    console.log(form.getValues());
-    console.log(form.formState.errors);
     console.log(errors);
-    console.groupEnd();
   });
+
+  // Helper function to get location object for LocationSelect
+  const getLocationObject = useCallback((locationId: string) => {
+    if (!locationId) return undefined;
+
+    // For now, return a basic object - in a real app you'd fetch from store
+    // This should ideally come from a locations store or be passed as part of the editData
+    return {
+      _id: locationId,
+      label: `Location ${locationId}`, // This would be the actual address
+    };
+  }, []);
+
+  // Load locations when dialog opens with defaultValues
+  useEffect(() => {
+    if (dialogOpen && defaultValues) {
+      // Ensure locations are loaded for edit mode
+      // This would typically dispatch to load locations from the store
+      // If we have locationPrices in defaultValues, we should ensure those locations are loaded
+      if (
+        defaultValues.pricingMethod !== "perItem" &&
+        "locationPrices" in defaultValues
+      ) {
+        const locationIds = (defaultValues as any).locationPrices.flatMap(
+          (item: any) => {
+            if (item.location) return [item.location];
+            if (item.fromLocation) return [item.fromLocation];
+            if (item.toLocation) return [item.toLocation];
+            return [];
+          }
+        );
+
+        // Here you would dispatch to load specific locations if needed
+      }
+    }
+  }, [dialogOpen, defaultValues]);
 
   useEffect(() => {
     if (selectedPricingMethod) {
@@ -193,19 +236,22 @@ const SubActivityPriceDialog = ({
 
   useEffect(() => {
     if (defaultValues) {
-      form.reset({
+      // Handle form reset for edit mode with proper type handling
+      const resetData: any = {
         pricingMethod: defaultValues.pricingMethod,
         subActivity: defaultValues.subActivity,
-        ...(defaultValues.pricingMethod === "perItem" && {
-          basePrice: defaultValues.basePrice,
-        }),
-        ...(defaultValues.pricingMethod === "perLocation" && {
-          locationPrices: defaultValues.locationPrices,
-        }),
-        ...(defaultValues.pricingMethod === "perTrip" && {
-          locationPrices: defaultValues.locationPrices,
-        }),
-      });
+      };
+
+      if (defaultValues.pricingMethod === "perItem") {
+        resetData.basePrice = defaultValues.basePrice;
+      } else if (
+        defaultValues.pricingMethod === "perLocation" ||
+        defaultValues.pricingMethod === "perTrip"
+      ) {
+        resetData.locationPrices = defaultValues.locationPrices;
+      }
+
+      form.reset(resetData);
     }
   }, [defaultValues, form]);
 
@@ -340,14 +386,16 @@ const SubActivityPriceDialog = ({
                               form={form}
                               name={`locationPrices.${idx}.location`}
                               label={"Location"}
-                              defaultValues={locationPrice.location as string}
+                              defaultValues={getLocationObject(
+                                (locationPrice as any).location
+                              )}
                             />
                             <div className="flex flex-1 items-end gap-2">
                               <FormField
                                 control={form.control}
                                 name={`locationPrices.${idx}.price`}
                                 render={({ field }) => (
-                                  <FormItem className="flex flex-col h-full">
+                                  <FormItem className="flex flex-col h-full w-full">
                                     <FormLabel>Price</FormLabel>
                                     <FormControl>
                                       <Input
@@ -369,13 +417,17 @@ const SubActivityPriceDialog = ({
                                   </FormItem>
                                 )}
                               />
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => removeLocationPriceHandler(idx)}
-                              >
-                                <TrashIcon className="w-4 h-4 text-red-500" />
-                              </Button>
+                              {locationPriceFields.length > 1 && (
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() =>
+                                    removeLocationPriceHandler(idx)
+                                  }
+                                >
+                                  <TrashIcon className="w-4 h-4 text-red-500" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -388,16 +440,18 @@ const SubActivityPriceDialog = ({
                               form={form}
                               name={`locationPrices.${idx}.fromLocation`}
                               label={"From Location"}
-                              defaultValues={
-                                locationPrice.fromLocation as string
-                              }
+                              defaultValues={getLocationObject(
+                                (locationPrice as any).fromLocation
+                              )}
                             />
                             <LocationSelect
                               key={idx}
                               form={form}
                               name={`locationPrices.${idx}.toLocation`}
                               label={"To Location"}
-                              defaultValues={locationPrice.toLocation as string}
+                              defaultValues={getLocationObject(
+                                (locationPrice as any).toLocation
+                              )}
                             />
                             <div className="flex flex-1 items-end gap-2">
                               <FormField
@@ -425,12 +479,16 @@ const SubActivityPriceDialog = ({
                                   </FormItem>
                                 )}
                               />
-                              <Button
-                                variant="outline"
-                                onClick={() => removeLocationPriceHandler(idx)}
-                              >
-                                <TrashIcon className="w-4 h-4 text-red-500" />
-                              </Button>
+                              {locationPriceFields.length > 1 && (
+                                <Button
+                                  variant="outline"
+                                  onClick={() =>
+                                    removeLocationPriceHandler(idx)
+                                  }
+                                >
+                                  <TrashIcon className="w-4 h-4 text-red-500" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         )
@@ -445,7 +503,7 @@ const SubActivityPriceDialog = ({
               </Button>
               <Button
                 type="submit"
-                disabled={loading === "pending" || !isFormValid}
+                disabled={loading === "pending"}
                 onClick={submitFormHandler}
               >
                 {loading === "pending" ? "Saving..." : "Save"}

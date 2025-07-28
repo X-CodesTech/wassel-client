@@ -267,18 +267,40 @@ const LocationSelect = React.memo<TLocationSelect>(
       isInitialized,
       userHasInteracted,
       initializeData,
+      loadSpecificLocations,
     } = useLocationSearch();
 
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [isOpen, setIsOpen] = useState(false);
     const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Initialize data when dropdown opens for the first time
+    // Initialize data when dropdown opens for the first time OR when we have defaultValues
     useEffect(() => {
-      if (isOpen && !isInitialized && !loading) {
+      if (
+        (isOpen && !isInitialized && !loading) ||
+        (defaultValues?._id && !isInitialized && !loading)
+      ) {
         initializeData();
       }
-    }, [isOpen, isInitialized, loading, initializeData]);
+    }, [isOpen, isInitialized, loading, initializeData, defaultValues?._id]);
+
+    // Load specific location if we have defaultValues but the location isn't in records
+    useEffect(() => {
+      if (defaultValues?._id && isInitialized && !loading) {
+        const locationExists = records.some(
+          (location) => location._id === defaultValues._id
+        );
+        if (!locationExists) {
+          loadSpecificLocations([defaultValues._id]);
+        }
+      }
+    }, [
+      defaultValues?._id,
+      isInitialized,
+      loading,
+      records,
+      loadSpecificLocations,
+    ]);
 
     // Aggressive focus preservation using direct DOM manipulation
     const preserveFocus = useCallback(() => {
@@ -339,14 +361,41 @@ const LocationSelect = React.memo<TLocationSelect>(
           // Memoize display values inside render where field.value is available
           const displayValues = useMemo(() => {
             const currentValue = field.value || defaultValues?._id || "";
+
+            // First try to find the location in the loaded records
             const selectedLocation = records.find(
               (location) => location._id === currentValue
             );
-            const displayText = selectedLocation
-              ? getStructuredAddress(selectedLocation).en
-              : defaultValues?.label || "";
 
-            return { currentValue, displayText };
+            // If found in records, use its structured address
+            if (selectedLocation) {
+              return {
+                currentValue,
+                displayText: getStructuredAddress(selectedLocation).en,
+              };
+            }
+
+            // If not found in records but we have defaultValues with a label, use that
+            if (defaultValues?.label && currentValue === defaultValues._id) {
+              return {
+                currentValue,
+                displayText: defaultValues.label,
+              };
+            }
+
+            // If we have a currentValue but no matching location, show a placeholder
+            if (currentValue && !selectedLocation && !defaultValues?.label) {
+              return {
+                currentValue,
+                displayText: `Location ${currentValue}`,
+              };
+            }
+
+            // Default case
+            return {
+              currentValue,
+              displayText: defaultValues?.label || "",
+            };
           }, [field.value, defaultValues?._id, defaultValues?.label, records]);
 
           return (

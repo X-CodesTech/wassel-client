@@ -10,8 +10,6 @@ import { getStructuredAddress } from "@/utils/getStructuredAddress";
 import { TFormSchema, formSchema } from "@/modules/SubActivityPrice/validation";
 import { TLoading } from "@/types";
 
-type UserType = "vendor" | "customer" | "priceList";
-
 type LocationObject = {
   _id: string;
   label: string;
@@ -27,8 +25,7 @@ type ISubActivityByPricingMethod = {
   }>;
 };
 
-interface UseSubActivityPriceDialogOptions<T extends UserType> {
-  userType: T;
+interface UseSubActivityPriceDialogOptions {
   defaultValues?: any; // Accept any type since we transform it internally
   dialogOpen: boolean;
   onSubmit?: (data: TFormSchema) => void;
@@ -36,14 +33,13 @@ interface UseSubActivityPriceDialogOptions<T extends UserType> {
   onOpenChange: (open: boolean) => void;
 }
 
-export const useSubActivityPriceDialog = <T extends UserType>({
-  userType,
+export const useSubActivityPriceDialog = ({
   defaultValues,
   dialogOpen,
   onSubmit = () => {},
   onError = () => {},
   onOpenChange,
-}: UseSubActivityPriceDialogOptions<T>) => {
+}: UseSubActivityPriceDialogOptions) => {
   const dispatch = useAppDispatch();
 
   // State
@@ -71,7 +67,7 @@ export const useSubActivityPriceDialog = <T extends UserType>({
             fromLocation: lp.fromLocation?._id || lp.fromLocation,
             toLocation: lp.toLocation?._id || lp.toLocation,
             pricingMethod: "perTrip" as const,
-            cost: lp.price || lp.cost || 0,
+            price: lp.price || lp.cost || 0,
             _originalFromLocation: lp.fromLocation,
             _originalToLocation: lp.toLocation,
           })) || [],
@@ -209,11 +205,7 @@ export const useSubActivityPriceDialog = <T extends UserType>({
 
   // Handle form submission
   const handleSubmit = useCallback(() => {
-    console.log("Form errors:", form.formState.errors);
-    console.log("Form values:", form.getValues());
-    console.log("Form valid:", form.formState.isValid);
     form.handleSubmit(onSubmit, (error) => {
-      console.log("Validation failed:", error);
       onError?.(error);
     })();
   }, [form, onSubmit, onError]);
@@ -293,10 +285,7 @@ export const useSubActivityPriceDialog = <T extends UserType>({
         form.reset({
           pricingMethod: "perItem",
           subActivity: transformedDefaultValues.subActivity,
-          [userType === "vendor" ? "cost" : "basePrice"]:
-            (transformedDefaultValues as any)[
-              userType === "vendor" ? "cost" : "basePrice"
-            ] || 0,
+          basePrice: transformedDefaultValues.basePrice || 0,
         } as any);
       } else if (transformedDefaultValues.pricingMethod === "perLocation") {
         form.reset({
@@ -327,7 +316,7 @@ export const useSubActivityPriceDialog = <T extends UserType>({
         } as any);
       }
     }
-  }, [transformedDefaultValues, form, userType, subActivities.length]);
+  }, [transformedDefaultValues, form, subActivities.length]);
 
   // Set default pricing method for add mode
   useEffect(() => {
@@ -345,7 +334,6 @@ export const useSubActivityPriceDialog = <T extends UserType>({
       dialogDescription: transformedDefaultValues
         ? "Edit the selected item"
         : "Add an item to the price list",
-      userType,
       defaultValues: transformedDefaultValues,
       onSubmit,
       onError,

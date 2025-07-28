@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import locationServices from "@/services/locationServices";
 import { getStructuredAddress } from "@/utils/getStructuredAddress";
+import { useAppSelector } from "@/hooks/useAppSelector";
 
 type Location = {
   _id: string;
@@ -27,6 +28,9 @@ type PaginationState = {
 };
 
 export const useLocationSearch = () => {
+  // Get locations from Redux store as fallback
+  const reduxLocations = useAppSelector((state) => state.locations.records);
+
   // Local state - completely independent from Redux
   const [records, setRecords] = useState<Location[]>([]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -59,25 +63,17 @@ export const useLocationSearch = () => {
       try {
         setLoading(true);
 
-        console.log("🔍 Fetching locations:", { page, search, append });
-
         // Use the existing locationServices
         const filters = search ? { search } : undefined;
-        const response = await locationServices.getLocations(page, 20, filters);
 
-        console.log("📦 API Response:", response);
+        const response = await locationServices.getLocations(page, 20, filters);
 
         if (append) {
           setRecords((prev) => {
             const newRecords = [...prev, ...response.data.locations];
-            console.log("📝 Appending records. Total:", newRecords.length);
             return newRecords;
           });
         } else {
-          console.log(
-            "📝 Setting records:",
-            response.data.locations?.length || 0
-          );
           setRecords(response.data.locations || []);
         }
 
@@ -89,35 +85,37 @@ export const useLocationSearch = () => {
         });
 
         setIsInitialized(true);
-        console.log("✅ Initialization complete");
       } catch (error: any) {
-        console.error("❌ Fetch locations error:", error);
+        // Fallback to Redux locations if API fails
+        if (reduxLocations.length > 0) {
+          setRecords(reduxLocations);
+          setIsInitialized(true);
+        }
       } finally {
         setLoading(false);
-        console.log("🏁 Loading finished");
       }
     },
-    []
+    [reduxLocations]
   );
 
   // Initialize data when triggered - this is called when dropdown opens
   const initializeData = useCallback(() => {
-    console.log("🚀 Initialize data called:", {
-      initCalled: initCalledRef.current,
-      isInitialized,
-      loading,
-    });
-
     // Prevent multiple calls for the same instance
     if (initCalledRef.current || isInitialized || loading) {
-      console.log("⛔ Initialize blocked");
+      return;
+    }
+
+    // If we have Redux locations available, use them first
+    if (reduxLocations.length > 0) {
+      setRecords(reduxLocations);
+      setIsInitialized(true);
+      initCalledRef.current = true;
       return;
     }
 
     initCalledRef.current = true;
-    console.log("✨ Starting first fetch");
     fetchLocations(1, "");
-  }, [isInitialized, loading, fetchLocations]);
+  }, [isInitialized, loading, fetchLocations, reduxLocations]);
 
   // Memoized computed properties to prevent unnecessary re-renders
   const computedValues = useMemo(() => {
@@ -129,13 +127,6 @@ export const useLocationSearch = () => {
           return address.includes(searchTerm);
         })
       : records;
-
-    console.log("📊 Computed values:", {
-      totalRecords: records.length,
-      filteredRecords: filteredRecords.length,
-      searchQuery: searchQuery.trim(),
-      hasMore: pagination.totalPages > pagination.page,
-    });
 
     return {
       filteredRecords,
@@ -162,25 +153,12 @@ export const useLocationSearch = () => {
 
     lastSearchRef.current = debouncedSearchQuery;
 
-    console.log("🔍 Search effect triggered:", {
-      query: debouncedSearchQuery,
-      currentRecords: records.length,
-      hasMore: pagination.totalPages > pagination.page,
-      currentPage: pagination.page,
-      totalPages: pagination.totalPages,
-    });
-
     if (debouncedSearchQuery.trim()) {
       // First check if we have any client-side filtered results
       const clientFilteredResults = records.filter((location) => {
         const address = getStructuredAddress(location).en.toLowerCase();
         const searchTerm = debouncedSearchQuery.toLowerCase();
         return address.includes(searchTerm);
-      });
-
-      console.log("🔍 Client-side filtering results:", {
-        clientFiltered: clientFilteredResults.length,
-        hasMorePages: pagination.totalPages > pagination.page,
       });
 
       // Only fire API request if:
@@ -190,25 +168,14 @@ export const useLocationSearch = () => {
         clientFilteredResults.length === 0 &&
         pagination.totalPages > pagination.page
       ) {
-        console.log(
-          "🚀 Firing search request - no local results and more pages available"
-        );
         fetchLocations(1, debouncedSearchQuery.trim(), false);
       } else if (clientFilteredResults.length > 0) {
-        console.log(
-          "✅ Using client-side filtered results:",
-          clientFilteredResults.length
-        );
       } else {
-        console.log("⛔ Search blocked - no more pages to load");
       }
     } else if (debouncedSearchQuery === "") {
       // When search is cleared, we don't need to reload if we have the initial data
       if (records.length === 0) {
-        console.log("🔄 Reloading data after search clear - no records");
         fetchLocations(1, "", false);
-      } else {
-        console.log("✅ Search cleared - showing all existing records");
       }
     }
   }, [
@@ -222,18 +189,8 @@ export const useLocationSearch = () => {
 
   // Memoized load more function
   const loadMore = useCallback(() => {
-    console.log("🔽 Load more called:", {
-      isInitialized,
-      currentPage: pagination.page,
-      totalPages: pagination.totalPages,
-      hasMore: pagination.totalPages > pagination.page,
-      loading,
-      allRecordsCount: records.length,
-    });
-
     if (!isInitialized) {
       // If not initialized yet, initialize first
-      console.log("🎬 Load more: initializing first");
       initializeData();
       return;
     }
@@ -241,14 +198,7 @@ export const useLocationSearch = () => {
     // Simple logic: load more if there are more pages available
     if (pagination.totalPages > pagination.page && !loading) {
       const nextPage = pagination.page + 1;
-      console.log(`📄 Loading page ${nextPage} of ${pagination.totalPages}`);
       fetchLocations(nextPage, searchQuery.trim(), true);
-    } else {
-      console.log("⛔ Load more blocked:", {
-        hasMorePages: pagination.totalPages > pagination.page,
-        notLoading: !loading,
-        reason: loading ? "Already loading" : "No more pages",
-      });
     }
   }, [
     pagination.totalPages,
@@ -285,6 +235,38 @@ export const useLocationSearch = () => {
     }
   }, [isInitialized, fetchLocations]);
 
+  // Function to load specific locations by ID (useful for edit mode)
+  const loadSpecificLocations = useCallback(async (locationIds: string[]) => {
+    if (!locationIds.length) return;
+
+    try {
+      setLoading(true);
+
+      // For now, we'll just fetch all locations and filter
+      // In a real implementation, you might have an API endpoint to fetch by IDs
+      const response = await locationServices.getLocations(1, 1000, {});
+      const allLocations = response.data.locations || [];
+
+      // Filter to only include the requested locations
+      const requestedLocations = allLocations.filter((location: Location) =>
+        locationIds.includes(location._id)
+      );
+
+      // Add these locations to our records if they're not already there
+      setRecords((prev) => {
+        const existingIds = new Set(prev.map((loc) => loc._id));
+        const newLocations = requestedLocations.filter(
+          (loc) => !existingIds.has(loc._id)
+        );
+        return [...prev, ...newLocations];
+      });
+    } catch (error: any) {
+      console.error("❌ Load specific locations error:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -312,6 +294,7 @@ export const useLocationSearch = () => {
     loadMore,
     clearSearch,
     initializeData, // Expose for manual initialization
+    loadSpecificLocations, // New function for loading specific locations
 
     // Computed properties
     hasMore: computedValues.hasMore,
