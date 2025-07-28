@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import priceListServices, { LocationPrice } from "@/services/priceListServices";
+import { axiosErrorHandler } from "@/utils";
 
 interface UpdateSubActivityPriceParams {
   priceListId: string;
@@ -21,9 +22,7 @@ export const actUpdateSubActivityPrice = createAsyncThunk(
       );
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to update subactivity price"
-      );
+      return rejectWithValue(axiosErrorHandler(error));
     }
   }
 );
