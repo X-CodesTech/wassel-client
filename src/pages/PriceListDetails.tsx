@@ -36,9 +36,7 @@ import DeletePriceListSubActivityDialog from "@/components/DeletePriceListSubAct
 import DeleteSubActivityConfirmationDialog from "@/components/PriceList/PriceListSubActivity/DeleteSubActivityConfirmationDialog";
 import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
 import { AddPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/AddPriceListSubActivityDialog";
-import SubActivityPriceDialog from "@/modules/SubActivityPrice/SubActivityPriceDialog";
-import { actGetLocations } from "@/store/locations";
-import { useSubActivityPriceDialog } from "@/hooks/useSubActivityPriceDialog";
+import { getStructuredAddress } from "@/utils/getStructuredAddress";
 
 // Form schema for editing price list
 const editPriceListFormSchema = z.object({
@@ -54,28 +52,6 @@ const editPriceListFormSchema = z.object({
 type EditPriceListFormValues = z.infer<typeof editPriceListFormSchema>;
 
 export default function PriceListDetails() {
-  const [selectedPriceListTest, setSelectedPriceListTest] =
-    useState<SubActivityPrice | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-
-  const { dialogProps } = useSubActivityPriceDialog({
-    userType: "priceList",
-    defaultValues: selectedPriceListTest,
-    dialogOpen: isOpen,
-    onSubmit: (data) => {
-      console.log(data);
-    },
-    onError: (error) => {
-      console.log(error);
-    },
-    onOpenChange: (open) => {
-      setIsOpen(open);
-      if (!open) {
-        setSelectedPriceListTest(null);
-      }
-    },
-  });
-
   const [match, params] = useRoute<{ id: string }>("/price-lists/:id");
   const [, setLocation] = useLocation();
   const dispatch = useAppDispatch();
@@ -113,7 +89,6 @@ export default function PriceListDetails() {
   useEffect(() => {
     if (match && params?.id) {
       dispatch(actGetPriceListById(params.id));
-      dispatch(actGetLocations({ page: 1, limit: 999999, filters: {} }));
     }
   }, [match, params?.id, dispatch]);
 
@@ -458,8 +433,7 @@ export default function PriceListDetails() {
                 size="icon"
                 className="text-blue-500"
                 onClick={() => {
-                  setSelectedPriceListTest(item);
-                  setIsOpen(true);
+                  handleEditSubActivity(item);
                 }}
               >
                 <Edit className="w-3 h-3" />
@@ -551,9 +525,7 @@ export default function PriceListDetails() {
             <Button
               variant="outline"
               onClick={() => {
-                setSelectedPriceListTest(null);
-                setIsOpen(true);
-                // setAddItemDialogOpen(true);
+                setAddItemDialogOpen(true);
               }}
             >
               <Plus className="h-4 w-4" />
@@ -626,8 +598,6 @@ export default function PriceListDetails() {
         open={addItemDialogOpen}
         onOpenChange={setAddItemDialogOpen}
       />
-
-      {isOpen && <SubActivityPriceDialog {...dialogProps} />}
     </div>
   );
 }
