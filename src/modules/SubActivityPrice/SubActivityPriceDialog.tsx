@@ -307,6 +307,8 @@ const SubActivityPriceDialog = ({
     [loading, hasFormChanges, isFormValid, submitDisabled]
   );
 
+  console.log("🎯 hasFormChanges", defaultValues);
+
   return (
     <>
       <Dialog open={dialogOpen} onOpenChange={onOpenChange}>

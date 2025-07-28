@@ -110,6 +110,7 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
   subActivityPriceId,
 }) => {
   const defaultValues = useMemo(() => {
+    if (!editData) return undefined;
     if (contextType === "vendor") {
       return {
         subActivity: editData?.subActivity,
@@ -171,75 +172,72 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
     data: any,
     callback?: () => void
   ) => {
-    await dispatch(
-      actAddPriceListSubActivity({
-        priceListId: priceListId!,
-        pricingMethod: data.pricingMethod,
-        subActivityId: data.subActivity,
-        basePrice: data.basePrice,
-        locationPrices: data.locationPrices,
-      })
-    )
-      .unwrap()
-      .then((response) => {
-        if (contextType === "customer") {
-          dispatch(
-            addPriceListSubActivity({
-              priceListId: response.data._id!,
-              subActivityPrices: response.data.subActivityPrices,
-            })
-          );
-        }
+    try {
+      const response = await dispatch(
+        actAddPriceListSubActivity({
+          priceListId: priceListId!,
+          pricingMethod: data.pricingMethod,
+          subActivityId: data.subActivity,
+          basePrice: data.basePrice,
+          locationPrices: data.locationPrices,
+        })
+      ).unwrap();
 
-        if (response.data) {
-          successNotificationHandler();
-          callback?.();
-        }
-      })
-      .catch((error) => {
-        errorNotificationHandler(error);
-      });
+      if (contextType === "customer") {
+        dispatch(
+          addPriceListSubActivity({
+            priceListId: response.data._id!,
+            subActivityPrices: response.data.subActivityPrices || [],
+          })
+        );
+      }
+
+      if (response.data) {
+        successNotificationHandler();
+        callback?.();
+      }
+    } catch (error) {
+      errorNotificationHandler(error);
+    }
   };
 
   const handleEditPriceListSubActivity = async (
     data: any,
     callback?: () => void
   ) => {
-    await dispatch(
-      actUpdateSubActivityPrice({
-        priceListId: priceListId!,
-        subActivityId: editData.subActivity._id,
-        data: updateBodyPasrer(data, contextType),
-      })
-    )
-      .unwrap()
-      .catch((error) => {
-        errorNotificationHandler(error);
-      })
-      .then(() => {
-        successNotificationHandler();
-        callback?.();
-      });
+    try {
+      await dispatch(
+        actUpdateSubActivityPrice({
+          priceListId: priceListId!,
+          subActivityId: editData.subActivity._id,
+          data: updateBodyPasrer(data, contextType),
+        })
+      ).unwrap();
+
+      successNotificationHandler();
+      callback?.();
+    } catch (error) {
+      errorNotificationHandler(error);
+    }
   };
 
   const handleAddVendorPriceListSubActivity = async (
     data: any,
     callback?: () => void
   ) => {
-    await dispatch(
-      actAddVendorSubActivityPrice({
-        vendorPriceListId: priceListId!,
-        ...updateBodyPasrer(data, contextType),
-      })
-    )
-      .unwrap()
-      .catch((error) => {
-        errorNotificationHandler(error);
-      })
-      .then(() => {
-        successNotificationHandler();
-        callback?.();
-      });
+    try {
+      await dispatch(
+        actAddVendorSubActivityPrice({
+          vendorPriceListId: priceListId!,
+          ...updateBodyPasrer(data, contextType),
+        })
+      ).unwrap();
+
+      successNotificationHandler();
+      callback?.();
+    } catch (error) {
+      errorNotificationHandler(error);
+    }
   };
 
   const handleEditVendorPriceListSubActivity = async (
@@ -247,37 +245,37 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
     callback?: () => void
   ) => {
     console.log("🎯 handleEditVendorPriceListSubActivity", data);
-    await dispatch(
-      actEditVendorSubActivityPrice({
-        vendorPriceListId: priceListId!,
-        subActivityId: subActivityPriceId!,
-        ...updateBodyPasrer(data, contextType, true),
-      })
-    )
-      .unwrap()
-      .catch((error) => {
-        if (error.message) {
-          toast({
-            title: "Error",
-            description: error.message,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: "An unexpected error occurred",
-            variant: "destructive",
-          });
-        }
-      })
-      .then(() => {
-        toast({
-          title: "Success",
-          description: "Price list updated successfully",
-        });
-        dispatch(actGetVendorPriceLists(vendorId!));
-        setIsDialogOpen(false);
+    try {
+      await dispatch(
+        actEditVendorSubActivityPrice({
+          vendorPriceListId: priceListId!,
+          subActivityId: subActivityPriceId!,
+          ...updateBodyPasrer(data, contextType, true),
+        })
+      ).unwrap();
+
+      toast({
+        title: "Success",
+        description: "Price list updated successfully",
       });
+      dispatch(actGetVendorPriceLists(vendorId!));
+      setIsDialogOpen(false);
+      callback?.();
+    } catch (error: any) {
+      if (error.message) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const handleSubmit = async (data: any) => {
@@ -327,7 +325,7 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
 
   // Use the custom hook for dialog management
   const { dialogProps } = useSubActivityPriceDialog({
-    defaultValues: defaultValues,
+    defaultValues,
     dialogOpen: isDialogOpen,
     addLocationDisabled: loading === "pending",
     submitLoading: loading === "pending",
