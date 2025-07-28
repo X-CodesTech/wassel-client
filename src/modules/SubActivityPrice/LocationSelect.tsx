@@ -1,4 +1,10 @@
-import React, { useMemo, useRef, useEffect, useState } from "react";
+import React, {
+  useMemo,
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { FormControl, FormField, FormItem } from "@/components/ui/form";
 import { FormLabel } from "@/components/ui/form";
 import {
@@ -29,7 +35,7 @@ type TLocationSelect = {
   defaultValues?: LocationObject;
 };
 
-// Memoized search input component
+// Completely uncontrolled search input to prevent focus loss
 const SearchInput = React.memo(
   ({
     searchQuery,
@@ -46,26 +52,88 @@ const SearchInput = React.memo(
     onFocus: () => void;
     onBlur: () => void;
   }) => {
+    const [internalValue, setInternalValue] = useState(searchQuery);
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Clean up timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (debounceTimeoutRef.current) {
+          clearTimeout(debounceTimeoutRef.current);
+        }
+      };
+    }, []);
+
+    // Only update internal value when searchQuery changes externally (like from clear button)
+    useEffect(() => {
+      if (searchQuery !== internalValue) {
+        setInternalValue(searchQuery);
+        if (searchInputRef.current) {
+          searchInputRef.current.value = searchQuery;
+        }
+      }
+    }, [searchQuery, internalValue, searchInputRef]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setInternalValue(value);
+
+      // Debounce the external callback
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+
+      debounceTimeoutRef.current = setTimeout(() => {
+        handleSearchChange(value);
+      }, 100); // Very short debounce just to batch rapid typing
+    };
+
+    const handleClearClick = () => {
+      setInternalValue("");
+      if (searchInputRef.current) {
+        searchInputRef.current.value = "";
+        searchInputRef.current.focus(); // Keep focus after clearing
+      }
+
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      clearSearch();
+    };
+
     return (
       <div className="p-2 border-b">
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
+          <input
             ref={searchInputRef}
+            type="text"
             placeholder="Search locations..."
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-8 pr-8"
-            autoFocus={false}
-            onFocus={onFocus}
-            onBlur={onBlur}
+            defaultValue={searchQuery}
+            onChange={handleInputChange}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-8 pr-8"
+            onFocus={(e) => {
+              console.log("🎯 Search input focused - UNCONTROLLED");
+              onFocus();
+              e.stopPropagation();
+            }}
+            onBlur={(e) => {
+              console.log("😴 Search input blurred - UNCONTROLLED");
+              onBlur();
+            }}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+            }}
           />
-          {searchQuery && (
+          {internalValue && (
             <Button
               variant="ghost"
               size="icon"
               className="absolute right-0 top-0 h-full w-8 p-0"
-              onClick={clearSearch}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClearClick();
+              }}
               type="button"
             >
               <X className="h-4 w-4" />
@@ -104,6 +172,17 @@ const LocationOptions = React.memo(
       userHasInteracted,
     });
 
+    // Memoize the load more handler to prevent unnecessary re-renders
+    const handleLoadMore = useCallback(() => {
+      console.log("⬇️ Load more clicked");
+      loadMore();
+    }, [loadMore]);
+
+    const handleManualLoad = useCallback(() => {
+      console.log("🎬 Manual load clicked");
+      loadMore();
+    }, [loadMore]);
+
     return (
       <>
         {/* Always show the container */}
@@ -136,10 +215,7 @@ const LocationOptions = React.memo(
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                console.log("⬇️ Load more clicked");
-                loadMore();
-              }}
+              onClick={handleLoadMore}
               disabled={loading}
               className="w-full"
               type="button"
@@ -162,10 +238,7 @@ const LocationOptions = React.memo(
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                console.log("🎬 Manual load clicked");
-                loadMore();
-              }}
+              onClick={handleManualLoad}
               className="w-full"
               type="button"
             >
@@ -174,6 +247,18 @@ const LocationOptions = React.memo(
           </div>
         )}
       </>
+    );
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison to reduce re-renders
+    return (
+      prevProps.records.length === nextProps.records.length &&
+      prevProps.loading === nextProps.loading &&
+      prevProps.hasMore === nextProps.hasMore &&
+      prevProps.isInitialized === nextProps.isInitialized &&
+      prevProps.userHasInteracted === nextProps.userHasInteracted &&
+      JSON.stringify(prevProps.records.map((r) => r._id)) ===
+        JSON.stringify(nextProps.records.map((r) => r._id))
     );
   }
 );
@@ -198,8 +283,7 @@ const LocationSelect = React.memo<TLocationSelect>(
 
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [isOpen, setIsOpen] = useState(false);
-    const [wasSearchFocused, setWasSearchFocused] = useState(false);
-    const [isUserTyping, setIsUserTyping] = useState(false);
+    const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Debug logging
     useEffect(() => {
@@ -210,19 +294,8 @@ const LocationSelect = React.memo<TLocationSelect>(
         isEmpty,
         hasMore,
         isOpen,
-        wasSearchFocused,
-        isUserTyping,
       });
-    }, [
-      records.length,
-      loading,
-      isInitialized,
-      isEmpty,
-      hasMore,
-      isOpen,
-      wasSearchFocused,
-      isUserTyping,
-    ]);
+    }, [records.length, loading, isInitialized, isEmpty, hasMore, isOpen]);
 
     // Initialize data when dropdown opens for the first time
     useEffect(() => {
@@ -237,168 +310,150 @@ const LocationSelect = React.memo<TLocationSelect>(
       }
     }, [isOpen, isInitialized, loading, initializeData]);
 
-    // Enhanced focus management - restore focus after loading completes
-    useEffect(() => {
-      if (!loading && wasSearchFocused && searchInputRef.current) {
-        console.log("🎯 Restoring focus after loading completed");
-        const timeoutId = setTimeout(() => {
-          if (searchInputRef.current) {
-            searchInputRef.current.focus();
-            // Move cursor to end
-            const length = searchInputRef.current.value.length;
-            searchInputRef.current.setSelectionRange(length, length);
-          }
-        }, 50); // Small delay to ensure DOM is updated
-
-        return () => clearTimeout(timeoutId);
+    // Aggressive focus preservation using direct DOM manipulation
+    const preserveFocus = useCallback(() => {
+      if (focusTimeoutRef.current) {
+        clearTimeout(focusTimeoutRef.current);
       }
-    }, [loading, wasSearchFocused]);
 
-    // Track when user stops typing (debounced)
+      focusTimeoutRef.current = setTimeout(() => {
+        if (
+          searchInputRef.current &&
+          document.activeElement !== searchInputRef.current
+        ) {
+          const input = searchInputRef.current;
+          const value = input.value;
+          const cursorPos = input.selectionStart || 0;
+
+          console.log("🔄 Preserving focus and cursor position");
+          input.focus();
+          input.setSelectionRange(cursorPos, cursorPos);
+        }
+      }, 10);
+    }, []);
+
+    // Clean up timeout on unmount
     useEffect(() => {
-      const timer = setTimeout(() => {
-        console.log("⏰ Typing timeout - user stopped typing");
-        setIsUserTyping(false);
-      }, 1000); // Consider user stopped typing after 1 second
+      return () => {
+        if (focusTimeoutRef.current) {
+          clearTimeout(focusTimeoutRef.current);
+        }
+      };
+    }, []);
 
-      return () => clearTimeout(timer);
-    }, [searchQuery]);
+    // Stable handlers to prevent unnecessary re-renders
+    const stableHandleSearchChange = useCallback(
+      (value: string) => {
+        console.log("🔍 Search input changed:", {
+          from: searchQuery,
+          to: value,
+        });
+        handleSearchChange(value);
+        preserveFocus();
+      },
+      [handleSearchChange, preserveFocus, searchQuery]
+    );
 
-    // Clear focus tracking only when dropdown closes or after significant delay
-    useEffect(() => {
-      if (searchQuery === "" && !isUserTyping) {
-        const timer = setTimeout(() => {
-          console.log("🧹 Clearing focus tracking after empty search delay");
-          setWasSearchFocused(false);
-        }, 2000); // Wait 2 seconds after search is cleared before clearing focus tracking
+    const stableHandleClearSearch = useCallback(() => {
+      console.log("🧹 Search cleared via button");
+      clearSearch();
+    }, [clearSearch]);
 
-        return () => clearTimeout(timer);
-      }
-    }, [searchQuery, isUserTyping]);
+    const stableHandleFocus = useCallback(() => {
+      console.log("🎯 Search input focused");
+    }, []);
+
+    const stableHandleBlur = useCallback(() => {
+      console.log("😴 Search input blurred");
+    }, []);
+
+    // Memoized display values to prevent unnecessary recalculations
+    const displayValues = useMemo(() => {
+      const currentValue = form.watch(name) || defaultValues?._id || "";
+      const selectedLocation = records.find(
+        (location) => location._id === currentValue
+      );
+      const displayText = selectedLocation
+        ? getStructuredAddress(selectedLocation).en
+        : defaultValues?.label || "";
+
+      return { currentValue, displayText };
+    }, [form, name, defaultValues?._id, defaultValues?.label, records]);
 
     return (
       <FormField
         control={form.control}
         name={name}
-        render={({ field }) => {
-          // Memoize display values to prevent unnecessary recalculations
-          const { currentValue, displayText } = useMemo(() => {
-            const currentValue = field.value || defaultValues?._id || "";
-            const selectedLocation = records.find(
-              (location) => location._id === currentValue
-            );
-            const displayText = selectedLocation
-              ? getStructuredAddress(selectedLocation).en
-              : defaultValues?.label || "";
+        render={({ field }) => (
+          <FormItem className="flex flex-col h-full">
+            <FormLabel>{label}</FormLabel>
+            <Select
+              onValueChange={field.onChange}
+              value={displayValues.currentValue}
+              disabled={disabled}
+              onOpenChange={(open) => {
+                console.log("🎪 Dropdown onOpenChange:", open);
+                setIsOpen(open);
+              }}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select location">
+                    {displayValues.displayText || "Select location"}
+                  </SelectValue>
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent className="p-0">
+                {/* Search Input */}
+                <SearchInput
+                  searchQuery={searchQuery}
+                  handleSearchChange={stableHandleSearchChange}
+                  clearSearch={stableHandleClearSearch}
+                  searchInputRef={searchInputRef}
+                  onFocus={stableHandleFocus}
+                  onBlur={stableHandleBlur}
+                />
 
-            return { currentValue, displayText };
-          }, [field.value, defaultValues?._id, defaultValues?.label, records]);
+                {/* Debug Info */}
+                {process.env.NODE_ENV === "development" && (
+                  <div className="p-2 text-xs text-gray-500 border-b">
+                    Debug: {records.length} records, loading:{" "}
+                    {loading.toString()}, init: {isInitialized.toString()}
+                  </div>
+                )}
 
-          return (
-            <FormItem className="flex flex-col h-full">
-              <FormLabel>{label}</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                value={currentValue}
-                disabled={disabled}
-                onOpenChange={(open) => {
-                  console.log("🎪 Dropdown onOpenChange:", open);
-                  setIsOpen(open);
-                  if (!open) {
-                    // Clear focus tracking when dropdown closes
-                    setWasSearchFocused(false);
-                    setIsUserTyping(false);
-                  }
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select location">
-                      {displayText || "Select location"}
-                    </SelectValue>
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="p-0">
-                  {/* Search Input */}
-                  <SearchInput
-                    searchQuery={searchQuery}
-                    handleSearchChange={(value) => {
-                      console.log("🔍 Search input changed:", {
-                        from: searchQuery,
-                        to: value,
-                      });
-                      setWasSearchFocused(true);
-                      setIsUserTyping(true);
-                      handleSearchChange(value);
-                    }}
-                    clearSearch={() => {
-                      console.log("🧹 Search cleared via button");
-                      setWasSearchFocused(false);
-                      setIsUserTyping(false);
-                      clearSearch();
-                    }}
-                    searchInputRef={searchInputRef}
-                    onFocus={() => {
-                      console.log("🎯 Search input focused");
-                      setWasSearchFocused(true);
-                    }}
-                    onBlur={() => {
-                      console.log("😴 Search input blurred");
-                      // Don't immediately clear focus tracking on blur
-                      // because it might be due to re-render during loading
-                      setTimeout(() => {
-                        if (!isUserTyping && searchQuery === "") {
-                          console.log("🧹 Delayed focus clear after blur");
-                          setWasSearchFocused(false);
-                        }
-                      }, 500);
-                    }}
-                  />
+                {/* Loading State */}
+                {loading && (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">
+                      Loading...
+                    </span>
+                  </div>
+                )}
 
-                  {/* Debug Info */}
-                  {process.env.NODE_ENV === "development" && (
-                    <div className="p-2 text-xs text-gray-500 border-b">
-                      Debug: {records.length} records, loading:{" "}
-                      {loading.toString()}, init: {isInitialized.toString()}
-                      <br />
-                      Focus: focused={wasSearchFocused.toString()}, typing=
-                      {isUserTyping.toString()}
-                    </div>
-                  )}
+                {/* Empty State - Show when initialized but no records */}
+                {isInitialized && !loading && records.length === 0 && (
+                  <div className="flex items-center justify-center p-4">
+                    <span className="text-sm text-muted-foreground">
+                      No options
+                    </span>
+                  </div>
+                )}
 
-                  {/* Loading State */}
-                  {loading && (
-                    <div className="flex items-center justify-center p-4">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      <span className="text-sm text-muted-foreground">
-                        Loading...
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Empty State - Show when initialized but no records */}
-                  {isInitialized && !loading && records.length === 0 && (
-                    <div className="flex items-center justify-center p-4">
-                      <span className="text-sm text-muted-foreground">
-                        No options
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Location Options - Always show the component */}
-                  <LocationOptions
-                    records={records}
-                    loading={loading}
-                    hasMore={hasMore}
-                    loadMore={loadMore}
-                    isInitialized={isInitialized}
-                    userHasInteracted={userHasInteracted}
-                  />
-                </SelectContent>
-              </Select>
-            </FormItem>
-          );
-        }}
+                {/* Location Options - Always show the component */}
+                <LocationOptions
+                  records={records}
+                  loading={loading}
+                  hasMore={hasMore}
+                  loadMore={loadMore}
+                  isInitialized={isInitialized}
+                  userHasInteracted={userHasInteracted}
+                />
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )}
       />
     );
   }
