@@ -36,7 +36,7 @@ import DeletePriceListSubActivityDialog from "@/components/DeletePriceListSubAct
 import DeleteSubActivityConfirmationDialog from "@/components/PriceList/PriceListSubActivity/DeleteSubActivityConfirmationDialog";
 import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
 import { AddPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/AddPriceListSubActivityDialog";
-import { getStructuredAddress } from "@/utils/getStructuredAddress";
+import SubActivityPriceManager from "@/components/SubActivityPriceManager";
 
 // Form schema for editing price list
 const editPriceListFormSchema = z.object({
@@ -569,6 +569,17 @@ export default function PriceListDetails() {
         </CardContent>
       </Card>
 
+      <SubActivityPriceManager
+        contextType="priceList"
+        dialogTitle="Add Sub-Activity"
+        dialogDescription="Add a new sub-activity to the price list"
+        editData={selectedSubActivityPrice || undefined}
+        subActivityPriceId={selectedSubActivityPrice?._id || ""}
+        priceListId={priceList._id || ""}
+        isDialogOpen={addItemDialogOpen}
+        setIsDialogOpen={setAddItemDialogOpen}
+      />
+
       {/* Delete Confirmation Dialog */}
       <DeleteSubActivityConfirmationDialog
         open={deleteDialogOpen}
@@ -576,12 +587,12 @@ export default function PriceListDetails() {
       />
 
       {/* Edit Price List Dialog */}
-      <EditPriceListSubActivityDialog
+      {/* <EditPriceListSubActivityDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         selectedSubActivityPrice={selectedSubActivityPrice as SubActivityPrice}
         priceListId={priceList._id || ""}
-      />
+      /> */}
 
       {/* Delete Sub-Activity Dialog */}
       {selectedSubActivityPrice && (
@@ -594,10 +605,10 @@ export default function PriceListDetails() {
       )}
 
       {/* Add Item Dialog */}
-      <AddPriceListSubActivityDialog
+      {/* <AddPriceListSubActivityDialog
         open={addItemDialogOpen}
         onOpenChange={setAddItemDialogOpen}
-      />
+      /> */}
     </div>
   );
 }

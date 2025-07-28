@@ -7,10 +7,7 @@ import { subActivityServices } from "@/services";
 import { actGetLocations } from "@/store/locations";
 import { axiosErrorHandler } from "@/utils";
 import { getStructuredAddress } from "@/utils/getStructuredAddress";
-import {
-  createFormSchema,
-  FormSchemaType,
-} from "@/modules/SubActivityPrice/validation";
+import { TFormSchema, formSchema } from "@/modules/SubActivityPrice/validation";
 import { TLoading } from "@/types";
 
 type UserType = "vendor" | "customer" | "priceList";
@@ -34,7 +31,7 @@ interface UseSubActivityPriceDialogOptions<T extends UserType> {
   userType: T;
   defaultValues?: any; // Accept any type since we transform it internally
   dialogOpen: boolean;
-  onSubmit?: (data: FormSchemaType<T>) => void;
+  onSubmit?: (data: TFormSchema) => void;
   onError?: (error: any) => void;
   onOpenChange: (open: boolean) => void;
 }
@@ -48,8 +45,6 @@ export const useSubActivityPriceDialog = <T extends UserType>({
   onOpenChange,
 }: UseSubActivityPriceDialogOptions<T>) => {
   const dispatch = useAppDispatch();
-  const formSchema = createFormSchema(userType);
-  type FormSchema = FormSchemaType<T>;
 
   // State
   const [subActivities, setSubActivities] = useState<
@@ -116,7 +111,7 @@ export const useSubActivityPriceDialog = <T extends UserType>({
   }, [defaultValues, transformSelectedData]);
 
   // Form setup
-  const form = useForm<FormSchema>({
+  const form = useForm<TFormSchema>({
     resolver: zodResolver(formSchema),
   });
 
@@ -196,7 +191,7 @@ export const useSubActivityPriceDialog = <T extends UserType>({
       appendLocationPrice({
         fromLocation: "",
         toLocation: "",
-        cost: 0,
+        price: 0,
         pricingMethod: "perTrip" as const,
       });
     }
@@ -264,7 +259,7 @@ export const useSubActivityPriceDialog = <T extends UserType>({
           {
             fromLocation: "",
             toLocation: "",
-            cost: 0,
+            price: 0,
             pricingMethod: "perTrip" as const,
           },
         ]);

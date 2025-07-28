@@ -16,7 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form.tsx";
-import { FieldPath, useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input.tsx";
 import {
   Select,
@@ -25,26 +25,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select.tsx";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/hooks/use-toast.ts";
 import { subActivityServices } from "@/services";
 import { axiosErrorHandler, cn } from "@/utils";
-import { PlusIcon, TrashIcon } from "lucide-react";
+import { Loader2, PlusIcon, TrashIcon } from "lucide-react";
 import LocationSelect from "./LocationSelect";
 import { TLoading } from "@/types";
-import { createFormSchema } from "./validation";
+import { TFormSchema, formSchema } from "./validation";
 import { PRICING_METHODS } from "@/utils/constants";
 
-type TSubActivityPriceDialog<T extends "customer" | "vendor" | "priceList"> = {
+type TSubActivityPriceDialog = {
   dialogOpen: boolean;
   onOpenChange: (open: boolean) => void;
   dialogTitle: string;
   dialogDescription: string;
   subActivityId: string;
-  userType: T;
-  defaultValues?: z.infer<ReturnType<typeof createFormSchema>>;
-  onSubmit?: (data: z.infer<ReturnType<typeof createFormSchema>>) => void;
+  defaultValues?: TFormSchema;
+  onSubmit?: (data: TFormSchema) => void;
 };
 
 const SubActivityPriceDialog = ({
@@ -54,18 +52,18 @@ const SubActivityPriceDialog = ({
   dialogDescription,
   defaultValues,
   onSubmit = () => {},
-  userType,
-}: TSubActivityPriceDialog<T>) => {
-  const formSchema = createFormSchema(userType);
-  type FormSchema = z.infer<typeof formSchema>;
-
+}: TSubActivityPriceDialog) => {
   const [subActivities, setSubActivities] = useState<
     ISubActivityByPricingMethod["data"]
   >([]);
   const [loading, setLoading] = useState<TLoading>("idle");
 
-  const form = useForm<FormSchema>({
-    defaultValues,
+  const form = useForm<TFormSchema>({
+    defaultValues: defaultValues || {
+      pricingMethod: "perItem",
+      subActivity: "",
+      basePrice: 0,
+    },
     resolver: zodResolver(formSchema),
   });
 
@@ -82,7 +80,6 @@ const SubActivityPriceDialog = ({
   const selectedSubActivity = form.watch("subActivity");
 
   const getSubActivitiesByPricingMethod = useCallback(async () => {
-    form.reset();
     setLoading("pending");
     try {
       const { data } = await subActivityServices.getSubActivityByPricingMethod(
@@ -113,12 +110,21 @@ const SubActivityPriceDialog = ({
   }, [selectedPricingMethod]);
 
   const addLocationPriceHandler = () => {
-    appendLocationPrice({
-      fromLocation: "",
-      toLocation: "",
-      price: 0,
-      pricingMethod: "perTrip" as const,
-    });
+    const newLocationPrice =
+      selectedPricingMethod === "perLocation"
+        ? {
+            location: "",
+            pricingMethod: "perLocation" as const,
+            price: 0,
+          }
+        : {
+            fromLocation: "",
+            toLocation: "",
+            pricingMethod: "perTrip" as const,
+            price: 0,
+          };
+
+    appendLocationPrice(newLocationPrice);
     form.trigger("locationPrices");
   };
 
@@ -127,25 +133,63 @@ const SubActivityPriceDialog = ({
     form.trigger("locationPrices");
   };
 
+  const submitFormHandler = form.handleSubmit(onSubmit, (errors) => {
+    console.groupCollapsed("Form Errors");
+    console.log(form.getValues());
+    console.log(form.formState.errors);
+    console.log(errors);
+    console.groupEnd();
+  });
+
   useEffect(() => {
     if (selectedPricingMethod) {
+      // Reset form with proper discriminated union structure
+      if (selectedPricingMethod === "perItem") {
+        form.reset({
+          pricingMethod: "perItem",
+          subActivity: "",
+          basePrice: 0,
+        } as TFormSchema);
+      } else if (selectedPricingMethod === "perLocation") {
+        form.reset({
+          pricingMethod: "perLocation",
+          subActivity: "",
+          locationPrices: [],
+        } as TFormSchema);
+      } else if (selectedPricingMethod === "perTrip") {
+        form.reset({
+          pricingMethod: "perTrip",
+          subActivity: "",
+          locationPrices: [],
+        } as TFormSchema);
+      }
       getSubActivitiesByPricingMethod();
     }
-  }, [getSubActivitiesByPricingMethod, selectedPricingMethod]);
+  }, [getSubActivitiesByPricingMethod, selectedPricingMethod, form]);
 
   useEffect(() => {
     if (selectedSubActivity && !defaultValues) {
-      form.setValue("locationPrices", [
-        {
-          fromLocation: "",
-          toLocation: "",
-          price: 0,
-          pricingMethod: "perTrip" as const,
-        },
-      ]);
+      if (selectedPricingMethod === "perLocation") {
+        form.setValue("locationPrices", [
+          {
+            location: "",
+            pricingMethod: "perLocation" as const,
+            price: 0,
+          },
+        ]);
+      } else if (selectedPricingMethod === "perTrip") {
+        form.setValue("locationPrices", [
+          {
+            fromLocation: "",
+            toLocation: "",
+            pricingMethod: "perTrip" as const,
+            price: 0,
+          },
+        ]);
+      }
       form.trigger("locationPrices");
     }
-  }, [selectedSubActivity]);
+  }, [selectedSubActivity, selectedPricingMethod, form, defaultValues]);
 
   useEffect(() => {
     if (defaultValues) {
@@ -163,7 +207,7 @@ const SubActivityPriceDialog = ({
         }),
       });
     }
-  }, [defaultValues]);
+  }, [defaultValues, form]);
 
   const isFormValid = form.formState.isValid;
 
@@ -224,6 +268,9 @@ const SubActivityPriceDialog = ({
                     >
                       <FormControl>
                         <SelectTrigger>
+                          {loading === "pending" ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : null}
                           <SelectValue placeholder="Select Sub Activity" />
                         </SelectTrigger>
                       </FormControl>
@@ -245,7 +292,7 @@ const SubActivityPriceDialog = ({
               {selectedPricingMethod === "perItem" ? (
                 <FormField
                   control={form.control}
-                  name={`basePrice` as FieldPath<FormSchema>}
+                  name="basePrice"
                   render={({ field }) => (
                     <FormItem className="flex flex-col h-full">
                       <FormLabel>Base Price</FormLabel>
@@ -253,7 +300,7 @@ const SubActivityPriceDialog = ({
                         <Input
                           type="number"
                           placeholder="0.00"
-                          {...field}
+                          value={field.value as number}
                           onChange={(e) =>
                             field.onChange(parseFloat(e.target.value) || 0)
                           }
@@ -293,12 +340,12 @@ const SubActivityPriceDialog = ({
                               form={form}
                               name={`locationPrices.${idx}.location`}
                               label={"Location"}
-                              defaultValues={locationPrice}
+                              defaultValues={locationPrice.location as string}
                             />
                             <div className="flex flex-1 items-end gap-2">
                               <FormField
                                 control={form.control}
-                                name={`locationPrices.${idx}.cost`}
+                                name={`locationPrices.${idx}.price`}
                                 render={({ field }) => (
                                   <FormItem className="flex flex-col h-full">
                                     <FormLabel>Price</FormLabel>
@@ -306,7 +353,7 @@ const SubActivityPriceDialog = ({
                                       <Input
                                         type="number"
                                         placeholder="0.00"
-                                        {...field}
+                                        value={field.value as number}
                                         onChange={(e) =>
                                           field.onChange(
                                             parseFloat(e.target.value) || 0
@@ -341,19 +388,21 @@ const SubActivityPriceDialog = ({
                               form={form}
                               name={`locationPrices.${idx}.fromLocation`}
                               label={"From Location"}
-                              defaultValues={locationPrice}
+                              defaultValues={
+                                locationPrice.fromLocation as string
+                              }
                             />
                             <LocationSelect
                               key={idx}
                               form={form}
                               name={`locationPrices.${idx}.toLocation`}
                               label={"To Location"}
-                              defaultValues={locationPrice}
+                              defaultValues={locationPrice.toLocation as string}
                             />
                             <div className="flex flex-1 items-end gap-2">
                               <FormField
                                 control={form.control}
-                                name={`locationPrices.${idx}.cost`}
+                                name={`locationPrices.${idx}.price`}
                                 render={({ field }) => (
                                   <FormItem className="flex flex-col h-full">
                                     <FormLabel>Price</FormLabel>
@@ -361,7 +410,7 @@ const SubActivityPriceDialog = ({
                                       <Input
                                         type="number"
                                         placeholder="0.00"
-                                        {...field}
+                                        value={field.value as number}
                                         onChange={(e) =>
                                           field.onChange(
                                             parseFloat(e.target.value) || 0
@@ -397,7 +446,7 @@ const SubActivityPriceDialog = ({
               <Button
                 type="submit"
                 disabled={loading === "pending" || !isFormValid}
-                onClick={() => form.handleSubmit(onSubmit)}
+                onClick={submitFormHandler}
               >
                 {loading === "pending" ? "Saving..." : "Save"}
               </Button>
