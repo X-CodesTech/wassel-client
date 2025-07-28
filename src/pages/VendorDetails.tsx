@@ -1,3 +1,4 @@
+import AttachmentModule from "@/components/AttachmentModule";
 import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
 import SubActivityPriceManager from "@/components/SubActivityPriceManager";
 import { Badge } from "@/components/ui/badge";
@@ -392,30 +393,11 @@ export default function VendorDetails({ params }: VendorDetailsProps) {
         />
       )}
 
-      {/* Modals */}
-      {/* <VendorPriceListModal
-        isOpen={isDialogOpen("addSubActivityPrice")}
-        onClose={handleCloseDialog}
-        vendorId={vendor?._id || ""}
-        onSubmit={handleAddSubActivityPrice}
-        isLoading={createPriceListLoading === "pending"}
-      /> */}
-
-      {/* <SubActivityPriceManager
-        contextType="customer"
-        dialogTitle="Add Sub-Activity"
-        dialogDescription="Add a new sub-activity to the price list"
-        isDialogOpen={dialog === "add" || !!selectedSubActivity}
-        setIsDialogOpen={(isOpen) => {
-          if (!isOpen) {
-            handleDialog({ open: false });
-          }
-        }}
-        editData={selectedSubActivity || undefined}
-        setEditData={setSelectedSubActivity}
-        subActivityPriceId={selectedSubActivity?._id || ""}
-        priceListId={selectedPriceList?._id || ""}
-      /> */}
+      <AttachmentModule
+        contextId={vendor.vendAccount}
+        contextType="Vendor"
+        title="Vendor Attachments"
+      />
 
       <SubActivityPriceManager
         contextType="vendor"

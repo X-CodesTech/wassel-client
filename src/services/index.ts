@@ -6,6 +6,7 @@ import subActivityServices from "./subActivityServices";
 import customerServices from "./customerServices";
 import vendorServices from "./vendorServices";
 import orderServices from "./orderServices";
+import attachmentServices from "./attachmentServices";
 
 export {
   http,
@@ -16,4 +17,5 @@ export {
   customerServices,
   vendorServices,
   orderServices,
+  attachmentServices,
 };

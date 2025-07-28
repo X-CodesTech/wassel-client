@@ -12,4 +12,5 @@ export const apiUrlConstants = {
   vendors: "/api/v1/vendors",
   vendorPriceLists: "/api/v1/vendor-price-lists",
   orders: "/api/v1/orders",
+  uploads: "/api/v1/uploads",
 };
