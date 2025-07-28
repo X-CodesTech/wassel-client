@@ -365,7 +365,7 @@ const AddPriceListDialog = ({
                     <FormLabel>Effective From</FormLabel>
                     <FormControl>
                       <Input
-                        type="datetime-local"
+                        type="date"
                         {...field}
                         onFocus={() => setIsAnyInputFocused(true)}
                         onBlur={() => setIsAnyInputFocused(false)}
@@ -387,7 +387,7 @@ const AddPriceListDialog = ({
                     <FormLabel>Effective To</FormLabel>
                     <FormControl>
                       <Input
-                        type="datetime-local"
+                        type="date"
                         {...field}
                         onFocus={() => setIsAnyInputFocused(true)}
                         onBlur={() => setIsAnyInputFocused(false)}
