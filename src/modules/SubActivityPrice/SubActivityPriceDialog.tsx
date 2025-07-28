@@ -53,6 +53,7 @@ type TSubActivityPriceDialog = {
   subActivityId: string;
   defaultValues?: TFormSchema;
   onSubmit?: (data: TFormSchema) => void;
+  onError?: (errors: any) => void;
 };
 
 const SubActivityPriceDialog = ({
@@ -62,6 +63,7 @@ const SubActivityPriceDialog = ({
   dialogDescription,
   defaultValues,
   onSubmit = () => {},
+  onError = () => {},
 }: TSubActivityPriceDialog) => {
   const [subActivities, setSubActivities] = useState<
     ISubActivityByPricingMethod["data"]
@@ -170,9 +172,7 @@ const SubActivityPriceDialog = ({
     });
   }, [form.watch(), defaultValues]);
 
-  const submitFormHandler = form.handleSubmit(onSubmit, (errors) => {
-    console.log(errors);
-  });
+  const submitFormHandler = form.handleSubmit(onSubmit, onError);
 
   // Helper function to get location object for LocationSelect
   const getLocationObject = useCallback((locationId: string) => {
