@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -61,6 +61,7 @@ import {
   ValidationError,
   UnknownError,
 } from "@/components/ErrorComponents";
+import SubActivityPriceDialog from "@/modules/SubActivityPrice/SubActivityPriceDialog.tsx";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -153,13 +154,14 @@ export default function DesignSystem() {
       </div>
 
       <Tabs defaultValue="foundations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="foundations">Foundations</TabsTrigger>
           <TabsTrigger value="components">Components</TabsTrigger>
           <TabsTrigger value="forms">Forms</TabsTrigger>
           <TabsTrigger value="layout">Layout</TabsTrigger>
           <TabsTrigger value="loading">Loading</TabsTrigger>
           <TabsTrigger value="errors">Errors</TabsTrigger>
+          <TabsTrigger value="Dialogs">Dialogs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="foundations">
@@ -1104,6 +1106,7 @@ function DataTable() {
             </ComponentSection>
           </div>
         </TabsContent>
+
         <TabsContent value="errors">
           <div className="space-y-8">
             <ComponentSection title="Error Types">
@@ -1382,6 +1385,16 @@ if (isLoading) {
 return <VendorTable data={data} />;`}
                   />
                 </div>
+              </div>
+            </ComponentSection>
+          </div>
+        </TabsContent>
+
+        <TabsContent value={"Dialogs"}>
+          <div className="space-y-8">
+            <ComponentSection title={"Add SubActivity Price Dialog"}>
+              <div className="space-y-6">
+                <SubActivityPriceDialog />
               </div>
             </ComponentSection>
           </div>
