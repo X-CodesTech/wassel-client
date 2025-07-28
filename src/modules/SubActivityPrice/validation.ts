@@ -26,12 +26,7 @@ const perLocationSchema = z
             location: z.string().min(1, "Location is required"),
             pricingMethod: z.literal("perLocation"),
             price: z.number().min(0, "Price must be positive"),
-            _originalLocation: z
-              .object({
-                _id: z.string(),
-                label: z.string(),
-              })
-              .optional(),
+            _originalLocation: z.object({}).optional(),
           })
           .strict()
       )
@@ -52,18 +47,8 @@ const perTripSchema = z
             toLocation: z.string().min(1, "To location is required"),
             pricingMethod: z.literal("perTrip"),
             price: z.number().min(0, "Price must be positive"),
-            _originalFromLocation: z
-              .object({
-                _id: z.string().optional(),
-                label: z.string().optional(),
-              })
-              .optional(),
-            _originalToLocation: z
-              .object({
-                _id: z.string().optional(),
-                label: z.string().optional(),
-              })
-              .optional(),
+            _originalFromLocation: z.object({}).optional(),
+            _originalToLocation: z.object({}).optional(),
           })
           .strict()
       )

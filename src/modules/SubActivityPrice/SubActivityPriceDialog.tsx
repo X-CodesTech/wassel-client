@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.tsx";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Form,
   FormControl,
@@ -34,7 +34,6 @@ import LocationSelect from "./LocationSelect";
 import { TLoading } from "@/types";
 import { TFormSchema, formSchema } from "./validation";
 import { PRICING_METHODS } from "@/utils/constants";
-import { getStructuredAddress } from "@/utils/getStructuredAddress";
 
 // Define the interface for sub-activity response
 interface ISubActivityByPricingMethod {
@@ -143,6 +142,33 @@ const SubActivityPriceDialog = ({
     removeLocationPrice(index);
     form.trigger("locationPrices");
   };
+
+  const hasFormChanges = useMemo(() => {
+    if (selectedPricingMethod === "perItem") {
+      return form.getValues().basePrice !== defaultValues?.basePrice;
+    }
+
+    const currentValues = form.getValues();
+    const originalValues = defaultValues;
+
+    // Check if arrays have different lengths
+    if (
+      currentValues?.locationPrices?.length !==
+      originalValues?.locationPrices?.length
+    ) {
+      return true;
+    }
+
+    // Check if any values are different
+    return currentValues?.locationPrices?.some((currentTrip, index) => {
+      const originalTrip = originalValues?.locationPrices[index];
+      return (
+        currentTrip.fromLocation !== originalTrip.fromLocation ||
+        currentTrip.toLocation !== originalTrip.toLocation ||
+        currentTrip.price !== originalTrip.price
+      );
+    });
+  }, [form.watch(), defaultValues]);
 
   const submitFormHandler = form.handleSubmit(onSubmit, (errors) => {
     console.log(errors);
@@ -257,6 +283,16 @@ const SubActivityPriceDialog = ({
 
   const isFormValid = form.formState.isValid;
 
+  const addLocationButtonDisabled = useMemo(
+    () => loading === "pending" || !isFormValid || !selectedSubActivity,
+    [loading, isFormValid, selectedSubActivity]
+  );
+
+  const submitButtonDisabled = useMemo(
+    () => loading === "pending" || !hasFormChanges || !isFormValid,
+    [loading, hasFormChanges, isFormValid]
+  );
+
   return (
     <>
       <Dialog open={dialogOpen} onOpenChange={onOpenChange}>
@@ -368,7 +404,7 @@ const SubActivityPriceDialog = ({
                       </h3>
                       <Button
                         onClick={addLocationPriceHandler}
-                        disabled={loading === "pending" || !isFormValid}
+                        disabled={addLocationButtonDisabled}
                       >
                         <PlusIcon />
                         Add{" "}
@@ -503,7 +539,7 @@ const SubActivityPriceDialog = ({
               </Button>
               <Button
                 type="submit"
-                disabled={loading === "pending"}
+                disabled={submitButtonDisabled}
                 onClick={submitFormHandler}
               >
                 {loading === "pending" ? "Saving..." : "Save"}
