@@ -34,8 +34,6 @@ import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
 import React from "react";
 import DeletePriceListSubActivityDialog from "@/components/DeletePriceListSubActivityDialog";
 import DeleteSubActivityConfirmationDialog from "@/components/PriceList/PriceListSubActivity/DeleteSubActivityConfirmationDialog";
-import { EditPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/EditPriceListSubActivityDialog";
-import { AddPriceListSubActivityDialog } from "@/components/PriceList/PriceListSubActivity/AddPriceListSubActivityDialog";
 import SubActivityPriceManager from "@/components/SubActivityPriceManager";
 
 // Form schema for editing price list
@@ -52,6 +50,8 @@ const editPriceListFormSchema = z.object({
 type EditPriceListFormValues = z.infer<typeof editPriceListFormSchema>;
 
 export default function PriceListDetails() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const [match, params] = useRoute<{ id: string }>("/price-lists/:id");
   const [, setLocation] = useLocation();
   const dispatch = useAppDispatch();
@@ -135,7 +135,7 @@ export default function PriceListDetails() {
 
   const handleEditSubActivity = (subActivityPrice: SubActivityPrice) => {
     setSelectedSubActivityPrice(subActivityPrice);
-    setEditDialogOpen(true);
+    setIsDialogOpen(true);
   };
 
   const handleDeleteSubActivity = (subActivityPrice: SubActivityPrice) => {
@@ -525,7 +525,7 @@ export default function PriceListDetails() {
             <Button
               variant="outline"
               onClick={() => {
-                setAddItemDialogOpen(true);
+                setIsDialogOpen(true);
               }}
             >
               <Plus className="h-4 w-4" />
@@ -573,11 +573,16 @@ export default function PriceListDetails() {
         contextType="priceList"
         dialogTitle="Add Sub-Activity"
         dialogDescription="Add a new sub-activity to the price list"
+        isDialogOpen={isDialogOpen}
+        setIsDialogOpen={(isOpen) => {
+          if (!isOpen) {
+            setIsDialogOpen(false);
+          }
+        }}
         editData={selectedSubActivityPrice || undefined}
+        setEditData={setSelectedSubActivityPrice}
         subActivityPriceId={selectedSubActivityPrice?._id || ""}
         priceListId={priceList._id || ""}
-        isDialogOpen={addItemDialogOpen}
-        setIsDialogOpen={setAddItemDialogOpen}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -585,14 +590,6 @@ export default function PriceListDetails() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
       />
-
-      {/* Edit Price List Dialog */}
-      {/* <EditPriceListSubActivityDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        selectedSubActivityPrice={selectedSubActivityPrice as SubActivityPrice}
-        priceListId={priceList._id || ""}
-      /> */}
 
       {/* Delete Sub-Activity Dialog */}
       {selectedSubActivityPrice && (
@@ -603,12 +600,6 @@ export default function PriceListDetails() {
           priceListId={priceList._id || ""}
         />
       )}
-
-      {/* Add Item Dialog */}
-      {/* <AddPriceListSubActivityDialog
-        open={addItemDialogOpen}
-        onOpenChange={setAddItemDialogOpen}
-      /> */}
     </div>
   );
 }
