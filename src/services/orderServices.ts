@@ -257,7 +257,7 @@ const orderServices = {
     orderId: string,
     data: SubmitIPORequest
   ): Promise<SubmitIPOResponse> => {
-    const response = await http.post(`/api/v1/orders/${orderId}/submit`, data);
+    const response = await http.put(`/api/v1/orders/${orderId}/submit`, data);
     return response.data;
   },
 };
