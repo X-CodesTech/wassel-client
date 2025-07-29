@@ -41,6 +41,22 @@ const priceListFormSchema = z
   })
   .refine(
     (data) => {
+      if (data.effectiveFrom) {
+        const fromDate = new Date(data.effectiveFrom);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day
+        fromDate.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+        return fromDate >= today;
+      }
+      return true;
+    },
+    {
+      message: "Effective from date must not be before today",
+      path: ["effectiveFrom"], // Show error on effectiveFrom field
+    }
+  )
+  .refine(
+    (data) => {
       if (data.effectiveFrom && data.effectiveTo) {
         const fromDate = new Date(data.effectiveFrom);
         const toDate = new Date(data.effectiveTo);
@@ -57,16 +73,15 @@ const priceListFormSchema = z
     (data) => {
       if (data.effectiveTo) {
         const toDate = new Date(data.effectiveTo);
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0); // Reset time to start of day
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day
         toDate.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
-        return toDate >= tomorrow;
+        return toDate > today;
       }
       return true;
     },
     {
-      message: "Effective to date must be at least 1 day after today",
+      message: "Effective to date must be after today",
       path: ["effectiveTo"], // Show error on effectiveTo field
     }
   );
@@ -119,6 +134,19 @@ const AddPriceListDialog = ({
       setIsAnyInputFocused(false);
     }
   }, [open]);
+
+  // Get today's date in YYYY-MM-DD format for min attribute
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
+
+  // Get tomorrow's date in YYYY-MM-DD format for min attribute
+  const getTomorrowDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split("T")[0];
+  };
 
   // JSON validation schema
   const validateJsonStructure = (data: any) => {
@@ -451,13 +479,14 @@ const AddPriceListDialog = ({
                       <Input
                         type="date"
                         {...field}
+                        min={getTodayDate()}
                         disabled={isLoading}
                         onFocus={() => setIsAnyInputFocused(true)}
                         onBlur={() => setIsAnyInputFocused(false)}
                       />
                     </FormControl>
                     <FormDescription>
-                      When this price list becomes active
+                      When this price list becomes active (today or later)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -474,13 +503,14 @@ const AddPriceListDialog = ({
                       <Input
                         type="date"
                         {...field}
+                        min={getTomorrowDate()}
                         disabled={isLoading}
                         onFocus={() => setIsAnyInputFocused(true)}
                         onBlur={() => setIsAnyInputFocused(false)}
                       />
                     </FormControl>
                     <FormDescription>
-                      When this price list expires
+                      When this price list expires (must be after today)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

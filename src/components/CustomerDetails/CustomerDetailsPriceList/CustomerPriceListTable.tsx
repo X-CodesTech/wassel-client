@@ -366,7 +366,7 @@ const CustomerPriceListTable = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {priceList.subActivityPrices?.map((item, index) =>
+                {priceList?.subActivityPrices?.map((item, index) =>
                   renderTableRow(item, index)
                 )}
               </TableBody>
@@ -390,7 +390,7 @@ const CustomerPriceListTable = ({
         editData={selectedSubActivityPrice || undefined}
         setEditData={setSelectedSubActivityPrice}
         subActivityPriceId={selectedSubActivityPrice?._id || ""}
-        priceListId={priceList._id!}
+        priceListId={priceList?._id!}
         isDelete={dialog === "deleteSubActivity"}
         setIsDelete={(isDelete) => {
           if (!isDelete) {

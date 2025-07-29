@@ -57,7 +57,7 @@ const CustomerDetailsPriceList = () => {
         {selectedCustomer?.priceLists.map((priceList, index) => (
           <React.Fragment key={priceList._id}>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{priceList.priceList.name}</CardTitle>
+              <CardTitle>{priceList?.priceList?.name}</CardTitle>
               <div className="flex items-center gap-4">
                 <Button
                   size="sm"
@@ -65,7 +65,7 @@ const CustomerDetailsPriceList = () => {
                   onClick={() =>
                     handleDialog({
                       open: true,
-                      priceList: priceList.priceList,
+                      priceList: priceList?.priceList,
                       dialog: "add",
                     })
                   }
@@ -80,7 +80,7 @@ const CustomerDetailsPriceList = () => {
                 <TableSkeleton rows={5} columns={4} />
               ) : selectedCustomer?.priceLists &&
                 selectedCustomer?.priceLists.length > 0 ? (
-                <CustomerPriceListTable priceList={priceList.priceList} />
+                <CustomerPriceListTable priceList={priceList?.priceList} />
               ) : (
                 <div className="text-center text-sm text-gray-500">
                   No price lists found
