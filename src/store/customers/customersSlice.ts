@@ -15,6 +15,7 @@ import {
 import { actAddCustomerPriceListSubActivity } from "./act/actAddCustomerPriceListSubActivity";
 import { actDeleteCustomerPriceListSubActivity } from "./act/actDeleteCustomerPriceListSubActivity.ts";
 import { TUpdatePriceListSubActivityPriceResponse } from "@/types/priceListServices.type.ts";
+import { actCreateCustomerPriceList } from "./act/actCreateCustomerPriceList";
 
 interface ICustomersState {
   records: Customer[];
@@ -30,6 +31,8 @@ interface ICustomersState {
   addPriceListSubActivityError: null | string;
   deletePriceListSubActivityLoading: TLoading;
   deletePriceListSubActivityError: null | string;
+  createPriceListLoading: TLoading;
+  createPriceListError: null | string;
   pagination: {
     total: number;
     page: number;
@@ -50,6 +53,8 @@ const initialState: ICustomersState = {
   addPriceListSubActivityError: null,
   deletePriceListSubActivityLoading: "idle",
   deletePriceListSubActivityError: null,
+  createPriceListLoading: "idle",
+  createPriceListError: null,
   pagination: {
     total: 0,
     page: 1,
@@ -218,6 +223,36 @@ const customersSlice = createSlice({
       }
     });
 
+    // Create Customer Price List
+    builder.addCase(actCreateCustomerPriceList.pending, (state) => {
+      state.createPriceListLoading = "pending";
+      state.createPriceListError = null;
+    });
+    builder.addCase(actCreateCustomerPriceList.rejected, (state, action) => {
+      state.createPriceListLoading = "rejected";
+      if (isString(action.payload)) {
+        state.createPriceListError = action.payload;
+      }
+    });
+    builder.addCase(actCreateCustomerPriceList.fulfilled, (state, action) => {
+      console.log(action.payload);
+      const newPriceList = action.payload.data;
+
+      state.createPriceListLoading = "fulfilled";
+      if (state.selectedCustomer) {
+        state.selectedCustomer.priceLists = [
+          ...state.selectedCustomer.priceLists,
+          {
+            ...newPriceList,
+            priceList: {
+              ...newPriceList,
+              subActivityPrices: [],
+            },
+          },
+        ];
+      }
+    });
+
     // Add Customer Price List Sub Activity
     builder.addCase(actAddCustomerPriceListSubActivity.pending, (state) => {
       state.addPriceListSubActivityLoading = "pending";
@@ -287,6 +322,7 @@ export {
   actGetCustomer,
   actAddCustomerPriceListSubActivity,
   actDeleteCustomerPriceListSubActivity,
+  actCreateCustomerPriceList,
 };
 
 export default customersSlice.reducer;
