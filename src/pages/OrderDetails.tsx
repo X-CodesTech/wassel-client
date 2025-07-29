@@ -22,6 +22,8 @@ import orderServices from "@/services/orderServices";
 import { IActivity, ISubActivity, ITransaction } from "@/types/ModelTypes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { useAppDispatch, useAppSelector } from "@/hooks/useAppSelector";
+import { actSubmitIPO } from "@/store/orders/act";
 
 // Extended interface for sub-activity with API response structure
 interface ISubActivityWithId extends ISubActivity {
@@ -67,6 +69,10 @@ export default function OrderDetails() {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
   const { getOrderById, loading, error, currentOrder } = useOrders();
+  const dispatch = useAppDispatch();
+  const ipoSubmissionLoading = useAppSelector(
+    (state) => state.orders.ipoSubmissionLoading
+  );
   const { fetchVendorCost, getVendorCostByKey, isLoadingByKey, getErrorByKey } =
     useVendorCost();
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -995,25 +1001,254 @@ export default function OrderDetails() {
 
   const handleSubmitIPO = async () => {
     try {
-      // TODO: Implement POST endpoint call
-      // const response = await fetch('/api/ipo/submit', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ orderId, ipoActions })
-      // });
+      // Calculate totals from all service items
+      let totalPrice = 0;
+      let totalCost = 0;
 
-      console.groupCollapsed("IPO Submitted");
-      console.log(ipoActions);
-      console.groupEnd();
+      // Calculate from truck type matches
+      if (order.truckTypeMatches) {
+        order.truckTypeMatches.forEach((item, index) => {
+          const serviceKey = generateServiceKey(
+            "truck",
+            index,
+            item.subActivityId
+          );
+          const price = priceOverrides[serviceKey] ?? item.price ?? 0;
+          const cost =
+            costOverrides[serviceKey] ??
+            selectedCosts[serviceKey] ??
+            item.cost ??
+            0;
+          totalPrice += price;
+          totalCost += cost;
+        });
+      }
 
-      toast({
-        title: "IPO Submitted",
-        description: "Initial Price Offer has been submitted successfully",
-      });
+      // Calculate from pickup special requirements
+      if (order.specialRequirementsPrices?.pickupSpecialRequirements) {
+        order.specialRequirementsPrices.pickupSpecialRequirements.forEach(
+          (item, index) => {
+            const serviceKey = generateServiceKey(
+              "pickup",
+              index,
+              item.subActivityId
+            );
+            const price = priceOverrides[serviceKey] ?? item.basePrice ?? 0;
+            const cost =
+              costOverrides[serviceKey] ??
+              selectedCosts[serviceKey] ??
+              item.cost ??
+              0;
+            totalPrice += price;
+            totalCost += cost;
+          }
+        );
+      }
 
-      // Reset actions after successful submission
-      resetIpoActions();
+      // Calculate from delivery special requirements
+      if (order.specialRequirementsPrices?.deliverySpecialRequirements) {
+        order.specialRequirementsPrices.deliverySpecialRequirements.forEach(
+          (item, index) => {
+            const serviceKey = generateServiceKey(
+              "delivery",
+              index,
+              item.subActivityId
+            );
+            const price = priceOverrides[serviceKey] ?? item.basePrice ?? 0;
+            const cost =
+              costOverrides[serviceKey] ??
+              selectedCosts[serviceKey] ??
+              item.cost ??
+              0;
+            totalPrice += price;
+            totalCost += cost;
+          }
+        );
+      }
+
+      // Calculate profit margin
+      const profitMargin =
+        totalPrice > 0 ? ((totalPrice - totalCost) / totalPrice) * 100 : 0;
+
+      // Build comprehensive JSON object
+      const ipoSubmissionData = {
+        orderBasicInfo: {
+          orderId: order._id,
+          orderIndex: order.orderIndex,
+          customer: order.billingAccount?.custName || "N/A",
+          orderDate: formatDate(order.createdAt),
+          service: order.service,
+          typesOfGoods: order.typesOfGoods,
+          goodsDescription: order.goodsDescription,
+        },
+        financialSummary: {
+          totalPrice: totalPrice,
+          totalCost: totalCost,
+          profitMargin: profitMargin,
+          profitAmount: totalPrice - totalCost,
+          currency: "USD",
+        },
+        truckTypeMatches: order.truckTypeMatches
+          ? order.truckTypeMatches.map((item, index) => {
+              const serviceKey = generateServiceKey(
+                "truck",
+                index,
+                item.subActivityId
+              );
+              const price = priceOverrides[serviceKey] ?? item.price ?? 0;
+              const cost =
+                costOverrides[serviceKey] ??
+                selectedCosts[serviceKey] ??
+                item.cost ??
+                0;
+              const selectedVendor = selectedVendors[serviceKey];
+
+              return {
+                index: index + 1,
+                subActivityId: item.subActivityId,
+                subActivityName: item.subActivityName,
+                priceListName: item.priceListName,
+                pricingMethod: item.pricingMethod,
+                price: price,
+                cost: cost,
+                selectedVendor: selectedVendor || null,
+                locationDetails: item.locationDetails || null,
+              };
+            })
+          : [],
+        pickupSpecialRequirements: order.specialRequirementsPrices
+          ?.pickupSpecialRequirements
+          ? order.specialRequirementsPrices.pickupSpecialRequirements.map(
+              (item, index) => {
+                const serviceKey = generateServiceKey(
+                  "pickup",
+                  index,
+                  item.subActivityId
+                );
+                const price = priceOverrides[serviceKey] ?? item.basePrice ?? 0;
+                const cost =
+                  costOverrides[serviceKey] ??
+                  selectedCosts[serviceKey] ??
+                  item.cost ??
+                  0;
+                const selectedVendor = selectedVendors[serviceKey];
+
+                return {
+                  index: index + 1,
+                  subActivityId: item.subActivityId,
+                  subActivityName: item.subActivityName,
+                  priceListName: item.priceListName,
+                  pricingMethod: item.pricingMethod,
+                  price: price,
+                  cost: cost,
+                  selectedVendor: selectedVendor || null,
+                };
+              }
+            )
+          : [],
+        deliverySpecialRequirements: order.specialRequirementsPrices
+          ?.deliverySpecialRequirements
+          ? order.specialRequirementsPrices.deliverySpecialRequirements.map(
+              (item, index) => {
+                const serviceKey = generateServiceKey(
+                  "delivery",
+                  index,
+                  item.subActivityId
+                );
+                const price = priceOverrides[serviceKey] ?? item.basePrice ?? 0;
+                const cost =
+                  costOverrides[serviceKey] ??
+                  selectedCosts[serviceKey] ??
+                  item.cost ??
+                  0;
+                const selectedVendor = selectedVendors[serviceKey];
+
+                return {
+                  index: index + 1,
+                  subActivityId: item.subActivityId,
+                  subActivityName: item.subActivityName,
+                  priceListName: item.priceListName,
+                  pricingMethod: item.pricingMethod,
+                  price: price,
+                  cost: cost,
+                  selectedVendor: selectedVendor || null,
+                };
+              }
+            )
+          : [],
+        locationDetails: {
+          shippingDetails: order.shippingDetails,
+        },
+        attachments: attachments.map((attachment, index) => ({
+          index: index + 1,
+          name: attachment.name,
+          type: attachment.type,
+          size: attachment.size,
+          uploadedAt: attachment.uploadedAt,
+        })),
+        overridesAndSelections: {
+          priceOverrides: priceOverrides,
+          costOverrides: costOverrides,
+          selectedVendors: selectedVendors,
+          selectedCosts: selectedCosts,
+        },
+        ipoActions: ipoActions,
+        metadata: {
+          submissionTimestamp: new Date().toISOString(),
+          totalServices:
+            (order.truckTypeMatches?.length || 0) +
+            (order.specialRequirementsPrices?.pickupSpecialRequirements
+              ?.length || 0) +
+            (order.specialRequirementsPrices?.deliverySpecialRequirements
+              ?.length || 0),
+          hasOverrides:
+            Object.keys(priceOverrides).length > 0 ||
+            Object.keys(costOverrides).length > 0,
+          hasVendorSelections: Object.keys(selectedVendors).length > 0,
+        },
+      };
+
+      // Output as JSON
+      console.log("🚀 IPO SUBMISSION DATA (JSON):", ipoSubmissionData);
+      console.log(
+        "📋 JSON STRING:",
+        JSON.stringify(ipoSubmissionData, null, 2)
+      );
+
+      // Submit IPO using Redux async thunk
+      const result = await dispatch(
+        actSubmitIPO({
+          orderId: order._id,
+          data: ipoSubmissionData,
+        })
+      );
+
+      if (actSubmitIPO.fulfilled.match(result)) {
+        const response = result.payload;
+        console.groupCollapsed("IPO Submitted");
+        console.log("Response:", response);
+        console.groupEnd();
+
+        toast({
+          title: "IPO Submitted Successfully",
+          description: "Initial Price Offer has been submitted successfully",
+        });
+
+        // Navigate to success page
+        navigate(`/order/success?orderId=${response.data._id}`);
+
+        // Reset actions after successful submission
+        resetIpoActions();
+      } else {
+        // Handle error case
+        toast({
+          title: "Error",
+          description: "Failed to submit IPO. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
+      console.error("Error submitting IPO:", error);
       toast({
         title: "Error",
         description: "Failed to submit IPO",
@@ -1768,8 +2003,20 @@ export default function OrderDetails() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2 justify-end">
-                <Button size="sm" className="bg-blue-600">
-                  Submit this IPO
+                <Button
+                  size="sm"
+                  className="bg-blue-600"
+                  onClick={handleSubmitIPO}
+                  disabled={ipoSubmissionLoading}
+                >
+                  {ipoSubmissionLoading ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit this IPO"
+                  )}
                 </Button>
                 <Popover
                   open={addServicePopoverOpen}

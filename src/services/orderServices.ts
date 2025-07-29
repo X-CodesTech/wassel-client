@@ -17,6 +17,90 @@ import {
   GetPriceBreakdownResponse,
 } from "@/types/types";
 
+export interface SubmitIPORequest {
+  orderBasicInfo: {
+    orderId: string;
+    orderIndex: string;
+    customer: string;
+    orderDate: string;
+    service: string;
+    typesOfGoods: string;
+    goodsDescription: string;
+  };
+  financialSummary: {
+    totalPrice: number;
+    totalCost: number;
+    profitMargin: number;
+    profitAmount: number;
+    currency: string;
+  };
+  truckTypeMatches: Array<{
+    index: number;
+    subActivityId: string;
+    subActivityName: string;
+    priceListName: string;
+    pricingMethod: string;
+    price: number;
+    cost: number;
+    selectedVendor: string | null;
+    locationDetails: any;
+  }>;
+  pickupSpecialRequirements: Array<{
+    index: number;
+    subActivityId: string;
+    subActivityName: string;
+    priceListName: string;
+    pricingMethod: string;
+    price: number;
+    cost: number;
+    selectedVendor: string | null;
+  }>;
+  deliverySpecialRequirements: Array<{
+    index: number;
+    subActivityId: string;
+    subActivityName: string;
+    priceListName: string;
+    pricingMethod: string;
+    price: number;
+    cost: number;
+    selectedVendor: string | null;
+  }>;
+  locationDetails: {
+    shippingDetails: any;
+  };
+  attachments: Array<{
+    index: number;
+    name: string;
+    type: string;
+    size: number;
+    uploadedAt: string;
+  }>;
+  overridesAndSelections: {
+    priceOverrides: Record<string, number>;
+    costOverrides: Record<string, number>;
+    selectedVendors: Record<string, string>;
+    selectedCosts: Record<string, number>;
+  };
+  ipoActions: any;
+  metadata: {
+    submissionTimestamp: string;
+    totalServices: number;
+    hasOverrides: boolean;
+    hasVendorSelections: boolean;
+  };
+}
+
+export interface SubmitIPOResponse {
+  success: boolean;
+  message: string;
+  data: {
+    _id: string;
+    orderIndex: string;
+    status: string;
+    submittedAt: string;
+  };
+}
+
 export interface UpdateVendorRequest {
   subActivityId: string;
   vendorId: string;
@@ -166,6 +250,14 @@ const orderServices = {
       `/api/v1/orders/${orderId}/update-vendor`,
       data
     );
+    return response.data;
+  },
+
+  submitIPO: async (
+    orderId: string,
+    data: SubmitIPORequest
+  ): Promise<SubmitIPOResponse> => {
+    const response = await http.post(`/api/v1/orders/${orderId}/submit`, data);
     return response.data;
   },
 };

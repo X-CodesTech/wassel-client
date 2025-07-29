@@ -17,6 +17,7 @@ import {
   setOrdersListError,
   setOrdersList,
   setOrdersPagination,
+  setIpoSubmissionLoading,
 } from "../ordersSlice";
 
 // Step 1: Create basic order
@@ -260,6 +261,36 @@ export const actGetOrders = createAsyncThunk(
       throw error;
     } finally {
       dispatch(setOrdersListLoading(false));
+    }
+  }
+);
+
+// Submit IPO
+export const actSubmitIPO = createAsyncThunk(
+  "orders/submitIPO",
+  async (
+    { orderId, data }: { orderId: string; data: any },
+    { dispatch, rejectWithValue }
+  ) => {
+    try {
+      dispatch(setIpoSubmissionLoading(true));
+      dispatch(setError(null));
+
+      const response = await orderServices.submitIPO(orderId, data);
+
+      if (response.success) {
+        dispatch(setSuccess(true));
+        return response;
+      } else {
+        throw new Error(response.message || "Failed to submit IPO");
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || error.message || "An error occurred";
+      dispatch(setError(errorMessage));
+      return rejectWithValue(errorMessage);
+    } finally {
+      dispatch(setIpoSubmissionLoading(false));
     }
   }
 );

@@ -22,6 +22,7 @@ interface OrderState {
   error: string | null;
   success: boolean;
   orderId: string | null;
+  ipoSubmissionLoading: boolean;
 }
 
 const initialState: OrderState = {
@@ -35,6 +36,7 @@ const initialState: OrderState = {
   error: null,
   success: false,
   orderId: null,
+  ipoSubmissionLoading: false,
 };
 
 const ordersSlice = createSlice({
@@ -114,6 +116,9 @@ const ordersSlice = createSlice({
       state.currentPage = 1;
       state.ordersListError = null;
     },
+    setIpoSubmissionLoading: (state, action: PayloadAction<boolean>) => {
+      state.ipoSubmissionLoading = action.payload;
+    },
   },
 });
 
@@ -133,6 +138,7 @@ export const {
   setOrdersList,
   setOrdersPagination,
   clearOrdersList,
+  setIpoSubmissionLoading,
 } = ordersSlice.actions;
 
 export default ordersSlice.reducer;
