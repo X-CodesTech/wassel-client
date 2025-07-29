@@ -29,15 +29,30 @@ import { PriceList } from "@/services/priceListServices";
 import { useState, useEffect } from "react";
 import { actCreateCustomerPriceList } from "@/store/customers";
 
-const priceListFormSchema = z.object({
-  name: z.string().min(1, "Price list name (English) is required"),
-  nameAr: z.string().min(1, "Price list name (Arabic) is required"),
-  description: z.string().optional(),
-  descriptionAr: z.string().optional(),
-  effectiveFrom: z.string().min(1, "Effective from date is required"),
-  effectiveTo: z.string().min(1, "Effective to date is required"),
-  isActive: z.boolean(),
-});
+const priceListFormSchema = z
+  .object({
+    name: z.string().min(1, "Price list name (English) is required"),
+    nameAr: z.string().min(1, "Price list name (Arabic) is required"),
+    description: z.string().optional(),
+    descriptionAr: z.string().optional(),
+    effectiveFrom: z.string().min(1, "Effective from date is required"),
+    effectiveTo: z.string().min(1, "Effective to date is required"),
+    isActive: z.boolean(),
+  })
+  .refine(
+    (data) => {
+      if (data.effectiveFrom && data.effectiveTo) {
+        const fromDate = new Date(data.effectiveFrom);
+        const toDate = new Date(data.effectiveTo);
+        return fromDate < toDate;
+      }
+      return true;
+    },
+    {
+      message: "Effective from date must be before effective to date",
+      path: ["effectiveTo"], // Show error on effectiveTo field
+    }
+  );
 
 type PriceListFormValues = z.infer<typeof priceListFormSchema>;
 
@@ -58,7 +73,15 @@ const AddPriceListDialog = ({
 }: AddPriceListDialogProps) => {
   const dispatch = useAppDispatch();
   const { loading } = useAppSelector((state) => state.priceLists);
+  const { createPriceListLoading: customerLoading } = useAppSelector(
+    (state) => state.customers
+  );
   const [isAnyInputFocused, setIsAnyInputFocused] = useState(false);
+
+  // Determine if we're in a loading state
+  const isLoading = isCustomer
+    ? customerLoading === "pending"
+    : loading === true;
 
   const form = useForm<PriceListFormValues>({
     resolver: zodResolver(priceListFormSchema),
@@ -127,12 +150,13 @@ const AddPriceListDialog = ({
   };
 
   const handlePasteJson = async () => {
-    // Don't allow paste if any input is focused
-    if (isAnyInputFocused) {
+    // Don't allow paste if any input is focused or if loading
+    if (isAnyInputFocused || isLoading) {
       toast({
-        title: "Input Active",
-        description:
-          "Please finish editing the current field before pasting JSON data.",
+        title: isLoading ? "Form Disabled" : "Input Active",
+        description: isLoading
+          ? "Cannot paste data while form is being submitted."
+          : "Please finish editing the current field before pasting JSON data.",
         variant: "destructive",
       });
       return;
@@ -195,8 +219,8 @@ const AddPriceListDialog = ({
   // Keyboard event listener for paste functionality
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Check if dialog is open and no input is focused
-      if (!open || isAnyInputFocused) {
+      // Check if dialog is open and no input is focused and not loading
+      if (!open || isAnyInputFocused || isLoading) {
         return;
       }
 
@@ -216,28 +240,40 @@ const AddPriceListDialog = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, isAnyInputFocused]);
+  }, [open, isAnyInputFocused, isLoading]);
 
   const onSubmit = async (data: PriceListFormValues) => {
     try {
-      const priceListData: PriceList = {
-        name: data.name,
-        nameAr: data.nameAr,
-        description: data.description || "",
-        descriptionAr: data.descriptionAr || "",
-        effectiveFrom: data.effectiveFrom,
-        effectiveTo: data.effectiveTo,
-        isActive: data.isActive,
-      };
-
       if (isCustomer) {
+        // Customer price list expects Date objects
+        const customerPriceListData = {
+          name: data.name,
+          nameAr: data.nameAr,
+          description: data.description || "",
+          descriptionAr: data.descriptionAr || "",
+          effectiveFrom: new Date(data.effectiveFrom),
+          effectiveTo: new Date(data.effectiveTo),
+          isActive: data.isActive,
+        };
+
         await dispatch(
           actCreateCustomerPriceList({
             customerId: customerId!,
-            priceListData,
+            priceListData: customerPriceListData,
           })
         ).unwrap();
       } else {
+        // Regular price list expects string dates
+        const priceListData: PriceList = {
+          name: data.name,
+          nameAr: data.nameAr,
+          description: data.description || "",
+          descriptionAr: data.descriptionAr || "",
+          effectiveFrom: data.effectiveFrom,
+          effectiveTo: data.effectiveTo,
+          isActive: data.isActive,
+        };
+
         await dispatch(actAddPriceList(priceListData)).unwrap();
       }
 
@@ -279,8 +315,21 @@ const AddPriceListDialog = ({
     }
   );
 
+  // Prevent dialog from closing when loading
+  const handleOpenChange = (newOpen: boolean) => {
+    if (isLoading && !newOpen) {
+      toast({
+        title: "Form Submitting",
+        description: "Please wait while the price list is being created.",
+        variant: "default",
+      });
+      return;
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-[80vw] max-h-[80dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Bilingual Price List</DialogTitle>
@@ -303,6 +352,7 @@ const AddPriceListDialog = ({
                       <Input
                         placeholder="Enter price list name in English"
                         {...field}
+                        disabled={isLoading}
                         onFocus={() => setIsAnyInputFocused(true)}
                         onBlur={() => setIsAnyInputFocused(false)}
                       />
@@ -323,6 +373,7 @@ const AddPriceListDialog = ({
                         placeholder="أدخل اسم قائمة الأسعار بالعربية"
                         {...field}
                         dir="rtl"
+                        disabled={isLoading}
                         onFocus={() => setIsAnyInputFocused(true)}
                         onBlur={() => setIsAnyInputFocused(false)}
                       />
@@ -342,6 +393,7 @@ const AddPriceListDialog = ({
                       <Input
                         placeholder="Enter description in English"
                         {...field}
+                        disabled={isLoading}
                         onFocus={() => setIsAnyInputFocused(true)}
                         onBlur={() => setIsAnyInputFocused(false)}
                       />
@@ -362,6 +414,7 @@ const AddPriceListDialog = ({
                         placeholder="أدخل الوصف بالعربية"
                         {...field}
                         dir="rtl"
+                        disabled={isLoading}
                         onFocus={() => setIsAnyInputFocused(true)}
                         onBlur={() => setIsAnyInputFocused(false)}
                       />
@@ -381,6 +434,7 @@ const AddPriceListDialog = ({
                       <Input
                         type="date"
                         {...field}
+                        disabled={isLoading}
                         onFocus={() => setIsAnyInputFocused(true)}
                         onBlur={() => setIsAnyInputFocused(false)}
                       />
@@ -403,6 +457,7 @@ const AddPriceListDialog = ({
                       <Input
                         type="date"
                         {...field}
+                        disabled={isLoading}
                         onFocus={() => setIsAnyInputFocused(true)}
                         onBlur={() => setIsAnyInputFocused(false)}
                       />
@@ -430,6 +485,7 @@ const AddPriceListDialog = ({
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={isLoading}
                         />
                       </FormControl>
                     </FormItem>
@@ -442,8 +498,8 @@ const AddPriceListDialog = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={loading}
+                onClick={() => handleOpenChange(false)}
+                disabled={isLoading}
               >
                 Cancel
               </Button>
@@ -454,9 +510,9 @@ const AddPriceListDialog = ({
                   color: "white",
                   border: "none",
                 }}
-                disabled={loading}
+                disabled={isLoading}
               >
-                {loading ? (
+                {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Creating...

@@ -235,7 +235,6 @@ const customersSlice = createSlice({
       }
     });
     builder.addCase(actCreateCustomerPriceList.fulfilled, (state, action) => {
-      console.log(action.payload);
       const newPriceList = action.payload.data;
 
       state.createPriceListLoading = "fulfilled";
