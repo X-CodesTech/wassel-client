@@ -28,6 +28,7 @@ import {
   Search,
   Filter,
   RefreshCw,
+  Paperclip,
 } from "lucide-react";
 import {
   Dialog,
@@ -782,46 +783,35 @@ const AttachmentModule: React.FC<AttachmentModuleProps> = ({
   return (
     <div className="bg-white rounded-lg border shadow-sm">
       {/* Header */}
-      <div className="p-4 border-b bg-gray-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-gray-800">
-              {title || `${contextType} Attachments`}
-            </h2>
-            <Badge className={getContextInfo().color}>
-              {getContextInfo().type}
-            </Badge>
-            <span className="text-sm text-gray-500 font-mono">
-              ID: {getContextInfo().id}
-            </span>
-            {getContextInfo().name !== getContextInfo().id && (
-              <span className="text-sm text-gray-600">
-                Name: {getContextInfo().name}
+      <div className="p-4 border-b bg-gray-50 flex-1">
+        <div className="flex items-center justify-between flex-1 ">
+          <div className="flex items-center gap-3 flex-1 justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <Paperclip className="mr-2 h-5 w-5" />
+                {title || `${contextType} Attachments`}
+              </h2>
+              <Badge className={getContextInfo().color}>
+                {getContextInfo().type}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 font-mono ms-auto">
+                ID: {getContextInfo().id}
               </span>
-            )}
+              {getContextInfo().name !== getContextInfo().id && (
+                <span className="text-sm text-gray-600">
+                  Name: {getContextInfo().name}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Action Bar */}
       <div className="p-3 border-b bg-gray-50">
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200"
-          >
-            Activate
-          </Button>
-
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Download className="w-3 h-3 mr-1" />
-            Download template
-          </Button>
-
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -829,30 +819,6 @@ const AttachmentModule: React.FC<AttachmentModuleProps> = ({
           >
             <Upload className="w-3 h-3 mr-1" />
             Upload file
-          </Button>
-
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Plus className="w-3 h-3 mr-1" />
-            Add service line
-          </Button>
-
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <FileSpreadsheet className="w-3 h-3 mr-1" />
-            Download excel
-          </Button>
-
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Printer className="w-3 h-3 mr-1" />
-            Print cost list
           </Button>
         </div>
       </div>
