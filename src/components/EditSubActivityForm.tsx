@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Activity, SubActivity, TransactionType } from "@/types/types";
+import subActivityServices from "@/services/subActivityServices";
 import {
   Form,
   FormControl,
@@ -25,28 +26,44 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAppSelector } from "@/hooks/useAppSelector";
 
 // Form validation schema matching the add form design
-const formSchema = z.object({
-  parentId: z.string(),
-  activity: z.string().min(1, "Activity is required"),
-  transactionType: z.string().min(1, "Transaction type is required"),
-  financeEffect: z.union([
-    z.literal("none"),
-    z.literal("positive"),
-    z.literal("negative"),
-  ]),
-  pricingMethod: z.union([
-    z.literal("perLocation"),
-    z.literal("perItem"),
-    z.literal("perTrip"),
-  ]),
-  portalItemNameEn: z.string().min(1, "Portal item name (English) is required"),
-  portalItemNameAr: z.string().min(1, "Portal item name (Arabic) is required"),
-  usedByFinance: z.boolean(),
-  usedByOperations: z.boolean(),
-  inShippingUnit: z.boolean(),
-  active: z.boolean(),
-  specialRequirement: z.boolean(),
-});
+const formSchema = z
+  .object({
+    parentId: z.string(),
+    activity: z.string().min(1, "Activity is required"),
+    transactionType: z.string().min(1, "Transaction type is required"),
+    financeEffect: z.union([
+      z.literal("none"),
+      z.literal("positive"),
+      z.literal("negative"),
+    ]),
+    pricingMethod: z.union([
+      z.literal("perLocation"),
+      z.literal("perItem"),
+      z.literal("perTrip"),
+    ]),
+    portalItemNameEn: z
+      .string()
+      .min(1, "Portal item name (English) is required"),
+    portalItemNameAr: z
+      .string()
+      .min(1, "Portal item name (Arabic) is required"),
+    usedByFinance: z.boolean(),
+    usedByOperations: z.boolean(),
+    inShippingUnit: z.boolean(),
+    active: z.boolean(),
+    specialRequirement: z.boolean(),
+  })
+  .refine(
+    (data) => {
+      // Ensure sub-activity transaction type matches parent activity transaction type
+      return true; // This will be validated in the component
+    },
+    {
+      message:
+        "Sub-activity transaction type must match parent activity transaction type",
+      path: ["transactionType"],
+    }
+  );
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -70,8 +87,9 @@ export default function EditSubActivityForm({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      parentId: parentActivity._id,
       activity: parentActivity.actSrl,
-      transactionType: subActivity.transactionType._id,
+      transactionType: parentActivity.activityTransactionType, // Always use parent activity's transaction type
       financeEffect: subActivity.financeEffect,
       pricingMethod: subActivity.pricingMethod,
       portalItemNameEn: subActivity.portalItemNameEn,
@@ -85,23 +103,57 @@ export default function EditSubActivityForm({
   });
 
   // Update sub-activity mutation
-  const updateSubActivityMutation = (values: FormValues) => {
-    toast({
-      title: "Success",
-      description: "Portal item updated successfully",
-    });
+  const updateSubActivityMutation = async (values: FormValues) => {
+    try {
+      const updateData = {
+        transactionType: parentActivity.activityTransactionType, // Send just the ID string
+        activity: parentActivity._id!,
+        pricingMethod: values.pricingMethod,
+        portalItemNameEn: values.portalItemNameEn,
+        portalItemNameAr: values.portalItemNameAr,
+        isActive: values.active,
+        financeEffect: values.financeEffect,
+        isUsedByFinance: values.usedByFinance,
+        isUsedByOps: values.usedByOperations,
+        isInShippingUnit: values.inShippingUnit,
+        isInSpecialRequirement: values.specialRequirement,
+      };
 
-    toast({
-      title: "Error",
-      description: `Failed to update portal item: ${values}`,
-      variant: "destructive",
-    });
+      await subActivityServices.updateSubActivity(
+        subActivity._id!,
+        updateData as any // API expects string IDs, not full objects
+      );
+
+      toast({
+        title: "Success",
+        description: "Portal item updated successfully",
+      });
+
+      onClose();
+    } catch (error: any) {
+      console.error("Failed to update sub-activity:", error);
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to update portal item",
+        variant: "destructive",
+      });
+    }
   };
 
   // Submit handler
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
+    try {
+      await updateSubActivityMutation(values);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // Filter transaction types to only show the one that matches parent activity
+  const allowedTransactionTypes = transactionTypes.filter(
+    (tt) => tt._id === parentActivity.activityTransactionType
+  );
 
   return (
     <div className="p-6">
@@ -125,7 +177,7 @@ export default function EditSubActivityForm({
                     Activity
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-12" {...field} readOnly />
+                    <Input className="h-12 bg-gray-50" {...field} readOnly />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -134,35 +186,23 @@ export default function EditSubActivityForm({
             <FormField
               control={form.control}
               name="transactionType"
+              disabled
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-gray-700">
                     Transaction Type
                   </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-12">
-                        <SelectValue
-                          placeholder={transactionTypes?.[0]?.name}
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {transactionTypes.map(
-                        (transactionType: TransactionType) => (
-                          <SelectItem
-                            key={transactionType._id}
-                            value={transactionType._id}
-                          >
-                            {transactionType.name}
-                          </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <Input
+                      className="h-12 bg-gray-50"
+                      value={
+                        allowedTransactionTypes.find(
+                          (tt) => tt._id === field.value
+                        )?.name || ""
+                      }
+                      readOnly
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
