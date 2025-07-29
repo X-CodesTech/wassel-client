@@ -52,6 +52,23 @@ const priceListFormSchema = z
       message: "Effective from date must be before effective to date",
       path: ["effectiveTo"], // Show error on effectiveTo field
     }
+  )
+  .refine(
+    (data) => {
+      if (data.effectiveTo) {
+        const toDate = new Date(data.effectiveTo);
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0); // Reset time to start of day
+        toDate.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+        return toDate >= tomorrow;
+      }
+      return true;
+    },
+    {
+      message: "Effective to date must be at least 1 day after today",
+      path: ["effectiveTo"], // Show error on effectiveTo field
+    }
   );
 
 type PriceListFormValues = z.infer<typeof priceListFormSchema>;
