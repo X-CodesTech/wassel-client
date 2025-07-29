@@ -67,13 +67,18 @@ export default function AddSubActivityForm({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Filter transaction types to only show the one that matches parent activity
+  const allowedTransactionTypes = transactionTypes.filter(
+    (tt) => tt._id === parentActivity.activityTransactionType
+  );
+
   // Initialize form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       parentId: parentActivity._id!,
       activity: parentActivity.actSrl || "",
-      transactionType: transactionTypes[0]._id,
+      transactionType: parentActivity.activityTransactionType || "",
       financeEffect: "none",
       pricingMethod: "perLocation",
       portalItemNameEn: "",
@@ -85,49 +90,6 @@ export default function AddSubActivityForm({
       specialRequirement: false,
     },
   });
-
-  // Add sub-activity mutation
-  const addSubActivityMutation = () => {};
-  // useMutation({
-  //   mutationFn: async (values: FormValues) => {
-  //     // Transform values to match backend API
-  //     const subActivityData = {
-  //       parentId: values.parentId,
-  //       itmSrl: 1, // Auto-increment will be handled by backend
-  //       itemCode: `${values.activity}-ITEM`,
-  //       itemName: values.portalItemNameEn,
-  //       activityName: values.activity,
-  //       activityType: "Portal Item",
-  //       pricingMethod: values.pricingMethod,
-  //       active: values.active,
-  //     };
-  //     return apiRequest("POST", "/api/sub-activities", subActivityData);
-  //   },
-  //   onSuccess: () => {
-  //     queryClient.invalidateQueries();
-  //     queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
-  //     queryClient.invalidateQueries({
-  //       queryKey: ["/api/activities", parentActivity.id, "sub-activities"],
-  //     });
-
-  //     toast({
-  //       title: "Success",
-  //       description: "Portal item added successfully",
-  //     });
-
-  //     setTimeout(() => {
-  //       onClose();
-  //     }, 100);
-  //   },
-  //   onError: (error) => {
-  //     toast({
-  //       title: "Error",
-  //       description: `Failed to add portal item: ${error}`,
-  //       variant: "destructive",
-  //     });
-  //     setIsSubmitting(false);
-  //   },
-  // });
 
   // Submit handler
   const onSubmit = async (values: FormValues) => {
@@ -146,9 +108,15 @@ export default function AddSubActivityForm({
           isUsedByFinance: values.usedByFinance,
           isUsedByOps: values.usedByOperations,
           portalItemNameAr: values.portalItemNameAr,
-          transactionType: values.transactionType,
-        }
+          transactionType: parentActivity.activityTransactionType, // Send just the ID string
+        } as any // API expects string IDs, not full objects
       );
+
+      toast({
+        title: "Success",
+        description: "Portal item added successfully",
+      });
+
       onClose();
     } catch (error) {
       toast({
@@ -176,13 +144,14 @@ export default function AddSubActivityForm({
             <FormField
               control={form.control}
               name="activity"
+              disabled
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-gray-700">
                     Activity
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-12" {...field} readOnly disabled />
+                    <Input className="h-12 bg-gray-50" {...field} readOnly />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -191,33 +160,23 @@ export default function AddSubActivityForm({
             <FormField
               control={form.control}
               name="transactionType"
+              disabled
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-gray-700">
                     Transaction Type
                   </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-12">
-                        <SelectValue
-                          placeholder={transactionTypes?.[0]?.name}
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {transactionTypes.map((transactionType) => (
-                        <SelectItem
-                          key={transactionType._id}
-                          value={transactionType._id}
-                        >
-                          {transactionType.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <Input
+                      className="h-12 bg-gray-50"
+                      value={
+                        allowedTransactionTypes.find(
+                          (tt) => tt._id === field.value
+                        )?.name || ""
+                      }
+                      readOnly
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

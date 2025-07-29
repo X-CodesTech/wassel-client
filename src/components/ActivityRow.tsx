@@ -292,6 +292,7 @@ export default function ActivityRow({
                 onDeleteSubActivity={handleOpenDeleteSubActivityModal}
                 onToggleSubActive={handleToggleSubActive}
                 onEditSubActivity={onEditSubActivity}
+                onRefreshSubActivities={getSubActivities}
               />
               <div className="mt-3 ml-6">
                 {activity.isWithItems ? (

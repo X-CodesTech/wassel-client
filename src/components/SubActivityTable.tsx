@@ -37,6 +37,7 @@ interface SubActivityTableProps {
   onToggleSubActive: (id: string, active: boolean) => void;
   onDeleteSubActivity: (id: string) => void;
   onEditSubActivity: (id: string) => void;
+  onRefreshSubActivities?: () => void;
 }
 
 const YesOrNoBadge = ({ value }: { value: boolean }) => {
@@ -57,6 +58,7 @@ export default function SubActivityTable({
   onToggleSubActive,
   onDeleteSubActivity,
   onEditSubActivity,
+  onRefreshSubActivities,
 }: SubActivityTableProps) {
   const [editSubActivityOpen, setEditSubActivityOpen] = useState(false);
   const [selectedSubActivity, setSelectedSubActivity] =
@@ -96,6 +98,15 @@ export default function SubActivityTable({
       }
       return 0;
     });
+
+  const handleEditSubActivityClose = () => {
+    setEditSubActivityOpen(false);
+    setSelectedSubActivity(null);
+    // Refresh sub-activities list after editing
+    if (onRefreshSubActivities) {
+      onRefreshSubActivities();
+    }
+  };
 
   return (
     <>
@@ -240,7 +251,7 @@ export default function SubActivityTable({
             <EditSubActivityForm
               parentActivity={parentActivity}
               subActivity={selectedSubActivity}
-              onClose={() => setEditSubActivityOpen(false)}
+              onClose={handleEditSubActivityClose}
             />
           )}
         </DialogContent>
