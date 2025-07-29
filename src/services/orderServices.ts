@@ -17,6 +17,33 @@ import {
   GetPriceBreakdownResponse,
 } from "@/types/types";
 
+export interface UpdateVendorRequest {
+  subActivityId: string;
+  vendorId: string;
+  locationId?: string;
+  fromLocationId?: string;
+  toLocationId?: string;
+}
+
+export interface UpdateVendorResponse {
+  success: boolean;
+  message: string;
+  data: {
+    orderId: string;
+    orderIndex: string;
+    subActivityId: string;
+    previousVendor: string;
+    newVendor: {
+      id: string;
+      name: string;
+    };
+    costDetails: {
+      method: string;
+      cost: number;
+    };
+  };
+}
+
 const orderServices = {
   /**
    * Step 1: Create basic order
@@ -128,6 +155,17 @@ const orderServices = {
     status?: string;
   }) => {
     const response = await http.get(apiUrlConstants.orders, { params });
+    return response.data;
+  },
+
+  updateVendor: async (
+    orderId: string,
+    data: UpdateVendorRequest
+  ): Promise<UpdateVendorResponse> => {
+    const response = await http.put(
+      `/api/v1/orders/${orderId}/update-vendor`,
+      data
+    );
     return response.data;
   },
 };

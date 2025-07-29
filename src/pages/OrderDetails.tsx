@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useOrders } from "@/hooks/useOrders";
 import { useVendorCost } from "@/hooks/useVendorCost";
 import http from "@/services/http";
+import orderServices from "@/services/orderServices";
 import { IActivity, ISubActivity, ITransaction } from "@/types/ModelTypes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -149,16 +150,129 @@ export default function OrderDetails() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Handle vendor selection
-  const handleVendorChange = (
+  const handleVendorChange = async (
     serviceKey: string,
     vendorId: string,
     cost: number
   ) => {
-    setSelectedVendors((prev) => ({ ...prev, [serviceKey]: vendorId }));
+    // Don't proceed if no vendor is selected (clearing selection)
+    if (!vendorId) {
+      setSelectedVendors((prev) => ({ ...prev, [serviceKey]: vendorId }));
+      if (!costOverrides[serviceKey]) {
+        setSelectedCosts((prev) => ({ ...prev, [serviceKey]: cost }));
+      }
+      return;
+    }
 
-    // Only update cost if there's no manual cost override
-    if (!costOverrides[serviceKey]) {
-      setSelectedCosts((prev) => ({ ...prev, [serviceKey]: cost }));
+    try {
+      // Find the sub-activity data based on serviceKey
+      const [type, indexStr, subActivityId] = serviceKey.split("-");
+      const index = parseInt(indexStr);
+
+      let subActivityData: any = null;
+      let pricingMethod: string = "perItem";
+      let locationParams: any = {};
+
+      // Find the sub-activity data based on type
+      if (type === "truck" && order.truckTypeMatches) {
+        subActivityData = order.truckTypeMatches[index];
+        pricingMethod = subActivityData?.pricingMethod || "perItem";
+        locationParams = {
+          fromLocation:
+            subActivityData?.locationDetails?.fromLocationDetails?._id,
+          toLocation: subActivityData?.locationDetails?.toLocationDetails?._id,
+        };
+      } else if (
+        type === "pickup" &&
+        order.specialRequirementsPrices?.pickupSpecialRequirements
+      ) {
+        subActivityData =
+          order.specialRequirementsPrices.pickupSpecialRequirements[index];
+        pricingMethod = subActivityData?.pricingMethod || "perItem";
+        locationParams = {
+          fromLocation:
+            subActivityData?.locationDetails?.fromLocationDetails?._id,
+          toLocation: subActivityData?.locationDetails?.toLocationDetails?._id,
+        };
+      } else if (
+        type === "delivery" &&
+        order.specialRequirementsPrices?.deliverySpecialRequirements
+      ) {
+        subActivityData =
+          order.specialRequirementsPrices.deliverySpecialRequirements[index];
+        pricingMethod = subActivityData?.pricingMethod || "perItem";
+        locationParams = {
+          fromLocation:
+            subActivityData?.locationDetails?.fromLocationDetails?._id,
+          toLocation: subActivityData?.locationDetails?.toLocationDetails?._id,
+        };
+      }
+
+      if (!subActivityData) {
+        toast({
+          title: "Error",
+          description: "Could not find sub-activity data",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Prepare the request data based on pricing method
+      const requestData: any = {
+        subActivityId: subActivityData.subActivityId || subActivityData._id,
+        vendorId,
+      };
+
+      // Add location parameters based on pricing method
+      if (pricingMethod === "perLocation") {
+        if (locationParams.fromLocation) {
+          requestData.locationId = locationParams.fromLocation;
+        }
+      } else if (pricingMethod === "perTrip") {
+        if (locationParams.fromLocation) {
+          requestData.fromLocationId = locationParams.fromLocation;
+        }
+        if (locationParams.toLocation) {
+          requestData.toLocationId = locationParams.toLocation;
+        }
+      }
+      // For perItem, no location parameters are needed
+
+      // Call the API to update the vendor
+      const response = await orderServices.updateVendor(order._id, requestData);
+
+      if (response.success) {
+        // Update local state
+        setSelectedVendors((prev) => ({ ...prev, [serviceKey]: vendorId }));
+
+        // Only update cost if there's no manual cost override
+        if (!costOverrides[serviceKey]) {
+          setSelectedCosts((prev) => ({ ...prev, [serviceKey]: cost }));
+        }
+
+        toast({
+          title: "Vendor Updated",
+          description: `Vendor updated to ${response.data.newVendor.name}`,
+        });
+
+        // Refresh the order data to get updated information
+        if (orderId) {
+          getOrderById(orderId);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "Failed to update vendor",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error updating vendor:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update vendor",
+        variant: "destructive",
+      });
     }
   };
 
@@ -188,41 +302,25 @@ export default function OrderDetails() {
           subActivityId,
         };
 
-        // Determine location parameters based on pricing method and service type
-        if (locationParams && pricingMethod !== "perItem") {
-          if (pricingMethod === "perLocation") {
-            // For perLocation pricing methods, send only location parameter
-            if (locationParams.location) {
-              params.location = locationParams.location;
-            }
+        // Determine location parameters based on pricing method
+        if (pricingMethod === "perItem") {
+          // For perItem pricing method, do NOT pass any location parameters
+          // Only subActivityId is required
+        } else if (pricingMethod === "perLocation") {
+          // For perLocation pricing method, pass only location parameter
+          if (locationParams?.location) {
+            params.location = locationParams.location;
+          } else if (locationParams?.fromLocation) {
             // Fallback: use fromLocation as location if no specific location provided
-            else if (locationParams.fromLocation) {
-              params.location = locationParams.fromLocation;
-            }
-          } else if (pricingMethod === "perTrip") {
-            // For perTrip pricing methods, send fromLocation and toLocation
-            if (locationParams.fromLocation) {
-              params.fromLocation = locationParams.fromLocation;
-            }
-            if (locationParams.toLocation) {
-              params.toLocation = locationParams.toLocation;
-            }
-            // Fallback: if only location provided, use it as fromLocation
-            if (locationParams.location && !locationParams.fromLocation) {
-              params.fromLocation = locationParams.location;
-            }
-          } else {
-            // For other pricing methods (route-based), send fromLocation and toLocation
-            if (locationParams.fromLocation) {
-              params.fromLocation = locationParams.fromLocation;
-            }
-            if (locationParams.toLocation) {
-              params.toLocation = locationParams.toLocation;
-            }
-            // Fallback: if single location provided, use it
-            if (locationParams.location) {
-              params.location = locationParams.location;
-            }
+            params.location = locationParams.fromLocation;
+          }
+        } else if (pricingMethod === "perTrip") {
+          // For perTrip pricing method, pass only fromLocation and toLocation
+          if (locationParams?.fromLocation) {
+            params.fromLocation = locationParams.fromLocation;
+          }
+          if (locationParams?.toLocation) {
+            params.toLocation = locationParams.toLocation;
           }
         }
 
