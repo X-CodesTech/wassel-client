@@ -160,11 +160,11 @@ const orderServices = {
     orderId: string,
     data: CreateOrderStep3Request
   ): Promise<CreateOrderStep3Response> => {
-    const response = await http.put(
+    return await http.put(
       `${apiUrlConstants.orders}/${orderId}/shipping`,
       data
     );
-    return response.data;
+    // return response.data;
   },
 
   /**

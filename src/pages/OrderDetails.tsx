@@ -2333,7 +2333,7 @@ export default function OrderDetails() {
                                 className="font-medium text-xs leading-tight break-words"
                                 title={item.subActivityName}
                               >
-                                {item.subActivityName}
+                                {item.subActivityId.portalItemNameEn}
                               </span>
                             </div>
                             <div>
