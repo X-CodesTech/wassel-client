@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useLocation } from "wouter";
-import { Order } from "@/types/types";
+import { CostWindow } from "@/components/InitialPriceOffer/CostWindow";
+import { VendorDropdown } from "@/components/InitialPriceOffer/VendorDropdown";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -11,16 +12,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { UpdatePriceCostModal } from "@/components/UpdatePriceCostModal";
 import { useToast } from "@/hooks/use-toast";
 import { useOrders } from "@/hooks/useOrders";
 import { useVendorCost } from "@/hooks/useVendorCost";
-import { CostWindow } from "@/components/InitialPriceOffer/CostWindow";
-import { VendorDropdown } from "@/components/InitialPriceOffer/VendorDropdown";
-import { UpdatePriceCostModal } from "@/components/UpdatePriceCostModal";
 import http from "@/services/http";
-import { ISubActivity, IActivity, ITransaction } from "@/types/ModelTypes";
+import { IActivity, ISubActivity, ITransaction } from "@/types/ModelTypes";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
 
 // Extended interface for sub-activity with API response structure
 interface ISubActivityWithId extends ISubActivity {
@@ -29,42 +29,20 @@ interface ISubActivityWithId extends ISubActivity {
   activity: IActivity & { _id: string };
 }
 
-import {
-  MoreHorizontal,
-  Mail,
-  Phone,
-  MapPin,
-  Package,
-  Clock,
-  User,
-  FileText,
-  Download,
-  Eye,
-  Edit,
-  Trash2,
-  Calendar,
-  DollarSign,
-  Truck,
-  Weight,
-  Plus,
-  Upload,
-  Paperclip,
-  X,
-  ArrowLeft,
-} from "lucide-react";
+import AttachmentModule from "@/components/AttachmentModule";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -72,6 +50,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  ArrowLeft,
+  DollarSign,
+  Edit,
+  FileText,
+  MapPin,
+  MoreHorizontal,
+  Package,
+  Truck,
+  X,
+} from "lucide-react";
 
 export default function OrderDetails() {
   const [location, navigate] = useLocation();
@@ -148,6 +137,8 @@ export default function OrderDetails() {
     locationMode: "pickup", // pickup or delivery
     selectedLocation: "",
     selectedSubActivity: "",
+    quantity: 1, // Minimum quantity of 1
+    note: "", // Optional note
   });
 
   // State for sub-activities
@@ -198,7 +189,7 @@ export default function OrderDetails() {
         };
 
         // Determine location parameters based on pricing method and service type
-        if (locationParams) {
+        if (locationParams && pricingMethod !== "perItem") {
           if (pricingMethod === "perLocation") {
             // For perLocation pricing methods, send only location parameter
             if (locationParams.location) {
@@ -584,7 +575,10 @@ export default function OrderDetails() {
   );
 
   // Handle service line form changes
-  const handleServiceLineFormChange = (field: string, value: string) => {
+  const handleServiceLineFormChange = (
+    field: string,
+    value: string | number
+  ) => {
     setServiceLineForm((prev) => ({
       ...prev,
       [field]: value,
@@ -596,7 +590,7 @@ export default function OrderDetails() {
 
     // Fetch sub-activities when service type changes
     if (field === "serviceType") {
-      fetchSubActivities(value);
+      fetchSubActivities(value as string);
     }
   };
 
@@ -665,51 +659,95 @@ export default function OrderDetails() {
       // Construct the new special requirement entry
       const newSpecialRequirement = {
         subActivity: serviceLineForm.selectedSubActivity,
-        quantity: 1, // Default quantity
-        note: "", // Default empty note
+        quantity: serviceLineForm.quantity,
+        note: serviceLineForm.note,
       };
 
       console.log("New Special Requirement:", newSpecialRequirement);
 
-      // Build the request body with existing special requirements + new one
-      requestBody = {
-        pickupSpecialRequirements: {},
-        deliverySpecialRequirements: {},
-      };
+      // Build the request body based on selected location mode only
+      requestBody = {};
 
+      console.log("Current Order from Redux:", currentOrder?.orderDetails);
       console.log("Existing Order Pickup Info:", order.pickupInfo);
       console.log("Existing Order Delivery Info:", order.deliveryInfo);
 
-      // Copy existing pickup special requirements
-      if (order.pickupInfo && order.pickupInfo.length > 0) {
-        order.pickupInfo.forEach((pickup) => {
-          if (pickup.pickupLocation?._id && pickup.pickupSpecialRequirements) {
-            requestBody.pickupSpecialRequirements[pickup.pickupLocation._id] =
-              pickup.pickupSpecialRequirements.map((req: any) => ({
+      // Only include special requirements for the selected location mode
+      if (serviceLineForm.locationMode === "pickup") {
+        requestBody.pickupSpecialRequirements = {};
+
+        // Get all pickup special requirements from Redux state
+        if (currentOrder?.orderDetails?.pickupInfo) {
+          currentOrder.orderDetails.pickupInfo.forEach((pickup: any) => {
+            if (
+              pickup.pickupLocation?._id &&
+              pickup.pickupSpecialRequirements
+            ) {
+              requestBody.pickupSpecialRequirements[pickup.pickupLocation._id] =
+                pickup.pickupSpecialRequirements.map((req: any) => ({
+                  subActivity: req.subActivity?._id || req.subActivity,
+                  quantity: req.quantity || 1,
+                  note: req.note || "",
+                }));
+            }
+          });
+        } else {
+          // Copy existing pickup special requirements from current order
+          if (order.pickupInfo && order.pickupInfo.length > 0) {
+            order.pickupInfo.forEach((pickup) => {
+              if (
+                pickup.pickupLocation?._id &&
+                pickup.pickupSpecialRequirements
+              ) {
+                requestBody.pickupSpecialRequirements[
+                  pickup.pickupLocation._id
+                ] = pickup.pickupSpecialRequirements.map((req: any) => ({
+                  subActivity: req.subActivity?._id || req.subActivity,
+                  quantity: req.quantity || 1,
+                  note: req.note || "",
+                }));
+              }
+            });
+          }
+        }
+      } else if (serviceLineForm.locationMode === "delivery") {
+        requestBody.deliverySpecialRequirements = {};
+
+        // Get all delivery special requirements from Redux state
+        if (currentOrder?.orderDetails?.deliveryInfo) {
+          currentOrder.orderDetails.deliveryInfo.forEach((delivery: any) => {
+            if (
+              delivery.deliveryLocation?._id &&
+              delivery.deliverySpecialRequirements
+            ) {
+              requestBody.deliverySpecialRequirements[
+                delivery.deliveryLocation._id
+              ] = delivery.deliverySpecialRequirements.map((req: any) => ({
                 subActivity: req.subActivity?._id || req.subActivity,
                 quantity: req.quantity || 1,
                 note: req.note || "",
               }));
+            }
+          });
+        } else {
+          // Copy existing delivery special requirements from current order
+          if (order.deliveryInfo && order.deliveryInfo.length > 0) {
+            order.deliveryInfo.forEach((delivery) => {
+              if (
+                delivery.deliveryLocation?._id &&
+                delivery.deliverySpecialRequirements
+              ) {
+                requestBody.deliverySpecialRequirements[
+                  delivery.deliveryLocation._id
+                ] = delivery.deliverySpecialRequirements.map((req: any) => ({
+                  subActivity: req.subActivity?._id || req.subActivity,
+                  quantity: req.quantity || 1,
+                  note: req.note || "",
+                }));
+              }
+            });
           }
-        });
-      }
-
-      // Copy existing delivery special requirements
-      if (order.deliveryInfo && order.deliveryInfo.length > 0) {
-        order.deliveryInfo.forEach((delivery) => {
-          if (
-            delivery.deliveryLocation?._id &&
-            delivery.deliverySpecialRequirements
-          ) {
-            requestBody.deliverySpecialRequirements[
-              delivery.deliveryLocation._id
-            ] = delivery.deliverySpecialRequirements.map((req: any) => ({
-              subActivity: req.subActivity?._id || req.subActivity,
-              quantity: req.quantity || 1,
-              note: req.note || "",
-            }));
-          }
-        });
+        }
       }
 
       // Add the new special requirement to the appropriate location
@@ -758,6 +796,8 @@ export default function OrderDetails() {
           locationMode: "pickup",
           selectedLocation: "",
           selectedSubActivity: "",
+          quantity: 1,
+          note: "",
         });
         setAddServicePopoverOpen(false);
       } else {
@@ -816,6 +856,8 @@ export default function OrderDetails() {
       locationMode: "pickup",
       selectedLocation: "",
       selectedSubActivity: "",
+      quantity: 1,
+      note: "",
     });
     setAddServicePopoverOpen(false);
     setAddingServiceLine(false);
@@ -861,6 +903,10 @@ export default function OrderDetails() {
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify({ orderId, ipoActions })
       // });
+
+      console.groupCollapsed("IPO Submitted");
+      console.log(ipoActions);
+      console.groupEnd();
 
       toast({
         title: "IPO Submitted",
@@ -1874,6 +1920,46 @@ export default function OrderDetails() {
                         </Select>
                       </div>
 
+                      {/* Quantity Field */}
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="quantity"
+                          className="text-xs font-medium"
+                        >
+                          Quantity
+                        </Label>
+                        <Input
+                          id="quantity"
+                          type="number"
+                          min="1"
+                          value={serviceLineForm.quantity}
+                          onChange={(e) =>
+                            handleServiceLineFormChange(
+                              "quantity",
+                              parseInt(e.target.value) || 1
+                            )
+                          }
+                          className="h-8"
+                          placeholder="Enter quantity"
+                        />
+                      </div>
+
+                      {/* Note Field */}
+                      <div className="space-y-2">
+                        <Label htmlFor="note" className="text-xs font-medium">
+                          Note (Optional)
+                        </Label>
+                        <Textarea
+                          id="note"
+                          value={serviceLineForm.note}
+                          onChange={(e) =>
+                            handleServiceLineFormChange("note", e.target.value)
+                          }
+                          className="h-16 resize-none"
+                          placeholder="Enter optional note"
+                        />
+                      </div>
+
                       {/* Action Buttons */}
                       <div className="flex justify-end space-x-2 pt-2">
                         <Button
@@ -1890,7 +1976,8 @@ export default function OrderDetails() {
                           disabled={
                             addingServiceLine ||
                             !serviceLineForm.selectedLocation ||
-                            !serviceLineForm.selectedSubActivity
+                            !serviceLineForm.selectedSubActivity ||
+                            serviceLineForm.quantity < 1
                           }
                           className="bg-blue-600 hover:bg-blue-700"
                         >
@@ -2963,178 +3050,11 @@ export default function OrderDetails() {
           </CardContent>
         </Card>
 
-        {/* Attachments */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Paperclip className="mr-2 h-5 w-5" />
-                Attachments
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileInputChange}
-                  className="hidden"
-                  ref={fileInputRef}
-                  accept="*/*"
-                />
-                <Button
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
-                  disabled={uploading}
-                  onClick={() => {
-                    fileInputRef.current?.click();
-                  }}
-                >
-                  {uploading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Uploading...</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <Plus className="h-4 w-4" />
-                      <span>Add Files</span>
-                    </div>
-                  )}
-                </Button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative">
-            {/* Loading state while fetching files */}
-            {loadingFiles && (
-              <div className="border-2 border-dashed rounded-lg p-8 text-center border-gray-300">
-                <div className="flex flex-col items-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                  <p className="text-lg font-medium text-gray-700 mb-2">
-                    Loading existing files...
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Please wait while we fetch your uploaded files
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Show Drag & Drop Zone only when no files are uploaded and not loading */}
-            {!loadingFiles && attachments.length === 0 && (
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  dragOver
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-300 hover:border-gray-400"
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-lg font-medium text-gray-700 mb-2">
-                  {dragOver ? "Drop files here" : "Drag & drop files here"}
-                </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  or click the button above to select files
-                </p>
-                <p className="text-xs text-gray-400">
-                  Supports: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF, TXT, CSV
-                  (Max 10MB each)
-                </p>
-              </div>
-            )}
-
-            {/* Hidden drag and drop overlay for when files exist */}
-            {!loadingFiles && attachments.length > 0 && (
-              <div
-                className={`absolute inset-0 border-2 border-dashed rounded-lg transition-colors pointer-events-none ${
-                  dragOver
-                    ? "border-blue-500 bg-blue-50 bg-opacity-90 pointer-events-auto z-10"
-                    : "border-transparent"
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                {dragOver && (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <Upload className="h-12 w-12 mx-auto mb-4 text-blue-500" />
-                      <p className="text-lg font-medium text-blue-700">
-                        Drop files to add more
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Attachments List */}
-            {!loadingFiles && attachments.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900">
-                    Uploaded Files ({attachments.length})
-                  </h4>
-                  <p className="text-sm text-gray-500">
-                    Click "Add Files" to upload more
-                  </p>
-                </div>
-                {attachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="flex items-center justify-between p-3 border rounded-lg bg-gray-50"
-                  >
-                    <div className="flex items-center space-x-3">
-                      {getFileIcon(attachment.type)}
-                      <div>
-                        <p className="font-medium text-sm">{attachment.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {attachment.type} •{" "}
-                          {(attachment.size / 1024 / 1024).toFixed(2)} MB •{" "}
-                          {formatDate(attachment.uploadedAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewAttachment(attachment)}
-                        title="Preview file"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadAttachment(attachment)}
-                        title="Download file"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRemoveAttachment(attachment.id)}
-                        className="text-red-600 hover:text-red-700"
-                        title="Remove file"
-                        disabled={deletingFileId === attachment.id}
-                      >
-                        {deletingFileId === attachment.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                        ) : (
-                          <X className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <AttachmentModule
+          contextId={order._id}
+          contextType="Order"
+          title={order.orderIndex}
+        />
 
         {/* Update Price/Cost Modal */}
         <UpdatePriceCostModal
