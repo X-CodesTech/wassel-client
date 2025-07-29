@@ -2,9 +2,10 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { customerServices } from "@/services";
-import { Import, Loader2, LucideDownloadCloud } from "lucide-react";
+import { Import, Loader2, LucideDownloadCloud, Plus } from "lucide-react";
 import { useReducer } from "react";
 import CustomerDetailsImportExcelPriceListDialog from "./CustomerDetailsDialogs/CustomerDetailsImportExcelPriceListDialog";
+import AddPriceListDialog from "@/components/PriceList/AddPriceListDialog";
 
 type TLoading = "idle" | "pending" | "fulfilled" | "rejected";
 
@@ -16,6 +17,12 @@ const initialState = {
     response: null,
   },
   exporting: {
+    loading: "idle" as TLoading,
+    error: null,
+    response: null,
+  },
+  addPriceList: {
+    modalOpen: false,
     loading: "idle" as TLoading,
     error: null,
     response: null,
@@ -64,6 +71,31 @@ const reducer = (state: typeof initialState, action: any) => {
         ...state,
         exporting: { ...state.exporting, response: action.payload },
       };
+    case "addPriceList/modalOpen":
+      return {
+        ...state,
+        addPriceList: { ...state.addPriceList, modalOpen: action.payload },
+      };
+    case "addPriceList/loading":
+      return {
+        ...state,
+        addPriceList: { ...state.addPriceList, loading: action.payload },
+      };
+    case "addPriceList/error":
+      return {
+        ...state,
+        addPriceList: { ...state.addPriceList, error: action.payload },
+      };
+    case "addPriceList/response":
+      return {
+        ...state,
+        addPriceList: { ...state.addPriceList, response: action.payload },
+      };
+    case "addPriceList/reset":
+      return {
+        ...state,
+        addPriceList: { ...initialState.addPriceList },
+      };
     default:
       return state;
   }
@@ -106,6 +138,10 @@ const CustomerDetailsPriceListActions = () => {
     dispatch({ type: "importing/modalOpen", payload: true });
   };
 
+  const handleAddPriceList = () => {
+    dispatch({ type: "addPriceList/modalOpen", payload: true });
+  };
+
   return (
     <>
       <div className="flex gap-2 flex-wrap">
@@ -131,6 +167,14 @@ const CustomerDetailsPriceListActions = () => {
           )}
           Export Price List
         </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => handleAddPriceList()}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add
+        </Button>
       </div>
 
       <CustomerDetailsImportExcelPriceListDialog
@@ -140,6 +184,15 @@ const CustomerDetailsPriceListActions = () => {
         }
         dialogDispatch={dispatch}
         dialogState={state.importing}
+      />
+      <AddPriceListDialog
+        open={state.addPriceList.modalOpen}
+        onOpenChange={(open) =>
+          dispatch({ type: "addPriceList/modalOpen", payload: open })
+        }
+        isEdit={false}
+        customerId={customerId}
+        isCustomer={true}
       />
     </>
   );

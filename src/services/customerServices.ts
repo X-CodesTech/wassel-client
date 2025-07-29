@@ -231,6 +231,41 @@ const customerServices = {
   },
 
   /**
+   * Add customer price list
+   */
+  createCustomerPriceList: async ({
+    customerId,
+    priceListData,
+  }: {
+    customerId: string;
+    priceListData: Partial<PriceList>;
+  }): Promise<
+    AxiosResponse<{
+      message: string;
+      data: {
+        _id: string;
+        name: string;
+        nameAr: string;
+        description: string;
+        descriptionAr: string;
+        effectiveFrom: Date;
+        effectiveTo: Date;
+        subActivityPrices: [];
+      };
+      customerPriceLust: {
+        customerId: string;
+        priceListId: string;
+        message: string;
+      };
+    }>
+  > => {
+    return await http.post(apiUrlConstants.priceLists, {
+      ...priceListData,
+      customerId,
+    });
+  },
+
+  /**
    * Add customer price list sub activity
    */
   addCustomerPriceListSubActivity: async <T extends TPricingMethod>({

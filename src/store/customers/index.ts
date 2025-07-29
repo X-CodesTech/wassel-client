@@ -12,4 +12,5 @@ export {
   actDeleteCustomerPriceListSubActivity,
   addPriceListSubActivity,
   removePriceListSubActivity,
+  actCreateCustomerPriceList,
 } from "./customersSlice";

@@ -27,6 +27,7 @@ import { toast } from "@/hooks/use-toast";
 import { actAddPriceList } from "@/store/priceLists";
 import { PriceList } from "@/services/priceListServices";
 import { useState, useEffect } from "react";
+import { actCreateCustomerPriceList } from "@/store/customers";
 
 const priceListFormSchema = z.object({
   name: z.string().min(1, "Price list name (English) is required"),
@@ -44,12 +45,16 @@ interface AddPriceListDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isEdit?: boolean;
+  isCustomer?: boolean;
+  customerId?: string;
 }
 
 const AddPriceListDialog = ({
   open,
   onOpenChange,
   isEdit = false,
+  isCustomer = false,
+  customerId,
 }: AddPriceListDialogProps) => {
   const dispatch = useAppDispatch();
   const { loading } = useAppSelector((state) => state.priceLists);
@@ -225,7 +230,16 @@ const AddPriceListDialog = ({
         isActive: data.isActive,
       };
 
-      await dispatch(actAddPriceList(priceListData)).unwrap();
+      if (isCustomer) {
+        await dispatch(
+          actCreateCustomerPriceList({
+            customerId: customerId!,
+            priceListData,
+          })
+        ).unwrap();
+      } else {
+        await dispatch(actAddPriceList(priceListData)).unwrap();
+      }
 
       // Reset form and close modal
       form.reset();
