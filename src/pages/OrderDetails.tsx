@@ -1123,8 +1123,8 @@ export default function OrderDetails() {
           description: "Initial Price Offer has been submitted successfully",
         });
 
-        // Navigate to success page
-        navigate(`/order/success?orderId=${response.data._id}`);
+        // Navigate to orders page
+        navigate(`/orders`);
 
         // Reset actions after successful submission
         resetIpoActions();
@@ -1894,7 +1894,7 @@ export default function OrderDetails() {
                   size="sm"
                   className="bg-blue-600"
                   onClick={handleSubmitIPO}
-                  disabled={ipoSubmissionLoading}
+                  disabled={ipoSubmissionLoading || order.isSubmitted}
                 >
                   {ipoSubmissionLoading ? (
                     <>
