@@ -16,7 +16,7 @@ const COLUMN_CONFIG: Record<keyof Activity, string> = {
   _id: "ID",
   actSrl: "ACTsrl",
   activityCode: "Activity Code",
-  activityTransactionType: "Activity Type",
+  activityTransactionType: "Transaction Type",
   activityNameEn: "Activity Name (EN)",
   activityNameAr: "Activity Name (AR)",
   portalActivityNameEn: "Portal Activity Name (EN)",

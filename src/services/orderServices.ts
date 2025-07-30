@@ -242,6 +242,20 @@ const orderServices = {
     return response.data;
   },
 
+  /**
+   * Update basic order information (for edit mode)
+   */
+  updateBasicOrder: async (
+    orderId: string,
+    data: CreateOrderStep1Request
+  ): Promise<CreateOrderStep1Response> => {
+    const response = await http.put(
+      `${apiUrlConstants.orders}/${orderId}`,
+      data
+    );
+    return response.data;
+  },
+
   updateVendor: async (
     orderId: string,
     data: UpdateVendorRequest
@@ -258,6 +272,14 @@ const orderServices = {
     data: SubmitIPORequest
   ): Promise<SubmitIPOResponse> => {
     const response = await http.put(`/api/v1/orders/${orderId}/submit`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete an order
+   */
+  deleteOrder: async (orderId: string) => {
+    const response = await http.delete(`${apiUrlConstants.orders}/${orderId}`);
     return response.data;
   },
 };
