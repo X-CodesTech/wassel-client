@@ -887,9 +887,11 @@ export default function OrderDetails() {
 
         toast({
           title: "Service Line Added",
-          description: `Added ${serviceLineForm.serviceType} service: ${selectedSubActivityDetails.portalItemNameEn || "Unknown"
-            } (${selectedSubActivityDetails.transactionType?.name}) for ${serviceLineForm.locationMode
-            }`,
+          description: `Added ${serviceLineForm.serviceType} service: ${
+            selectedSubActivityDetails.portalItemNameEn || "Unknown"
+          } (${selectedSubActivityDetails.transactionType?.name}) for ${
+            serviceLineForm.locationMode
+          }`,
         });
 
         // Reset form and close popover
@@ -928,12 +930,17 @@ export default function OrderDetails() {
         console.error("Could not log payload due to error:", logError);
       }
 
+      // Enhanced error handling with better backend message extraction
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.response?.data?.errors?.[0]?.msg ||
+        error?.message ||
+        "Failed to add service line";
+
       toast({
         title: "Error",
-        description:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to add service line",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -1068,8 +1075,6 @@ export default function OrderDetails() {
       const profitMargin =
         totalPrice > 0 ? ((totalPrice - totalCost) / totalPrice) * 100 : 0;
 
-
-
       // Output in your desired format
       const orderFormat = {
         _id: order._id,
@@ -1097,11 +1102,11 @@ export default function OrderDetails() {
           name: attachment.name,
           type: attachment.type,
           size: attachment.size,
-          uploadedAt: attachment.uploadedAt
+          uploadedAt: attachment.uploadedAt,
         })),
         totalPrice: totalPrice,
         totalCost: totalCost,
-        profitMargin: profitMargin
+        profitMargin: profitMargin,
       };
 
       // Submit IPO using Redux async thunk
@@ -1324,8 +1329,9 @@ export default function OrderDetails() {
   // Helper function to format location
   const formatLocation = (location: any) => {
     if (!location) return "N/A";
-    return `${location.country || "N/A"}, ${location.area || "N/A"}, ${location.city || "N/A"
-      }`;
+    return `${location.country || "N/A"}, ${location.area || "N/A"}, ${
+      location.city || "N/A"
+    }`;
   };
 
   // Helper function to format special requirements
@@ -1333,7 +1339,8 @@ export default function OrderDetails() {
     if (!requirements || !Array.isArray(requirements)) return [];
     return requirements.map(
       (req) =>
-        `${req.quantity || 0} x ${req.subActivity?.portalItemNameEn || "Unknown"
+        `${req.quantity || 0} x ${
+          req.subActivity?.portalItemNameEn || "Unknown"
         }${req.note ? ` - ${req.note}` : ""}`
     );
   };
@@ -2016,14 +2023,14 @@ export default function OrderDetails() {
                                 loadingSubActivities
                                   ? "Loading sub-activities..."
                                   : subActivities.length > 0
-                                    ? "Select a sub-activity"
-                                    : "No sub-activities available"
+                                  ? "Select a sub-activity"
+                                  : "No sub-activities available"
                               }
                             />
                           </SelectTrigger>
                           <SelectContent>
                             {!loadingSubActivities &&
-                              subActivities.length > 0 ? (
+                            subActivities.length > 0 ? (
                               subActivities.map((subActivity) => {
                                 // Get finance effect color
                                 const getFinanceEffectColor = (
@@ -2129,13 +2136,15 @@ export default function OrderDetails() {
                               const displayText =
                                 serviceLineForm.locationMode === "pickup"
                                   ? `${formatLocation(
-                                    (location as any).pickupLocation
-                                  )} - ${(location as any).pickupDetailedAddress
-                                  }`
+                                      (location as any).pickupLocation
+                                    )} - ${
+                                      (location as any).pickupDetailedAddress
+                                    }`
                                   : `${formatLocation(
-                                    (location as any).deliveryLocation
-                                  )} - ${(location as any).deliveryDetailedAddress
-                                  }`;
+                                      (location as any).deliveryLocation
+                                    )} - ${
+                                      (location as any).deliveryDetailedAddress
+                                    }`;
 
                               return (
                                 <SelectItem
@@ -2339,9 +2348,11 @@ export default function OrderDetails() {
                             <div>
                               <span
                                 className="text-gray-700 text-xs leading-tight break-words"
-                                title={`${item.locationDetails?.fromLocation || "N/A"
-                                  } → ${item.locationDetails?.toLocation || "N/A"
-                                  }`}
+                                title={`${
+                                  item.locationDetails?.fromLocation || "N/A"
+                                } → ${
+                                  item.locationDetails?.toLocation || "N/A"
+                                }`}
                               >
                                 {item.locationDetails?.fromLocation || "N/A"} →{" "}
                                 {item.locationDetails?.toLocation || "N/A"}
@@ -2450,8 +2461,8 @@ export default function OrderDetails() {
                                       handleUpdatePrice(
                                         serviceKey,
                                         priceOverrides[serviceKey] ??
-                                        item.price ??
-                                        0,
+                                          item.price ??
+                                          0,
                                         item.subActivityName || "Service",
                                         "truck",
                                         index
@@ -2466,9 +2477,9 @@ export default function OrderDetails() {
                                       handleUpdateCost(
                                         serviceKey,
                                         costOverrides[serviceKey] ??
-                                        selectedCosts[serviceKey] ??
-                                        item.cost ??
-                                        0,
+                                          selectedCosts[serviceKey] ??
+                                          item.cost ??
+                                          0,
                                         item.subActivityName || "Service",
                                         "truck",
                                         index
@@ -2533,7 +2544,7 @@ export default function OrderDetails() {
                               (req: any) =>
                                 req.subActivity?._id === item.subActivityId ||
                                 req.subActivity?.portalItemNameEn ===
-                                item.subActivityName
+                                  item.subActivityName
                             );
                           if (hasMatchingReq) {
                             return pickup.pickupLocation;
@@ -2545,8 +2556,9 @@ export default function OrderDetails() {
 
                       const pickupLocation = getPickupLocationForSpecialReq();
                       const locationText = pickupLocation
-                        ? `${pickupLocation.country || "N/A"}, ${pickupLocation.area || "N/A"
-                        }`
+                        ? `${pickupLocation.country || "N/A"}, ${
+                            pickupLocation.area || "N/A"
+                          }`
                         : "Pickup Location";
                       const locationId = pickupLocation?._id;
 
@@ -2700,9 +2712,9 @@ export default function OrderDetails() {
                                       handleUpdatePrice(
                                         serviceKey,
                                         priceOverrides[serviceKey] ??
-                                        totalPrice,
+                                          totalPrice,
                                         item.subActivityName ||
-                                        "Pickup Special Requirement",
+                                          "Pickup Special Requirement",
                                         "pickup",
                                         index
                                       )
@@ -2716,11 +2728,11 @@ export default function OrderDetails() {
                                       handleUpdateCost(
                                         serviceKey,
                                         costOverrides[serviceKey] ??
-                                        selectedCosts[serviceKey] ??
-                                        item.cost ??
-                                        0,
+                                          selectedCosts[serviceKey] ??
+                                          item.cost ??
+                                          0,
                                         item.subActivityName ||
-                                        "Pickup Special Requirement",
+                                          "Pickup Special Requirement",
                                         "pickup",
                                         index
                                       )
@@ -2784,7 +2796,7 @@ export default function OrderDetails() {
                               (req: any) =>
                                 req.subActivity?._id === item.subActivityId ||
                                 req.subActivity?.portalItemNameEn ===
-                                item.subActivityName
+                                  item.subActivityName
                             );
                           if (hasMatchingReq) {
                             return delivery.deliveryLocation;
@@ -2797,8 +2809,9 @@ export default function OrderDetails() {
                       const deliveryLocation =
                         getDeliveryLocationForSpecialReq();
                       const locationText = deliveryLocation
-                        ? `${deliveryLocation.country || "N/A"}, ${deliveryLocation.area || "N/A"
-                        }`
+                        ? `${deliveryLocation.country || "N/A"}, ${
+                            deliveryLocation.area || "N/A"
+                          }`
                         : "Delivery Location";
                       const locationId = deliveryLocation?._id;
 
@@ -2952,9 +2965,9 @@ export default function OrderDetails() {
                                       handleUpdatePrice(
                                         serviceKey,
                                         priceOverrides[serviceKey] ??
-                                        totalPrice,
+                                          totalPrice,
                                         item.subActivityName ||
-                                        "Delivery Special Requirement",
+                                          "Delivery Special Requirement",
                                         "delivery",
                                         index
                                       )
@@ -2968,11 +2981,11 @@ export default function OrderDetails() {
                                       handleUpdateCost(
                                         serviceKey,
                                         costOverrides[serviceKey] ??
-                                        selectedCosts[serviceKey] ??
-                                        item.cost ??
-                                        0,
+                                          selectedCosts[serviceKey] ??
+                                          item.cost ??
+                                          0,
                                         item.subActivityName ||
-                                        "Delivery Special Requirement",
+                                          "Delivery Special Requirement",
                                         "delivery",
                                         index
                                       )
@@ -3241,9 +3254,9 @@ export default function OrderDetails() {
                         });
                         return totalPrice > 0
                           ? (
-                            ((totalPrice - totalCost) / totalPrice) *
-                            100
-                          ).toFixed(1) + "%"
+                              ((totalPrice - totalCost) / totalPrice) *
+                              100
+                            ).toFixed(1) + "%"
                           : "0%";
                       })()}
                     </span>

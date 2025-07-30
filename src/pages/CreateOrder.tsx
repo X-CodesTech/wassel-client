@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -34,7 +32,6 @@ import {
   Package,
   MapPin,
   User,
-  Calendar,
   Send,
   ArrowRight,
   ArrowLeft,
@@ -57,9 +54,6 @@ import {
   CreateOrderStep1Data,
   CreateOrderStep2Data,
   CreateOrderStep3Data,
-  PickupSpecialRequirementData,
-  DeliverySpecialRequirementData,
-  CoordinatorData,
 } from "@/types/types";
 import { SpecialRequirementsDropdown } from "@/components/SpecialRequirementsDropdown";
 import subActivityServices from "@/services/subActivityServices";
@@ -74,10 +68,11 @@ import {
 type Step = 1 | 2 | 3;
 
 export default function CreateOrder() {
-  const [location, navigate] = useLocation();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [orderId, setOrderId] = useState<string | null>(null);
+
   const [specialRequirements, setSpecialRequirements] = useState<any[]>([]);
   const [specialReqLoading, setSpecialReqLoading] = useState(true);
   const [shippingUnits, setShippingUnits] = useState<any[]>([]);
@@ -95,7 +90,6 @@ export default function CreateOrder() {
   const {
     loading,
     error,
-    success,
     createBasicOrder,
     addPickupDeliveryInfo,
     addShippingDetails,
@@ -117,6 +111,7 @@ export default function CreateOrder() {
   }, [draftRestored, hasDraft]);
 
   // Load special requirements
+
   useEffect(() => {
     setSpecialReqLoading(true);
     subActivityServices
@@ -124,14 +119,25 @@ export default function CreateOrder() {
       .then((res) => {
         setSpecialRequirements(res.data.data || []);
       })
+      .catch((error: any) => {
+        console.error("Failed to fetch special requirements:", error);
+        toast({
+          title: "Warning",
+          description:
+            error?.response?.data?.message ||
+            error?.message ||
+            "Failed to load special requirements.",
+          variant: "destructive",
+        });
+      })
       .finally(() => setSpecialReqLoading(false));
-  }, []);
+  }, [toast]);
 
   // Step 1 Form
   const step1Form = useForm<CreateOrderStep1Data>({
     resolver: zodResolver(createOrderStep1Schema),
     defaultValues: {
-      service: "Freight Service",
+      service: "Frieght",
       typesOfGoods: "",
       goodsDescription: "",
       billingAccount: "", // Will be selected from dropdown
@@ -275,9 +281,16 @@ export default function CreateOrder() {
         description: "Basic order information saved successfully.",
       });
     } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to create basic order";
+
+      console.error("Step 1 submission error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create basic order",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -305,9 +318,16 @@ export default function CreateOrder() {
         description: "Pickup and delivery information saved successfully.",
       });
     } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to add pickup and delivery info";
+
+      console.error("Step 2 submission error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to add pickup and delivery info",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -350,9 +370,16 @@ export default function CreateOrder() {
       clearOrderData();
       navigate(`/orders/${orderId}`);
     } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to add shipping details";
+
+      console.error("Step 3 submission error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to add shipping details",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -362,13 +389,6 @@ export default function CreateOrder() {
   const goToPreviousStep = () => {
     if (currentStep > 1) {
       setCurrentStep((prev) => (prev - 1) as Step);
-    }
-  };
-
-  // Handle going to next step
-  const goToNextStep = () => {
-    if (currentStep < 3) {
-      setCurrentStep((prev) => (prev + 1) as Step);
     }
   };
 
@@ -720,20 +740,6 @@ export default function CreateOrder() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <FormField
-                    control={step1Form.control}
-                    name="service"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Service</FormLabel>
-                        <FormControl>
-                          <Input value="Freight Service" disabled readOnly />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   <FormField
                     control={step1Form.control}
                     name="typesOfGoods"
