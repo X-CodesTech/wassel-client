@@ -129,6 +129,11 @@ export default function OrdersList() {
     navigate(`/orders/${orderId}/edit`);
   };
 
+  // Handle view order summary
+  const handleViewSummary = (orderId: string) => {
+    navigate(`/orders/${orderId}/summary`);
+  };
+
   // Handle delete order
   const handleDeleteOrder = (order: any) => {
     setSelectedOrderForDelete(order);
@@ -429,6 +434,15 @@ export default function OrdersList() {
                               >
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewSummary(order._id);
+                                }}
+                              >
+                                <Package className="mr-2 h-4 w-4" />
+                                View Summary
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={(e) => {

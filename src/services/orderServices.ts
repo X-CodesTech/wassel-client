@@ -250,7 +250,7 @@ const orderServices = {
     data: CreateOrderStep1Request
   ): Promise<CreateOrderStep1Response> => {
     const response = await http.put(
-      `${apiUrlConstants.orders}/${orderId}/basic-info`,
+      `${apiUrlConstants.orders}/${orderId}`,
       data
     );
     return response.data;
