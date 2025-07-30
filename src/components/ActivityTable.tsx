@@ -106,7 +106,7 @@ export default function ActivityTable({
               className="cursor-pointer"
             >
               <div className="flex items-center">
-                Activity Type
+                Transaction Type
                 <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />
               </div>
             </TableHead>
