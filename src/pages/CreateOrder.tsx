@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useOrders } from "@/hooks/useOrders";
+import orderServices from "@/services/orderServices";
 import { useLocation } from "wouter";
 import { CustomerDropdown } from "@/components/CustomerDropdown";
 import { LocationDropdown } from "@/components/LocationDropdown";
@@ -67,11 +68,147 @@ import {
 
 type Step = 1 | 2 | 3;
 
-export default function CreateOrder() {
+// Utility function to transform order data from API to form format
+function transformOrderDataToFormData(orderData: any) {
+  if (!orderData) return null;
+
+  const formatDateTime = (dateTime: string | Date) => {
+    if (!dateTime) return "";
+    const date = new Date(dateTime);
+    return date.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+  };
+
+  const extractId = (obj: any) => {
+    if (typeof obj === "string") return obj;
+    return obj?._id || obj?.id || "";
+  };
+
+  // Step 1 data
+  const step1Data: CreateOrderStep1Data = {
+    service: orderData.service || "Frieght",
+    typesOfGoods: orderData.typesOfGoods || "",
+    goodsDescription: orderData.goodsDescription || "",
+    billingAccount: extractId(orderData.billingAccount),
+    contactPerson: orderData.contactPerson || "",
+    requesterName: orderData.requesterName || "",
+    requesterMobile1: orderData.requesterMobile1 || "",
+    requesterMobile2: orderData.requesterMobile2 || "",
+    emailAddress: orderData.emailAddress || "",
+  };
+
+  // Step 2 data
+  const step2Data: CreateOrderStep2Data = {
+    pickupInfo: orderData.pickupInfo?.map((pickup: any) => ({
+      pickupLocation: extractId(pickup.pickupLocation),
+      pickupDetailedAddress: pickup.pickupDetailedAddress || "",
+      fromTime: formatDateTime(pickup.fromTime),
+      toTime: formatDateTime(pickup.toTime),
+      pickupSpecialRequirements:
+        pickup.pickupSpecialRequirements?.map((req: any) => ({
+          subActivity: extractId(req.subActivity),
+          quantity: req.quantity || 1,
+          note: req.note || "",
+        })) || [],
+      otherRequirements: pickup.otherRequirements || "",
+      pickupNotes: pickup.pickupNotes || "",
+      pickupCoordinator: {
+        requesterName: pickup.pickupCoordinator?.requesterName || "",
+        requesterMobile1: pickup.pickupCoordinator?.requesterMobile1 || "",
+        requesterMobile2: pickup.pickupCoordinator?.requesterMobile2 || "",
+        emailAddress: pickup.pickupCoordinator?.emailAddress || "",
+      },
+    })) || [
+      {
+        pickupLocation: "",
+        pickupDetailedAddress: "",
+        fromTime: "",
+        toTime: "",
+        pickupSpecialRequirements: [],
+        otherRequirements: "",
+        pickupNotes: "",
+        pickupCoordinator: {
+          requesterName: "",
+          requesterMobile1: "",
+          requesterMobile2: "",
+          emailAddress: "",
+        },
+      },
+    ],
+    deliveryInfo: orderData.deliveryInfo?.map((delivery: any) => ({
+      deliveryLocation: extractId(delivery.deliveryLocation),
+      deliveryDetailedAddress: delivery.deliveryDetailedAddress || "",
+      fromTime: formatDateTime(delivery.fromTime),
+      toTime: formatDateTime(delivery.toTime),
+      deliverySpecialRequirements:
+        delivery.deliverySpecialRequirements?.map((req: any) => ({
+          subActivity: extractId(req.subActivity),
+          quantity: req.quantity || 1,
+          note: req.note || "",
+        })) || [],
+      otherRequirements: delivery.otherRequirements || "",
+      deliveryNotes: delivery.deliveryNotes || "",
+      deliveryCoordinator: {
+        requesterName: delivery.deliveryCoordinator?.requesterName || "",
+        requesterMobile1: delivery.deliveryCoordinator?.requesterMobile1 || "",
+        requesterMobile2: delivery.deliveryCoordinator?.requesterMobile2 || "",
+        emailAddress: delivery.deliveryCoordinator?.emailAddress || "",
+      },
+    })) || [
+      {
+        deliveryLocation: "",
+        deliveryDetailedAddress: "",
+        fromTime: "",
+        toTime: "",
+        deliverySpecialRequirements: [],
+        otherRequirements: "",
+        deliveryNotes: "",
+        deliveryCoordinator: {
+          requesterName: "",
+          requesterMobile1: "",
+          requesterMobile2: "",
+          emailAddress: "",
+        },
+      },
+    ],
+  };
+
+  // Step 3 data
+  const step3Data: CreateOrderStep3Data = {
+    shippingUnits: extractId(orderData.shippingDetails?.shippingUnits),
+    typeOfTruck: extractId(orderData.shippingDetails?.typeOfTruck),
+    qty: orderData.shippingDetails?.qty || 1,
+    dimM: orderData.shippingDetails?.dimM || 1,
+    length: orderData.shippingDetails?.length || 1,
+    width: orderData.shippingDetails?.width || 1,
+    height: orderData.shippingDetails?.height || 1,
+    totalWeight: orderData.shippingDetails?.totalWeight || 1,
+    note: orderData.shippingDetails?.note || "",
+  };
+
+  return { step1Data, step2Data, step3Data };
+}
+
+interface CreateOrderProps {
+  mode?: "create" | "edit";
+  orderId?: string;
+  existingOrderData?: any; // This will be the order data from API
+}
+
+export default function CreateOrder({
+  mode = "create",
+  orderId: propOrderId,
+  existingOrderData,
+}: CreateOrderProps = {}) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>(1);
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(propOrderId || null);
+
+  // Transform existing order data if in edit mode
+  const transformedData =
+    mode === "edit" && existingOrderData
+      ? transformOrderDataToFormData(existingOrderData)
+      : null;
 
   const [specialRequirements, setSpecialRequirements] = useState<any[]>([]);
   const [specialReqLoading, setSpecialReqLoading] = useState(true);
@@ -103,12 +240,12 @@ export default function CreateOrder() {
     clearOrderData();
   }, [clearOrderError, clearOrderData]);
 
-  // Check for existing draft on component mount
+  // Check for existing draft on component mount (only in create mode)
   useEffect(() => {
-    if (!draftRestored && hasDraft()) {
+    if (mode === "create" && !draftRestored && hasDraft()) {
       setShowDraftDialog(true);
     }
-  }, [draftRestored, hasDraft]);
+  }, [mode, draftRestored, hasDraft]);
 
   // Load special requirements
 
@@ -136,7 +273,7 @@ export default function CreateOrder() {
   // Step 1 Form
   const step1Form = useForm<CreateOrderStep1Data>({
     resolver: zodResolver(createOrderStep1Schema),
-    defaultValues: {
+    defaultValues: transformedData?.step1Data || {
       service: "Frieght",
       typesOfGoods: "",
       goodsDescription: "",
@@ -152,7 +289,7 @@ export default function CreateOrder() {
   // Step 2 Form
   const step2Form = useForm<CreateOrderStep2Data>({
     resolver: zodResolver(createOrderStep2Schema),
-    defaultValues: {
+    defaultValues: transformedData?.step2Data || {
       pickupInfo: [
         {
           pickupLocation: "",
@@ -212,7 +349,7 @@ export default function CreateOrder() {
   // Step 3 Form
   const step3Form = useForm<CreateOrderStep3Data>({
     resolver: zodResolver(createOrderStep3Schema),
-    defaultValues: {
+    defaultValues: transformedData?.step3Data || {
       shippingUnits: "",
       typeOfTruck: "",
       qty: 1,
@@ -271,21 +408,37 @@ export default function CreateOrder() {
   const onStep1Submit = async (data: CreateOrderStep1Data) => {
     try {
       clearOrderError();
-      const response = await createBasicOrder(data);
-      setOrderId(response.data._id);
-      setCurrentStep(2);
-      // Update draft with new order ID
-      autoSaveDraft();
-      toast({
-        title: "Step 1 Completed",
-        description: "Basic order information saved successfully.",
-      });
+
+      if (mode === "edit" && orderId) {
+        // Update existing order
+        await orderServices.updateBasicOrder(orderId, data);
+        setCurrentStep(2);
+        toast({
+          title: "Step 1 Updated",
+          description: "Basic order information updated successfully.",
+        });
+      } else {
+        // Create new order
+        const response = await createBasicOrder(data);
+        setOrderId(response.data._id);
+        setCurrentStep(2);
+        // Update draft with new order ID
+        if (mode === "create") {
+          autoSaveDraft();
+        }
+        toast({
+          title: "Step 1 Completed",
+          description: "Basic order information saved successfully.",
+        });
+      }
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
         error?.message ||
-        "Failed to create basic order";
+        mode === "edit"
+          ? "Failed to update basic order"
+          : "Failed to create basic order";
 
       console.error("Step 1 submission error:", error);
       toast({
@@ -311,10 +464,12 @@ export default function CreateOrder() {
       clearOrderError();
       await addPickupDeliveryInfo(orderId, data);
       setCurrentStep(3);
-      // Update draft with progress
-      autoSaveDraft();
+      // Update draft with progress (only in create mode)
+      if (mode === "create") {
+        autoSaveDraft();
+      }
       toast({
-        title: "Step 2 Completed",
+        title: mode === "edit" ? "Step 2 Updated" : "Step 2 Completed",
         description: "Pickup and delivery information saved successfully.",
       });
     } catch (error: any) {
@@ -362,12 +517,20 @@ export default function CreateOrder() {
 
       await addShippingDetails(orderId, processedData);
       toast({
-        title: "Order Created Successfully",
-        description: "Your order has been created and is being processed.",
+        title:
+          mode === "edit"
+            ? "Order Updated Successfully"
+            : "Order Created Successfully",
+        description:
+          mode === "edit"
+            ? "Your order has been updated successfully."
+            : "Your order has been created and is being processed.",
       });
-      // Clear draft on successful order creation
-      clearDraft();
-      clearOrderData();
+      // Clear draft on successful order creation (only in create mode)
+      if (mode === "create") {
+        clearDraft();
+        clearOrderData();
+      }
       navigate(`/orders/${orderId}`);
     } catch (error: any) {
       const errorMessage =
@@ -439,8 +602,10 @@ export default function CreateOrder() {
     });
   };
 
-  // Auto-save draft
+  // Auto-save draft (only in create mode)
   const autoSaveDraft = () => {
+    if (mode !== "create") return; // Don't save drafts in edit mode
+
     const draftData: any = {
       currentStep,
       timestamp: Date.now(),
@@ -580,16 +745,22 @@ export default function CreateOrder() {
 
   const renderStepTitle = () => {
     const titles = {
-      1: "Basic Order Information",
-      2: "Pickup & Delivery Details",
-      3: "Shipping Information",
+      1:
+        mode === "edit"
+          ? "Edit Basic Order Information"
+          : "Basic Order Information",
+      2:
+        mode === "edit"
+          ? "Edit Pickup & Delivery Details"
+          : "Pickup & Delivery Details",
+      3: mode === "edit" ? "Edit Shipping Information" : "Shipping Information",
     };
     return titles[currentStep];
   };
 
   return (
     <div className="w-full space-y-6 p-6">
-      <title>Create Order | Wassel</title>
+      <title>{mode === "edit" ? "Edit Order" : "Create Order"} | Wassel</title>
 
       {/* Draft Restoration Dialog */}
       <DraftRestorationDialog
@@ -1760,7 +1931,7 @@ export default function CreateOrder() {
                 ) : (
                   <>
                     <Send className="mr-2 h-4 w-4" />
-                    Create Order
+                    {mode === "edit" ? "Edit Order" : "Create Order"}
                   </>
                 )}
               </Button>

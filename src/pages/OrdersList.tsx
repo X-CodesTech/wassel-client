@@ -25,6 +25,8 @@ import {
   Package,
   User,
   Clock,
+  Trash2,
+  Edit,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import OrderDeleteConfirmationDialog from "@/components/OrderDeleteConfirmationDialog";
 
 export default function OrdersList() {
   const [location, navigate] = useLocation();
@@ -67,6 +70,11 @@ export default function OrdersList() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
+
+  // State for delete dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedOrderForDelete, setSelectedOrderForDelete] =
+    useState<any>(null);
 
   // Fetch orders on component mount and when filters change
   useEffect(() => {
@@ -114,6 +122,36 @@ export default function OrdersList() {
   // Handle row click to navigate to order details
   const handleOrderClick = (orderId: string) => {
     navigate(`/orders/${orderId}`);
+  };
+
+  // Handle edit order
+  const handleEditOrder = (orderId: string) => {
+    navigate(`/orders/${orderId}/edit`);
+  };
+
+  // Handle delete order
+  const handleDeleteOrder = (order: any) => {
+    setSelectedOrderForDelete(order);
+    setDeleteDialogOpen(true);
+  };
+
+  // Handle delete success - refresh the orders list
+  const handleDeleteSuccess = () => {
+    const fetchOrdersData = async () => {
+      try {
+        const params = {
+          page,
+          limit,
+          ...(searchTerm && { search: searchTerm }),
+          ...(statusFilter !== "all" && { status: statusFilter }),
+        };
+        await getOrders(params);
+      } catch (error) {
+        console.error("Error refreshing orders:", error);
+      }
+    };
+
+    fetchOrdersData();
   };
 
   // Helper function to format date
@@ -395,18 +433,21 @@ export default function OrdersList() {
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // TODO: Implement edit functionality
+                                  handleEditOrder(order._id);
                                 }}
                               >
+                                <Edit className="mr-2 h-4 w-4" />
                                 Edit Order
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // TODO: Implement duplicate functionality
+                                  handleDeleteOrder(order);
                                 }}
+                                className="text-red-600 focus:text-red-600"
                               >
-                                Duplicate Order
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Order
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -482,6 +523,14 @@ export default function OrdersList() {
             </CardContent>
           </Card>
         )}
+
+      {/* Delete Confirmation Dialog */}
+      <OrderDeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        order={selectedOrderForDelete}
+        onDeleteSuccess={handleDeleteSuccess}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import LocationManagement from "@/pages/LocationManagement";
 import OrdersList from "@/pages/OrdersList";
 import OrderDetails from "@/pages/OrderDetails";
 import CreateOrder from "@/pages/CreateOrder";
+import EditOrder from "@/pages/EditOrder";
 import VendorsList from "@/pages/VendorsList";
 import VendorDetails from "@/pages/VendorDetails";
 import DesignSystem from "@/pages/DesignSystem";
@@ -30,6 +31,7 @@ function Router() {
         <Route path="/" component={Overview} />
         <Route path="/activities" component={ActivityManagement} />
         <Route path="/orders" component={OrdersList} />
+        <Route path="/orders/:orderId/edit" component={EditOrder} />
         <Route path="/orders/:id" component={OrderDetails} />
         <Route path="/create-order" component={CreateOrder} />
         <Route path="/price-lists" component={PriceLists} />
