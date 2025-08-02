@@ -400,8 +400,8 @@ export interface Coordinator {
 export interface PickupInfo {
   pickupLocation: string;
   pickupDetailedAddress: string;
-  fromTime: string;
-  toTime: string;
+  fromTime?: string;
+  toTime?: string;
   pickupSpecialRequirements: PickupSpecialRequirement[];
   otherRequirements?: string;
   pickupNotes?: string;
@@ -411,8 +411,8 @@ export interface PickupInfo {
 export interface DeliveryInfo {
   deliveryLocation: string;
   deliveryDetailedAddress: string;
-  fromTime: string;
-  toTime: string;
+  fromTime?: string;
+  toTime?: string;
   deliverySpecialRequirements: DeliverySpecialRequirement[];
   otherRequirements?: string;
   deliveryNotes?: string;
@@ -829,8 +829,8 @@ export const coordinatorSchema = z.object({
 export const pickupInfoSchema = z.object({
   pickupLocation: z.string().min(1, "Pickup location is required"),
   pickupDetailedAddress: z.string().min(1, "Pickup address is required"),
-  fromTime: z.string().min(1, "From time is required"),
-  toTime: z.string().min(1, "To time is required"),
+  fromTime: z.string().optional(),
+  toTime: z.string().optional(),
   pickupSpecialRequirements: z.array(pickupSpecialRequirementSchema),
   otherRequirements: z.string().optional(),
   pickupNotes: z.string().optional(),
@@ -840,8 +840,8 @@ export const pickupInfoSchema = z.object({
 export const deliveryInfoSchema = z.object({
   deliveryLocation: z.string().min(1, "Delivery location is required"),
   deliveryDetailedAddress: z.string().min(1, "Delivery address is required"),
-  fromTime: z.string().min(1, "From time is required"),
-  toTime: z.string().min(1, "To time is required"),
+  fromTime: z.string().optional(),
+  toTime: z.string().optional(),
   deliverySpecialRequirements: z.array(deliverySpecialRequirementSchema),
   otherRequirements: z.string().optional(),
   deliveryNotes: z.string().optional(),
