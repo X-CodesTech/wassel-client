@@ -35,7 +35,10 @@ function Router() {
         <Route path="/orders/:orderId/edit" component={EditOrder} />
         <Route path="/orders/:orderId/summary" component={OrderSummary} />
         <Route path="/orders/:id" component={OrderDetails} />
-        <Route path="/create-order" component={CreateOrder} />
+        <Route
+          path="/create-order"
+          component={() => <CreateOrder mode="create" />}
+        />
         <Route path="/price-lists" component={PriceLists} />
         <Route path="/price-lists/:id" component={PriceListDetails} />
         <Route path="/customers" component={Customers} />
