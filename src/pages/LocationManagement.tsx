@@ -400,14 +400,22 @@ export default function LocationManagement() {
 
   // Handle add form submission
   const handleAddSubmit = useCallback(
-    (data: LocationFormData) => {
-      dispatch(actAddLocation(data));
-      setIsAddDialogOpen(false);
-      addForm.reset();
-      toast({
-        title: "Success",
-        description: "Location added successfully",
-      });
+    async (data: LocationFormData) => {
+      try {
+        await dispatch(actAddLocation(data)).unwrap();
+        setIsAddDialogOpen(false);
+        addForm.reset();
+        toast({
+          title: "Success",
+          description: "Location added successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add location",
+          variant: "destructive",
+        });
+      }
     },
     [dispatch, addForm, toast]
   );
@@ -428,6 +436,25 @@ export default function LocationManagement() {
       }
     },
     [dispatch, editingLocation, editForm, toast]
+  );
+
+  // Handle cancel actions
+  const handleCancel = useCallback(() => {
+    setIsAddDialogOpen(false);
+    setEditingLocation(null);
+    addForm.reset();
+    editForm.reset();
+  }, [addForm, editForm]);
+
+  // Handle add dialog close
+  const handleAddDialogClose = useCallback(
+    (open: boolean) => {
+      setIsAddDialogOpen(open);
+      if (!open) {
+        addForm.reset();
+      }
+    },
+    [addForm]
   );
 
   // Handle edit click
@@ -456,12 +483,6 @@ export default function LocationManagement() {
     },
     []
   );
-
-  // Handle cancel
-  const handleCancel = useCallback(() => {
-    setIsAddDialogOpen(false);
-    setEditingLocation(null);
-  }, []);
 
   // Filter locations
   const filteredLocations = locations.filter((location) => {
@@ -501,7 +522,7 @@ export default function LocationManagement() {
           <MapPin className="h-6 w-6 text-blue-600" />
           <h1 className="text-2xl font-bold">Location Management</h1>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={handleAddDialogClose}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -755,7 +776,7 @@ export default function LocationManagement() {
       {/* Edit Dialog */}
       <Dialog
         open={!!editingLocation}
-        onOpenChange={() => setEditingLocation(null)}
+        onOpenChange={(open) => !open && setEditingLocation(null)}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
