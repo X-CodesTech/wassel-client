@@ -70,14 +70,54 @@ import { TLoading } from "@/types";
 
 // Form schema matching the bilingual JSON structure
 const locationFormSchema = z.object({
-  country: z.string().min(1, "Country is required"),
-  countryAr: z.string().min(1, "Country (Arabic) is required"),
-  area: z.string().min(1, "Area is required"),
-  areaAr: z.string().min(1, "Area (Arabic) is required"),
-  city: z.string().min(1, "City is required"),
-  cityAr: z.string().min(1, "City (Arabic) is required"),
-  village: z.string().min(1, "Village is required"),
-  villageAr: z.string().min(1, "Village (Arabic) is required"),
+  country: z
+    .string()
+    .min(1, "Country name is required")
+    .min(2, "Country name must be at least 2 characters")
+    .max(100, "Country name must not exceed 100 characters")
+    .trim(),
+  countryAr: z
+    .string()
+    .min(1, "اسم البلد مطلوب")
+    .min(2, "اسم البلد يجب أن يكون على الأقل حرفين")
+    .max(100, "اسم البلد يجب ألا يتجاوز 100 حرف")
+    .trim(),
+  area: z
+    .string()
+    .min(1, "Area name is required")
+    .min(2, "Area name must be at least 2 characters")
+    .max(100, "Area name must not exceed 100 characters")
+    .trim(),
+  areaAr: z
+    .string()
+    .min(1, "اسم المنطقة مطلوب")
+    .min(2, "اسم المنطقة يجب أن يكون على الأقل حرفين")
+    .max(100, "اسم المنطقة يجب ألا يتجاوز 100 حرف")
+    .trim(),
+  city: z
+    .string()
+    .min(1, "City name is required")
+    .min(2, "City name must be at least 2 characters")
+    .max(100, "City name must not exceed 100 characters")
+    .trim(),
+  cityAr: z
+    .string()
+    .min(1, "اسم المدينة مطلوب")
+    .min(2, "اسم المدينة يجب أن يكون على الأقل حرفين")
+    .max(100, "اسم المدينة يجب ألا يتجاوز 100 حرف")
+    .trim(),
+  village: z
+    .string()
+    .min(1, "Village name is required")
+    .min(2, "Village name must be at least 2 characters")
+    .max(100, "Village name must not exceed 100 characters")
+    .trim(),
+  villageAr: z
+    .string()
+    .min(1, "اسم القرية مطلوب")
+    .min(2, "اسم القرية يجب أن يكون على الأقل حرفين")
+    .max(100, "اسم القرية يجب ألا يتجاوز 100 حرف")
+    .trim(),
   isActive: z.boolean(),
 });
 
@@ -114,11 +154,13 @@ const LocationForm = memo(
               name="country"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Country (English)</FormLabel>
+                  <FormLabel>
+                    Country (English) <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Enter country name" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-sm mt-1" />
                 </FormItem>
               )}
             />
@@ -127,11 +169,13 @@ const LocationForm = memo(
               name="countryAr"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Country (Arabic)</FormLabel>
+                  <FormLabel>
+                    Country (Arabic) <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="أدخل اسم البلد" {...field} dir="rtl" />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-sm mt-1" />
                 </FormItem>
               )}
             />
@@ -144,11 +188,13 @@ const LocationForm = memo(
               name="area"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Area (English)</FormLabel>
+                  <FormLabel>
+                    Area (English) <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Enter area name" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-sm mt-1" />
                 </FormItem>
               )}
             />
@@ -157,7 +203,9 @@ const LocationForm = memo(
               name="areaAr"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Area (Arabic)</FormLabel>
+                  <FormLabel>
+                    Area (Arabic) <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="أدخل اسم المنطقة"
@@ -165,7 +213,7 @@ const LocationForm = memo(
                       dir="rtl"
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-sm mt-1" />
                 </FormItem>
               )}
             />
@@ -178,11 +226,13 @@ const LocationForm = memo(
               name="city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>City (English)</FormLabel>
+                  <FormLabel>
+                    City (English) <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Enter city name" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-sm mt-1" />
                 </FormItem>
               )}
             />
@@ -191,7 +241,9 @@ const LocationForm = memo(
               name="cityAr"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>City (Arabic)</FormLabel>
+                  <FormLabel>
+                    City (Arabic) <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="أدخل اسم المدينة"
@@ -199,7 +251,7 @@ const LocationForm = memo(
                       dir="rtl"
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-sm mt-1" />
                 </FormItem>
               )}
             />
@@ -212,11 +264,13 @@ const LocationForm = memo(
               name="village"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Village (English)</FormLabel>
+                  <FormLabel>
+                    Village (English) <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Enter village name" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-sm mt-1" />
                 </FormItem>
               )}
             />
@@ -225,11 +279,13 @@ const LocationForm = memo(
               name="villageAr"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Village (Arabic)</FormLabel>
+                  <FormLabel>
+                    Village (Arabic) <span className="text-red-500">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="أدخل اسم القرية" {...field} dir="rtl" />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-500 text-sm mt-1" />
                 </FormItem>
               )}
             />
@@ -369,6 +425,7 @@ export default function LocationManagement() {
   // Add form
   const addForm = useForm<LocationFormData>({
     resolver: zodResolver(locationFormSchema),
+    mode: "onChange", // Validate on change for immediate feedback
     defaultValues: {
       country: "",
       countryAr: "",
@@ -385,6 +442,7 @@ export default function LocationManagement() {
   // Edit form
   const editForm = useForm<LocationFormData>({
     resolver: zodResolver(locationFormSchema),
+    mode: "onChange", // Validate on change for immediate feedback
     defaultValues: {
       country: "",
       countryAr: "",
@@ -400,34 +458,93 @@ export default function LocationManagement() {
 
   // Handle add form submission
   const handleAddSubmit = useCallback(
-    (data: LocationFormData) => {
-      dispatch(actAddLocation(data));
-      setIsAddDialogOpen(false);
-      addForm.reset();
-      toast({
-        title: "Success",
-        description: "Location added successfully",
-      });
+    async (data: LocationFormData) => {
+      try {
+        // Trigger validation before submitting
+        const isValid = await addForm.trigger();
+        if (!isValid) {
+          toast({
+            title: "Validation Error",
+            description:
+              "Please check all required fields and correct any errors",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        await dispatch(actAddLocation(data)).unwrap();
+        setIsAddDialogOpen(false);
+        addForm.reset();
+        toast({
+          title: "Success",
+          description: "Location added successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add location",
+          variant: "destructive",
+        });
+      }
     },
     [dispatch, addForm, toast]
   );
 
   // Handle edit form submission
   const handleEditSubmit = useCallback(
-    (data: LocationFormData) => {
+    async (data: LocationFormData) => {
       if (editingLocation) {
-        dispatch(
-          actUpdateLocation({ id: editingLocation._id, location: data })
-        );
-        setEditingLocation(null);
-        editForm.reset();
-        toast({
-          title: "Success",
-          description: "Location updated successfully",
-        });
+        try {
+          // Trigger validation before submitting
+          const isValid = await editForm.trigger();
+          if (!isValid) {
+            toast({
+              title: "Validation Error",
+              description:
+                "Please check all required fields and correct any errors",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          await dispatch(
+            actUpdateLocation({ id: editingLocation._id, location: data })
+          ).unwrap();
+          setEditingLocation(null);
+          editForm.reset();
+          toast({
+            title: "Success",
+            description: "Location updated successfully",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to update location",
+            variant: "destructive",
+          });
+        }
       }
     },
     [dispatch, editingLocation, editForm, toast]
+  );
+
+  // Handle cancel actions
+  const handleCancel = useCallback(() => {
+    setIsAddDialogOpen(false);
+    setEditingLocation(null);
+    addForm.reset();
+    editForm.reset();
+  }, [addForm, editForm]);
+
+  // Handle add dialog close
+  const handleAddDialogClose = useCallback(
+    (open: boolean) => {
+      setIsAddDialogOpen(open);
+      if (!open) {
+        addForm.reset();
+      }
+    },
+    [addForm]
   );
 
   // Handle edit click
@@ -456,12 +573,6 @@ export default function LocationManagement() {
     },
     []
   );
-
-  // Handle cancel
-  const handleCancel = useCallback(() => {
-    setIsAddDialogOpen(false);
-    setEditingLocation(null);
-  }, []);
 
   // Filter locations
   const filteredLocations = locations.filter((location) => {
@@ -501,7 +612,7 @@ export default function LocationManagement() {
           <MapPin className="h-6 w-6 text-blue-600" />
           <h1 className="text-2xl font-bold">Location Management</h1>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={handleAddDialogClose}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -755,7 +866,7 @@ export default function LocationManagement() {
       {/* Edit Dialog */}
       <Dialog
         open={!!editingLocation}
-        onOpenChange={() => setEditingLocation(null)}
+        onOpenChange={(open) => !open && setEditingLocation(null)}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>

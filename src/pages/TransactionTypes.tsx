@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,7 +42,31 @@ import {
 } from "@/store/transactionTypes/transactionTypesSlice";
 import { TransactionType } from "@/types/types";
 
-// Form schema
+// Create form schema with duplicate validation
+const createFormSchema = (
+  existingTransactionTypes: TransactionType[],
+  excludeId?: string
+) => {
+  return z.object({
+    name: z
+      .string()
+      .min(1, { message: "Transaction name is required" })
+      .refine(
+        (name) => {
+          const normalizedName = name.toLowerCase().trim();
+          const isDuplicate = existingTransactionTypes.some(
+            (type) =>
+              type.name.toLowerCase().trim() === normalizedName &&
+              (!excludeId || type._id !== excludeId)
+          );
+          return !isDuplicate;
+        },
+        { message: "A transaction type with this name already exists" }
+      ),
+  });
+};
+
+// Default form schema for initial setup
 const formSchema = z.object({
   name: z.string().min(1, { message: "Transaction name is required" }),
 });
@@ -67,9 +91,20 @@ export default function TransactionTypes() {
     dispatch(actGetTransactionTypes());
   }, [dispatch]);
 
+  // Create dynamic resolvers with duplicate validation
+  const addFormResolver = useMemo(
+    () => zodResolver(createFormSchema(records)),
+    [records]
+  );
+
+  const editFormResolver = useMemo(
+    () => zodResolver(createFormSchema(records, selectedTransactionType?._id)),
+    [records, selectedTransactionType?._id]
+  );
+
   // Form for adding transaction type
   const addForm = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: addFormResolver,
     defaultValues: {
       name: "",
     },
@@ -77,11 +112,20 @@ export default function TransactionTypes() {
 
   // Form for editing transaction type
   const editForm = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: editFormResolver,
     defaultValues: {
       name: selectedTransactionType?.name || "",
     },
   });
+
+  // Update forms when resolvers change to ensure validation is current
+  useEffect(() => {
+    addForm.trigger();
+  }, [addFormResolver, addForm]);
+
+  useEffect(() => {
+    editForm.trigger();
+  }, [editFormResolver, editForm]);
 
   // Reset edit form when selected transaction changes
   useEffect(() => {
