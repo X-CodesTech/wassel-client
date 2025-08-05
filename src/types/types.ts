@@ -156,10 +156,10 @@ export interface Location {
   countryAr: string;
   area: string;
   areaAr: string;
-  city: string;
-  cityAr: string;
-  village: string;
-  villageAr: string;
+  city?: string;
+  cityAr?: string;
+  village?: string;
+  villageAr?: string;
   isActive: boolean;
   __v: number;
   createdAt: Date;
@@ -172,10 +172,10 @@ export const locationSchema = z.object({
   countryAr: z.string().min(1, "Country (Arabic) is required"),
   area: z.string().min(1, "Area is required"),
   areaAr: z.string().min(1, "Area (Arabic) is required"),
-  city: z.string().min(1, "City is required"),
-  cityAr: z.string().min(1, "City (Arabic) is required"),
-  village: z.string().min(1, "Village is required"),
-  villageAr: z.string().min(1, "Village (Arabic) is required"),
+  city: z.string().optional(),
+  cityAr: z.string().optional(),
+  village: z.string().optional(),
+  villageAr: z.string().optional(),
   isActive: z.boolean(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
