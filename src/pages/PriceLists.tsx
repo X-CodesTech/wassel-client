@@ -29,6 +29,11 @@ const getSubActivityName = (
     return "Unknown Item";
   }
 
+  // Check if subActivity is null or undefined
+  if (!subActivity) {
+    return "Unknown Item";
+  }
+
   if ("portalItemNameEn" in subActivity) {
     return subActivity.portalItemNameEn;
   }

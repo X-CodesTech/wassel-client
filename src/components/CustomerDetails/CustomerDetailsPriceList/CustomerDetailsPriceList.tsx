@@ -61,7 +61,7 @@ const CustomerDetailsPriceList = () => {
               <div className="flex items-center gap-4">
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="default"
                   onClick={() =>
                     handleDialog({
                       open: true,
@@ -71,7 +71,7 @@ const CustomerDetailsPriceList = () => {
                   }
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add
+                  Add Sub-Activity
                 </Button>
               </div>
             </CardHeader>
@@ -82,8 +82,17 @@ const CustomerDetailsPriceList = () => {
                 selectedCustomer?.priceLists.length > 0 ? (
                 <CustomerPriceListTable priceList={priceList?.priceList} />
               ) : (
-                <div className="text-center text-sm text-gray-500">
-                  No price lists found
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="rounded-full bg-blue-100 p-3 mb-3">
+                    <Plus className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <h4 className="text-lg font-medium mb-1">
+                    No Sub-Activities
+                  </h4>
+                  <p className="text-gray-500 max-w-md mb-4">
+                    This price list doesn't have any sub-activities yet. Click
+                    "Add Sub-Activity" above to get started.
+                  </p>
                 </div>
               )}
             </CardContent>

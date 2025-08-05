@@ -316,7 +316,7 @@ export const useSubActivityPriceDialog = ({
                 fromLocation: lp.fromLocation?._id || lp.fromLocation,
                 toLocation: lp.toLocation?._id || lp.toLocation,
                 pricingMethod: "perTrip",
-                cost: lp.cost || lp.price || 0,
+                price: lp.cost || lp.price || 0,
               })
             ) || [],
         } as any);
