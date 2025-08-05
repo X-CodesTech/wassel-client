@@ -3,10 +3,10 @@ export interface ILocation {
   countryAr: string;
   area: string;
   areaAr: string;
-  city: string;
-  cityAr: string;
-  village: string;
-  villageAr: string;
+  city?: string;
+  cityAr?: string;
+  village?: string;
+  villageAr?: string;
   isActive: boolean;
 }
 

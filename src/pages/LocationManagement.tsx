@@ -96,28 +96,28 @@ const locationFormSchema = z.object({
     .trim(),
   city: z
     .string()
-    .min(1, "City name is required")
-    .min(2, "City name must be at least 2 characters")
     .max(100, "City name must not exceed 100 characters")
-    .trim(),
+    .trim()
+    .optional()
+    .or(z.literal("")),
   cityAr: z
     .string()
-    .min(1, "اسم المدينة مطلوب")
-    .min(2, "اسم المدينة يجب أن يكون على الأقل حرفين")
     .max(100, "اسم المدينة يجب ألا يتجاوز 100 حرف")
-    .trim(),
+    .trim()
+    .optional()
+    .or(z.literal("")),
   village: z
     .string()
-    .min(1, "Village name is required")
-    .min(2, "Village name must be at least 2 characters")
     .max(100, "Village name must not exceed 100 characters")
-    .trim(),
+    .trim()
+    .optional()
+    .or(z.literal("")),
   villageAr: z
     .string()
-    .min(1, "اسم القرية مطلوب")
-    .min(2, "اسم القرية يجب أن يكون على الأقل حرفين")
     .max(100, "اسم القرية يجب ألا يتجاوز 100 حرف")
-    .trim(),
+    .trim()
+    .optional()
+    .or(z.literal("")),
   isActive: z.boolean(),
 });
 
@@ -226,9 +226,7 @@ const LocationForm = memo(
               name="city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    City (English) <span className="text-red-500">*</span>
-                  </FormLabel>
+                  <FormLabel>City (English)</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter city name" {...field} />
                   </FormControl>
@@ -241,9 +239,7 @@ const LocationForm = memo(
               name="cityAr"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    City (Arabic) <span className="text-red-500">*</span>
-                  </FormLabel>
+                  <FormLabel>City (Arabic)</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="أدخل اسم المدينة"
@@ -264,9 +260,7 @@ const LocationForm = memo(
               name="village"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    Village (English) <span className="text-red-500">*</span>
-                  </FormLabel>
+                  <FormLabel>Village (English)</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter village name" {...field} />
                   </FormControl>
@@ -279,9 +273,7 @@ const LocationForm = memo(
               name="villageAr"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    Village (Arabic) <span className="text-red-500">*</span>
-                  </FormLabel>
+                  <FormLabel>Village (Arabic)</FormLabel>
                   <FormControl>
                     <Input placeholder="أدخل اسم القرية" {...field} dir="rtl" />
                   </FormControl>
@@ -556,10 +548,10 @@ export default function LocationManagement() {
         countryAr: location.countryAr,
         area: location.area,
         areaAr: location.areaAr,
-        city: location.city,
-        cityAr: location.cityAr,
-        village: location.village,
-        villageAr: location.villageAr,
+        city: location.city || "",
+        cityAr: location.cityAr || "",
+        village: location.village || "",
+        villageAr: location.villageAr || "",
         isActive: location.isActive,
       });
     },
@@ -581,15 +573,19 @@ export default function LocationManagement() {
       location.countryAr.includes(filters.search) ||
       location.area.toLowerCase().includes(filters.search.toLowerCase()) ||
       location.areaAr.includes(filters.search) ||
-      location.city.toLowerCase().includes(filters.search.toLowerCase()) ||
-      location.cityAr.includes(filters.search) ||
-      location.village.toLowerCase().includes(filters.search.toLowerCase()) ||
-      location.villageAr.includes(filters.search);
+      (location.city || "")
+        .toLowerCase()
+        .includes(filters.search.toLowerCase()) ||
+      (location.cityAr || "").includes(filters.search) ||
+      (location.village || "")
+        .toLowerCase()
+        .includes(filters.search.toLowerCase()) ||
+      (location.villageAr || "").includes(filters.search);
 
     const matchesCountry =
       !filters.country || location.country === filters.country;
     const matchesArea = !filters.area || location.area === filters.area;
-    const matchesCity = !filters.city || location.city === filters.city;
+    const matchesCity = !filters.city || (location.city || "") === filters.city;
     const matchesActiveStatus = !filters.showActiveOnly || location.isActive;
 
     return (
@@ -811,10 +807,10 @@ export default function LocationManagement() {
                     </TableCell>
                     <TableCell>{location.area}</TableCell>
                     <TableCell dir="rtl">{location.areaAr}</TableCell>
-                    <TableCell>{location.city}</TableCell>
-                    <TableCell dir="rtl">{location.cityAr}</TableCell>
-                    <TableCell>{location.village}</TableCell>
-                    <TableCell dir="rtl">{location.villageAr}</TableCell>
+                    <TableCell>{location.city || "-"}</TableCell>
+                    <TableCell dir="rtl">{location.cityAr || "-"}</TableCell>
+                    <TableCell>{location.village || "-"}</TableCell>
+                    <TableCell dir="rtl">{location.villageAr || "-"}</TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
