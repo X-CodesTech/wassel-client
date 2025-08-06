@@ -96,7 +96,11 @@ export default function PriceListDetails() {
     if (typeof subActivity === "string") {
       return "Unknown Activity";
     }
-    return subActivity.portalItemNameEn || "Unknown Activity";
+    return (
+      subActivity?.portalItemNameEn ||
+      subActivity?.portalItemNameAr ||
+      "Unknown Activity"
+    );
   };
 
   // Get activity name
@@ -104,6 +108,12 @@ export default function PriceListDetails() {
     if (typeof subActivity === "string") {
       return "Unknown Activity";
     }
+
+    // Check if subActivity is null or undefined
+    if (!subActivity) {
+      return "Unknown Activity";
+    }
+
     if (typeof subActivity.activity === "string") {
       return subActivity.activity;
     }
@@ -120,6 +130,12 @@ export default function PriceListDetails() {
     if (typeof subActivity === "string") {
       return "Unknown";
     }
+
+    // Check if subActivity is null or undefined
+    if (!subActivity) {
+      return "Unknown";
+    }
+
     if (typeof subActivity.transactionType === "string") {
       return subActivity.transactionType;
     }
@@ -270,9 +286,10 @@ export default function PriceListDetails() {
                               <div className="text-xs space-y-1">
                                 <div>{getActivityName(item.subActivity)}</div>
                                 <div>
-                                  {typeof item.subActivity.activity === "string"
+                                  {item.subActivity &&
+                                  typeof item.subActivity.activity === "string"
                                     ? ""
-                                    : item.subActivity.activity?.nameAr || ""}
+                                    : item.subActivity?.activity?.nameAr || ""}
                                 </div>
                               </div>
                             </td>

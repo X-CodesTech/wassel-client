@@ -39,7 +39,7 @@ const updateBodyPasrer = (
           return {
             subActivity: data.subActivity,
             pricingMethod: data.pricingMethod,
-            locationPrices: data.locationPrices?.map((lp) => ({
+            locationPrices: data.locationPrices?.map((lp: any) => ({
               ...lp,
               fromLocation: lp.fromLocation,
               toLocation: lp.toLocation,
@@ -50,7 +50,7 @@ const updateBodyPasrer = (
           return {
             subActivity: data.subActivity,
             pricingMethod: data.pricingMethod,
-            locationPrices: data.locationPrices?.map((lp) => ({
+            locationPrices: data.locationPrices?.map((lp: any) => ({
               ...lp,
               fromLocation: lp.fromLocation,
               toLocation: lp.toLocation,
@@ -121,7 +121,7 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
         subActivity: editData?.subActivity,
         pricingMethod: editData?.pricingMethod || "perItem",
         locationPrices:
-          editData?.locationPrices?.map((lp) => ({
+          editData?.locationPrices?.map((lp: any) => ({
             ...lp,
             fromLocation: lp.fromLocation,
             toLocation: lp.toLocation,
@@ -178,21 +178,32 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
     callback?: () => void
   ) => {
     try {
+      // Transform the form data to match the expected API structure
+      const submitData: any = {
+        pricingMethod: data.pricingMethod,
+        priceListId: priceListId!,
+        subActivityId: data.subActivity,
+      };
+
+      // Add pricing method specific data
+      if (data.pricingMethod === "perItem") {
+        submitData.basePrice = data.basePrice;
+      } else if (
+        data.pricingMethod === "perLocation" ||
+        data.pricingMethod === "perTrip"
+      ) {
+        submitData.locationPrices = data.locationPrices;
+      }
+
       const response = await dispatch(
-        actAddPriceListSubActivity({
-          priceListId: priceListId!,
-          pricingMethod: data.pricingMethod,
-          subActivityId: data.subActivity,
-          basePrice: data.basePrice,
-          locationPrices: data.locationPrices,
-        })
+        actAddPriceListSubActivity(submitData)
       ).unwrap();
 
       if (contextType === "customer") {
         dispatch(
           addPriceListSubActivity({
             priceListId: response.data._id!,
-            subActivityPrices: response.data.subActivityPrices || [],
+            subActivityPrices: (response.data.subActivityPrices as any) || [],
           })
         );
       }
@@ -231,11 +242,12 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
     callback?: () => void
   ) => {
     try {
+      const vendorData = updateBodyPasrer(data, contextType);
       await dispatch(
         actAddVendorSubActivityPrice({
           vendorPriceListId: priceListId!,
-          ...updateBodyPasrer(data, contextType),
-        })
+          ...vendorData,
+        } as any)
       ).unwrap();
 
       successNotificationHandler();
@@ -251,12 +263,13 @@ const SubActivityPriceManager: React.FC<SubActivityPriceManagerProps> = ({
   ) => {
     console.log("🎯 handleEditVendorPriceListSubActivity", data);
     try {
+      const vendorEditData = updateBodyPasrer(data, contextType, true);
       await dispatch(
         actEditVendorSubActivityPrice({
           vendorPriceListId: priceListId!,
           subActivityId: subActivityPriceId!,
-          ...updateBodyPasrer(data, contextType, true),
-        })
+          ...vendorEditData,
+        } as any)
       ).unwrap();
 
       toast({

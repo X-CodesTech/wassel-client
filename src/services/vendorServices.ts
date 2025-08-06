@@ -45,10 +45,10 @@ export interface Location {
   countryAr: string;
   area: string;
   areaAr: string;
-  city: string;
-  cityAr: string;
-  village: string;
-  villageAr: string;
+  city?: string;
+  cityAr?: string;
+  village?: string;
+  villageAr?: string;
   isActive: boolean;
   __v: number;
   createdAt: Date;

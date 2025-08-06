@@ -12,7 +12,13 @@ import {
 } from "@/components/ui/table";
 import { CustomerPriceListResponse } from "@/services/customerServices";
 import { PRICING_METHOD_OPTIONS } from "@/utils/constants";
-import { ChevronDownIcon, ChevronUpIcon, Edit, Trash2 } from "lucide-react";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  Edit,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import React, { useState } from "react";
 
 type TPriceList = CustomerPriceListResponse["priceList"];
@@ -366,8 +372,26 @@ const CustomerPriceListTable = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {priceList?.subActivityPrices?.map((item, index) =>
-                  renderTableRow(item, index)
+                {priceList?.subActivityPrices?.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={MAIN_TABLE_HEADERS.length + 1}
+                      className="h-32"
+                    >
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <div className="rounded-full bg-blue-100 p-2 mb-2">
+                          <Plus className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          No sub-activities in this price list yet.
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  priceList?.subActivityPrices?.map((item, index) =>
+                    renderTableRow(item, index)
+                  )
                 )}
               </TableBody>
             </Table>
