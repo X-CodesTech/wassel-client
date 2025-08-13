@@ -17,8 +17,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { getStructuredAddress } from "@/utils/getStructuredAddress";
 import { UseFormReturn } from "react-hook-form";
-import { Loader2, Search, X } from "lucide-react";
+import { Loader2, Search, X, Plus } from "lucide-react";
 import { useLocationSearch } from "@/hooks/useLocationSearch";
+import { AddLocationModal } from "./AddLocationModal";
+import { useAppSelector } from "@/hooks/useAppSelector";
 
 type LocationObject = {
   _id: string;
@@ -159,6 +161,9 @@ const LocationOptions = React.memo(
     loadMore,
     isInitialized,
     userHasInteracted,
+    form,
+    name,
+    initializeData,
   }: {
     records: any[];
     loading: boolean;
@@ -166,6 +171,9 @@ const LocationOptions = React.memo(
     loadMore: () => void;
     isInitialized: boolean;
     userHasInteracted: boolean;
+    form: UseFormReturn<any>;
+    name: string;
+    initializeData: () => void;
   }) => {
     // Memoize the load more handler to prevent unnecessary re-renders
     const handleLoadMore = useCallback(() => {
@@ -191,7 +199,7 @@ const LocationOptions = React.memo(
             : // Show placeholder when no records
               !loading &&
               isInitialized && (
-                <div className="p-2 text-center text-sm text-muted-foreground">
+                <div className="p-2 text-center text-muted-foreground">
                   No locations found
                 </div>
               )}
@@ -245,6 +253,9 @@ const LocationOptions = React.memo(
       prevProps.hasMore === nextProps.hasMore &&
       prevProps.isInitialized === nextProps.isInitialized &&
       prevProps.userHasInteracted === nextProps.userHasInteracted &&
+      prevProps.form === nextProps.form &&
+      prevProps.name === nextProps.name &&
+      prevProps.initializeData === nextProps.initializeData &&
       JSON.stringify(prevProps.records.map((r) => r._id)) ===
         JSON.stringify(nextProps.records.map((r) => r._id))
     );
@@ -255,9 +266,11 @@ LocationOptions.displayName = "LocationOptions";
 
 const LocationSelect = React.memo<TLocationSelect>(
   ({ form, disabled, name, label, defaultValues }) => {
+    // Get locations from Redux store - this will automatically update when new locations are added
+    const reduxLocations = useAppSelector((state) => state.locations.records);
+    const reduxLoading = useAppSelector((state) => state.locations.loading);
+
     const {
-      records,
-      loading,
       searchQuery,
       handleSearchChange,
       loadMore,
@@ -270,6 +283,30 @@ const LocationSelect = React.memo<TLocationSelect>(
       loadSpecificLocations,
     } = useLocationSearch();
 
+    // Use Redux locations as the primary source, filtered by search
+    const records = useMemo(() => {
+      if (!searchQuery.trim()) {
+        return reduxLocations;
+      }
+      // Filter Redux locations based on search query
+      return reduxLocations.filter((location) => {
+        const searchLower = searchQuery.toLowerCase();
+        return (
+          location.country.toLowerCase().includes(searchLower) ||
+          location.countryAr.includes(searchQuery) ||
+          location.area.toLowerCase().includes(searchLower) ||
+          location.areaAr.includes(searchQuery) ||
+          (location.city || "").toLowerCase().includes(searchLower) ||
+          (location.cityAr || "").includes(searchQuery) ||
+          (location.village || "").toLowerCase().includes(searchLower) ||
+          (location.villageAr || "").includes(searchQuery)
+        );
+      });
+    }, [reduxLocations, searchQuery]);
+
+    // Use Redux loading state
+    const loading = reduxLoading;
+
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [isOpen, setIsOpen] = useState(false);
     const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -277,17 +314,23 @@ const LocationSelect = React.memo<TLocationSelect>(
     // Initialize data when dropdown opens for the first time OR when we have defaultValues
     useEffect(() => {
       if (
-        (isOpen && !isInitialized && !loading) ||
-        (defaultValues?._id && !isInitialized && !loading)
+        (isOpen && reduxLocations.length === 0 && !loading) ||
+        (defaultValues?._id && reduxLocations.length === 0 && !loading)
       ) {
         initializeData();
       }
-    }, [isOpen, isInitialized, loading, initializeData, defaultValues?._id]);
+    }, [
+      isOpen,
+      reduxLocations.length,
+      loading,
+      initializeData,
+      defaultValues?._id,
+    ]);
 
     // Load specific location if we have defaultValues but the location isn't in records
     useEffect(() => {
-      if (defaultValues?._id && isInitialized && !loading) {
-        const locationExists = records.some(
+      if (defaultValues?._id && reduxLocations.length > 0 && !loading) {
+        const locationExists = reduxLocations.some(
           (location) => location._id === defaultValues._id
         );
         if (!locationExists) {
@@ -296,9 +339,9 @@ const LocationSelect = React.memo<TLocationSelect>(
       }
     }, [
       defaultValues?._id,
-      isInitialized,
+      reduxLocations.length,
       loading,
-      records,
+      reduxLocations,
       loadSpecificLocations,
     ]);
 
@@ -437,14 +480,16 @@ const LocationSelect = React.memo<TLocationSelect>(
                     </div>
                   )}
 
-                  {/* Empty State - Show when initialized but no records */}
-                  {isInitialized && !loading && records.length === 0 && (
-                    <div className="flex items-center justify-center p-4">
-                      <span className="text-sm text-muted-foreground">
-                        No options
-                      </span>
-                    </div>
-                  )}
+                  {/* Empty State - Show when no records match search */}
+                  {reduxLocations.length > 0 &&
+                    !loading &&
+                    records.length === 0 && (
+                      <div className="flex items-center justify-center p-4">
+                        <span className="text-sm text-muted-foreground">
+                          No locations found matching your search
+                        </span>
+                      </div>
+                    )}
 
                   {/* Location Options - Always show the component */}
                   <LocationOptions
@@ -454,7 +499,67 @@ const LocationSelect = React.memo<TLocationSelect>(
                     loadMore={loadMore}
                     isInitialized={isInitialized}
                     userHasInteracted={userHasInteracted}
+                    form={form}
+                    name={name}
+                    initializeData={initializeData}
                   />
+
+                  {/* Add New Location Option - Always visible */}
+                  {reduxLocations.length > 0 && !loading && (
+                    <div className="border-t p-2">
+                      <AddLocationModal
+                        mode="locationSelect"
+                        trigger={
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-primary hover:text-primary/80 border-primary/20 hover:border-primary/40"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add New Location
+                          </Button>
+                        }
+                        onLocationCreated={(location) => {
+                          console.log(
+                            "🔍 Location created callback received:",
+                            location
+                          );
+                          // Handle both string ID and Location object
+                          if (typeof location === "string") {
+                            // If it's just an ID, set it in the form
+                            if (form.setValue) {
+                              console.log(
+                                "🔍 Setting form value with ID:",
+                                location
+                              );
+                              form.setValue(name, location);
+                              console.log(
+                                "🔍 Form value after setValue:",
+                                form.getValues(name)
+                              );
+                            }
+                          } else {
+                            // If it's a full Location object, set the ID and refresh data
+                            if (form.setValue) {
+                              console.log(
+                                "🔍 Setting form value with location object:",
+                                location._id
+                              );
+                              form.setValue(name, location._id);
+                              console.log(
+                                "🔍 Form value after setValue:",
+                                form.getValues(name)
+                              );
+                            }
+                            // No need to call initializeData since Redux state will automatically update
+                            console.log(
+                              "🔍 Redux state will automatically update with new location"
+                            );
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </FormItem>
