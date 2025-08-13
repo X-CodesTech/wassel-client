@@ -268,7 +268,7 @@ export default function ActivityRow({
             >
               Edit
             </Button>
-            <Button
+            {/* <Button
               variant="link"
               className="text-red-600 hover:text-red-900"
               onClick={(e) => {
@@ -277,7 +277,7 @@ export default function ActivityRow({
               }}
             >
               Delete
-            </Button>
+            </Button> */}
           </div>
         </TableCell>
       </TableRow>

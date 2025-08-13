@@ -290,7 +290,7 @@ export default function TransactionTypes() {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
+                    {/* <Button
                       variant="outline"
                       size="icon"
                       className="text-red-500 hover:text-red-600"
@@ -300,7 +300,7 @@ export default function TransactionTypes() {
                       }}
                     >
                       <Trash className="h-4 w-4" />
-                    </Button>
+                    </Button> */}
                   </div>
                 </div>
               </CardContent>

@@ -230,13 +230,13 @@ export default function SubActivityTable({
                     >
                       Edit
                     </Button>
-                    <Button
+                    {/* <Button
                       variant="link"
                       className="text-red-600 hover:text-red-900 px-2 py-1 h-auto"
                       onClick={() => onDeleteSubActivity(subActivity._id!)}
                     >
                       Delete
-                    </Button>
+                    </Button> */}
                   </div>
                 </TableCell>
               </TableRow>

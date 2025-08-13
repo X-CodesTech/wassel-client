@@ -831,10 +831,10 @@ export default function LocationManagement() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <DeleteButton
+                        {/* <DeleteButton
                           key={location._id}
                           locationId={location._id}
-                        />
+                        /> */}
                       </div>
                     </TableCell>
                   </TableRow>
