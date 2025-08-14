@@ -64,6 +64,7 @@ import {
   Truck,
   X,
 } from "lucide-react";
+import { GetOrderResponse } from "@/types/types";
 
 export default function OrderDetails() {
   const [location, navigate] = useLocation();
@@ -1223,6 +1224,12 @@ export default function OrderDetails() {
     }
   };
 
+  const formatInitialPriceOfferLocation = (location: any) => {
+    return `${location.country || "N/A"}, ${location.area || "N/A"}, ${
+      location.city || "N/A"
+    }, ${location.village || "N/A"}`;
+  };
+
   // Extract order ID from URL and fetch data
   useEffect(() => {
     const pathParts = location.split("/");
@@ -2348,14 +2355,19 @@ export default function OrderDetails() {
                             <div>
                               <span
                                 className="text-gray-700 text-xs leading-tight break-words"
-                                title={`${
-                                  item.locationDetails?.fromLocation || "N/A"
-                                } → ${
-                                  item.locationDetails?.toLocation || "N/A"
-                                }`}
+                                title={`${formatInitialPriceOfferLocation(
+                                  item.locationDetails?.fromLocationDetails
+                                )} → ${formatInitialPriceOfferLocation(
+                                  item.locationDetails?.toLocationDetails
+                                )}`}
                               >
-                                {item.locationDetails?.fromLocation || "N/A"} →{" "}
-                                {item.locationDetails?.toLocation || "N/A"}
+                                {formatInitialPriceOfferLocation(
+                                  item.locationDetails?.fromLocationDetails
+                                )}{" "}
+                                →{" "}
+                                {formatInitialPriceOfferLocation(
+                                  item.locationDetails?.toLocationDetails
+                                )}
                               </span>
                             </div>
                             <div className="text-center">
@@ -2598,7 +2610,9 @@ export default function OrderDetails() {
                                 className="text-gray-700 text-xs leading-tight break-words"
                                 title={locationText}
                               >
-                                {locationText}
+                                {formatInitialPriceOfferLocation(
+                                  pickupLocation
+                                )}
                               </span>
                             </div>
                             <div className="text-center">
